@@ -1091,6 +1091,10 @@ institutional-nft-protocol/
     "@openzeppelin/contracts": "^5.0.0",
     "@openzeppelin/contracts-upgradeable": "^5.0.0",
     "@openzeppelin/hardhat-upgrades": "^3.0.0",
+    "@chainlink/contracts": "^1.1.0",
+    "@account-abstraction/contracts": "^0.7.0",
+    "@layerzerolabs/lz-evm-oapp-v2": "^2.0.0",
+    "@superfluid-finance/ethereum-contracts": "^1.9.0",
     "dotenv": "^16.3.1",
     "hardhat": "^2.19.0"
   }
@@ -1362,7 +1366,7 @@ contract ERC721SecureUUPS is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721Upgradeable, ERC2981Upgradeable, AccessControlUpgradeable)
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable, ERC2981Upgradeable, AccessControlUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -1487,9 +1491,10 @@ NOTES:
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract FractionalVault is ERC20, ReentrancyGuard {
+contract FractionalVault is ERC20, IERC721Receiver, ReentrancyGuard {
     IERC721 public immutable nft;
     uint256 public immutable nftTokenId;
 
@@ -1499,6 +1504,7 @@ contract FractionalVault is ERC20, ReentrancyGuard {
     uint256 public buyoutPriceWei;    // total ETH required to buy NFT
 
     uint256 public saleProceedsWei;   // ETH proceeds from buyout (claim pool)
+    uint256 public snapshotSupply;    // Fixed supply snapshot at buyout time (prevents rounding attack)
 
     event Deposited(address indexed curator, uint256 fractionsMinted);
     event BuyoutStarted(uint256 priceWei);
@@ -1553,6 +1559,8 @@ contract FractionalVault is ERC20, ReentrancyGuard {
         require(msg.value == buyoutPriceWei, "wrong value");
         require(saleProceedsWei == 0, "already sold");
 
+        // Snapshot supply at buyout time to prevent rounding attack
+        snapshotSupply = totalSupply();
         saleProceedsWei = msg.value;
         buyoutActive = false;
 
@@ -1565,12 +1573,12 @@ contract FractionalVault is ERC20, ReentrancyGuard {
     function claimProceeds(uint256 burnAmount) external nonReentrant {
         require(saleProceedsWei > 0, "no proceeds");
         require(burnAmount > 0, "burn=0");
+        require(snapshotSupply > 0, "snapshot=0");
+        require(balanceOf(msg.sender) >= burnAmount, "insufficient balance");
 
-        uint256 supply = totalSupply();
-        require(supply > 0, "supply=0");
-
-        // pro-rata ETH out
-        uint256 ethOut = (saleProceedsWei * burnAmount) / supply;
+        // Use snapshotSupply (fixed at buyout) to prevent manipulation
+        uint256 ethOut = (saleProceedsWei * burnAmount) / snapshotSupply;
+        require(ethOut > 0, "ethOut=0");
 
         _burn(msg.sender, burnAmount);
 
@@ -2434,6 +2442,9 @@ contract NFTMarketplace is ReentrancyGuard, Pausable, Ownable {
     // Bid increment percentage (basis points)
     uint256 public minBidIncrementBps = 500; // 5%
 
+    // Pull-over-push pattern for safe bid refunds (prevents DoS)
+    mapping(address => uint256) public pendingReturns;
+
     // ==================== Events ====================
 
     event Listed(uint256 indexed listingId, address indexed seller, address nftContract, uint256 tokenId, uint256 price);
@@ -2594,15 +2605,24 @@ contract NFTMarketplace is ReentrancyGuard, Pausable, Ownable {
             );
         }
 
-        // Refund previous bidder
+        // Queue refund for previous bidder (pull-over-push pattern)
         if (auction.currentBidder != address(0)) {
-            payable(auction.currentBidder).sendValue(auction.currentBid);
+            pendingReturns[auction.currentBidder] += auction.currentBid;
         }
 
         auction.currentBid = msg.value;
         auction.currentBidder = msg.sender;
 
         emit BidPlaced(auctionId, msg.sender, msg.value);
+    }
+
+    // Withdraw pending returns (pull-over-push pattern)
+    function withdrawPendingReturn() external nonReentrant {
+        uint256 amount = pendingReturns[msg.sender];
+        require(amount > 0, "No pending returns");
+
+        pendingReturns[msg.sender] = 0;
+        payable(msg.sender).sendValue(amount);
     }
 
     function endAuction(uint256 auctionId) external nonReentrant {
@@ -2623,9 +2643,9 @@ contract NFTMarketplace is ReentrancyGuard, Pausable, Ownable {
         } else {
             // Reserve not met or no bids - return NFT to seller
             nft.safeTransferFrom(address(this), auction.seller, auction.tokenId);
-            // Refund last bidder if any
+            // Queue refund for last bidder (pull-over-push pattern)
             if (auction.currentBidder != address(0)) {
-                payable(auction.currentBidder).sendValue(auction.currentBid);
+                pendingReturns[auction.currentBidder] += auction.currentBid;
             }
             emit AuctionCancelled(auctionId);
         }
@@ -2871,6 +2891,7 @@ contract NFTLending is ReentrancyGuard, Pausable, Ownable {
 
     struct Loan {
         address borrower;
+        address lender;              // Added: lender address for repayment
         address nftContract;
         uint256 tokenId;
         uint256 principal;           // Loan amount
@@ -3007,6 +3028,7 @@ contract NFTLending is ReentrancyGuard, Pausable, Ownable {
 
         loans[loanId] = Loan({
             borrower: msg.sender,
+            lender: offer.lender,
             nftContract: nftContract,
             tokenId: tokenId,
             principal: offer.principal,
@@ -3070,13 +3092,16 @@ contract NFTLending is ReentrancyGuard, Pausable, Ownable {
         bool isPastDue = block.timestamp > loan.startTime + loan.duration;
 
         // Check if underwater (if oracle available)
+        // Underwater = debt exceeds threshold % of collateral value
         bool isUnderwater = false;
         if (address(priceOracle) != address(0)) {
             _accrueInterest(loanId);
             uint256 totalOwed = loan.principal + loan.accruedInterest;
             uint256 nftValue = priceOracle.getPrice(loan.nftContract, loan.tokenId);
-            uint256 threshold = (totalOwed * liquidationThresholdBps) / 10000;
-            isUnderwater = nftValue < threshold;
+            require(nftValue > 0, "Oracle returned 0");
+            // Underwater if totalOwed > nftValue * liquidationThreshold / 10000
+            uint256 maxDebt = (nftValue * liquidationThresholdBps) / 10000;
+            isUnderwater = totalOwed > maxDebt;
         }
 
         require(isPastDue || isUnderwater, "Cannot liquidate");
@@ -21928,6 +21953,9 @@ contract FractionalVault is ERC20, ERC721Holder, ReentrancyGuard, Ownable {
     // Redemption
     mapping(address => bool) public hasClaimed;
 
+    // Pull-over-push for safe bid refunds
+    mapping(address => uint256) public pendingReturns;
+
     event VaultCreated(address indexed nftContract, uint256 indexed tokenId, uint256 fractions);
     event ReservePriceUpdated(uint256 newPrice);
     event AuctionStarted(address indexed bidder, uint256 bid);
@@ -22022,13 +22050,23 @@ contract FractionalVault is ERC20, ERC721Holder, ReentrancyGuard, Ownable {
             auctionEndTime = block.timestamp + 15 minutes;
         }
 
-        // Refund previous bidder
+        // Queue refund for previous bidder (pull-over-push pattern)
         if (previousBidder != address(0)) {
-            (bool success, ) = previousBidder.call{value: previousBid}("");
-            require(success, "Refund failed");
+            pendingReturns[previousBidder] += previousBid;
         }
 
         emit BidPlaced(msg.sender, msg.value);
+    }
+
+    /**
+     * @notice Withdraw pending bid refund
+     */
+    function withdrawPendingReturn() external nonReentrant {
+        uint256 amount = pendingReturns[msg.sender];
+        require(amount > 0, "No pending returns");
+        pendingReturns[msg.sender] = 0;
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Withdraw failed");
     }
 
     /**
