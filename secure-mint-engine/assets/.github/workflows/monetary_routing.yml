@@ -1,0 +1,21 @@
+name: Monetary Routing Check
+on: [push, pull_request]
+jobs:
+  routing-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          mkdir -p intake
+          if [ ! -f intake/PROJECT_CONTEXT.json ]; then
+            echo '{"money_mechanic_type": "stablecoin_backed", "backing_type": "fiat_reserve"}' > intake/PROJECT_CONTEXT.json
+          fi
+      - run: python3 scripts/monetary_routing_ci_check.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: routing-report
+          path: outputs/MonetaryRoutingCIReport.md

@@ -1,0 +1,110 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  ORACLE-GATED SECURITY MODEL                                 ║
+║                  Multi-Layer Validation + Circuit Breaker                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+                     ┌───────────────────────┐
+                     │    MINT / BURN        │
+                     │    REQUEST            │
+                     └───────────┬───────────┘
+                                 │
+          ╔══════════════════════╪══════════════════════════╗
+          ║  LAYER 1: PRIMARY ORACLE VALIDATION             ║
+          ║                      │                          ║
+          ║                      ▼                          ║
+          ║       ┌──────────────────────────┐              ║
+          ║       │   PRIMARY ORACLE         │              ║
+          ║       │   (e.g., Chainlink)      │              ║
+          ║       │                          │              ║
+          ║       │   getLatestPrice()       │              ║
+          ║       └────────────┬─────────────┘              ║
+          ║                    │                             ║
+          ║                    ▼                             ║
+          ║       ┌──────────────────────────┐              ║
+          ║       │   STALENESS CHECK        │  FAIL --> REJECT
+          ║       │                          │              ║
+          ║       │   block.timestamp -      │              ║
+          ║       │   updatedAt < MAX_AGE    │              ║
+          ║       │   (MAX_AGE = 3600s)      │              ║
+          ║       └────────────┬─────────────┘              ║
+          ║                    │ PASS                        ║
+          ║                    ▼                             ║
+          ║       ┌──────────────────────────┐              ║
+          ║       │   DEVIATION CHECK        │  FAIL --> REJECT
+          ║       │                          │              ║
+          ║       │   |newPrice - lastPrice| │              ║
+          ║       │   ─────────────────────  │              ║
+          ║       │        lastPrice         │              ║
+          ║       │                          │              ║
+          ║       │   Must be < 5%           │              ║
+          ║       └────────────┬─────────────┘              ║
+          ╚════════════════════╪════════════════════════════╝
+                               │ PASS
+          ╔════════════════════╪════════════════════════════╗
+          ║  LAYER 2: SECONDARY ORACLE CROSS-CHECK          ║
+          ║                    │                             ║
+          ║                    ▼                             ║
+          ║       ┌──────────────────────────┐              ║
+          ║       │   SECONDARY ORACLE       │              ║
+          ║       │   (e.g., Pyth, Band,     │              ║
+          ║       │    API3, Redstone)        │              ║
+          ║       └────────────┬─────────────┘              ║
+          ║                    │                             ║
+          ║                    ▼                             ║
+          ║       ┌──────────────────────────┐              ║
+          ║       │   CROSS-ORACLE           │  FAIL --> REJECT
+          ║       │   DEVIATION CHECK        │              ║
+          ║       │                          │              ║
+          ║       │   |primary - secondary|  │              ║
+          ║       │   ─────────────────────  │              ║
+          ║       │        primary           │              ║
+          ║       │                          │              ║
+          ║       │   Must be < 2%           │              ║
+          ║       └────────────┬─────────────┘              ║
+          ╚════════════════════╪════════════════════════════╝
+                               │ PASS
+          ╔════════════════════╪════════════════════════════╗
+          ║  LAYER 3: CONSENSUS & CIRCUIT BREAKER           ║
+          ║                    │                             ║
+          ║                    ▼                             ║
+          ║  ┌────────────────────────────────────┐         ║
+          ║  │   MEDIAN CONSENSUS                  │         ║
+          ║  │                                     │         ║
+          ║  │   finalPrice = median(              │         ║
+          ║  │     primary, secondary, twap        │         ║
+          ║  │   )                                 │         ║
+          ║  └──────────────────┬─────────────────┘         ║
+          ║                     │                            ║
+          ║                     ▼                            ║
+          ║  ┌────────────────────────────────────┐         ║
+          ║  │   CIRCUIT BREAKER                   │         ║
+          ║  │                                     │         ║
+          ║  │   Triggers:                         │         ║
+          ║  │   - Price swing > 10% in 1 hour     │         ║
+          ║  │   - Oracle downtime > 30 minutes    │         ║
+          ║  │   - 3+ consecutive deviations       │         ║
+          ║  │   - Volume spike > 5x average       │         ║
+          ║  │                                     │         ║
+          ║  │   TRIPPED --> EMERGENCY PAUSE       │         ║
+          ║  └──────────────────┬─────────────────┘         ║
+          ╚═════════════════════╪═══════════════════════════╝
+                                │ CLEAR
+                                ▼
+                   ┌─────────────────────────┐
+                   │   MINT GATE             │
+                   │                         │
+                   │   validatedPrice =      │
+                   │     finalPrice          │
+                   │                         │
+                   │   Proceed to mint/burn  │
+                   │   with validated price  │
+                   └─────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  ╔═╗   Validation layer boundary      PASS   Check succeeded                │
+│  -->   Flow direction                 FAIL   Check failed, reject request   │
+│  TWAP  Time-Weighted Average Price    REJECT Request denied with reason     │
+│  PoR   Proof of Reserves             TRIPPED Circuit breaker activated      │
+└──────────────────────────────────────────────────────────────────────────────┘

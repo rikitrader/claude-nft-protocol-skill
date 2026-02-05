@@ -1,0 +1,47 @@
+name: Security Scanning
+on: [push, pull_request]
+jobs:
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: crytic/slither-action@v0.4.0  # Pinned to v0.4.0 for reproducibility
+        with:
+          slither-args: '--filter-paths "node_modules|lib|test" --exclude-dependencies'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: slither-report
+          path: results.sarif
+
+  mythril:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge install
+      - run: pip install mythril
+      - run: |
+          for f in \
+            assets/contracts/BackedToken.sol \
+            assets/contracts/SecureMintPolicy.sol \
+            assets/contracts/TreasuryVault.sol \
+            assets/contracts/EmergencyPause.sol \
+            assets/contracts/ChainlinkPoRAdapter.sol \
+            assets/contracts/OracleRouter.sol \
+            assets/contracts/Governor.sol \
+            assets/contracts/Timelock.sol \
+            assets/contracts/RedemptionEngine.sol \
+            assets/contracts/GuardianMultisig.sol; do
+            echo "=== Analyzing $f ==="
+            myth analyze "$f" --execution-timeout 300 --solc-remaps "$(cat assets/remappings.txt | tr '\n' ' ')" || true
+          done
+
+  solhint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install -g solhint
+      - run: solhint 'assets/contracts/**/*.sol'

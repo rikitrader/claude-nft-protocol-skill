@@ -1,0 +1,134 @@
+{"ts": "2026-02-05T22:09:13.396994+00:00", "op": "list-standards", "used": 500, "saved": 195359, "details": {}}
+{"ts": "2026-02-05T22:09:17.331411+00:00", "op": "list-standards", "used": 500, "saved": 195359, "details": {}}
+{"ts": "2026-02-05T22:09:18.311049+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "lending"}}
+{"ts": "2026-02-05T22:09:19.276061+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T22:09:20.645524+00:00", "op": "get-section", "used": 66, "saved": 26366, "details": {"section": ""}}
+{"ts": "2026-02-05T22:13:19.820201+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "lending collateral"}}
+{"ts": "2026-02-05T22:13:25.507628+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T22:13:30.250156+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T22:13:35.960074+00:00", "op": "get-section", "used": 2879, "saved": 15408, "details": {"section": "module-7-module-7-nft-lending-collateral-loans"}}
+{"ts": "2026-02-05T22:13:41.238438+00:00", "op": "list-modules", "used": 800, "saved": 195059, "details": {}}
+{"ts": "2026-02-05T22:13:46.081382+00:00", "op": "list-contracts", "used": 1000, "saved": 194859, "details": {}}
+{"ts": "2026-02-05T22:13:49.167586+00:00", "op": "list-standards", "used": 500, "saved": 195359, "details": {}}
+{"ts": "2026-02-05T22:13:53.601297+00:00", "op": "find-standard", "used": 500, "saved": 195359, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T22:14:00.396800+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T22:30:21.020239+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "fractionalization vault rental governance compliance KYC"}}
+{"ts": "2026-02-05T22:30:30.668785+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "fractionalization vault rental governance compliance KYC"}}
+{"ts": "2026-02-05T22:30:39.623988+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T22:32:00.693231+00:00", "op": "get-contract", "used": 2410, "saved": 15877, "details": {"contract": "NFTRental"}}
+{"ts": "2026-02-05T22:32:01.316684+00:00", "op": "get-contract", "used": 2232, "saved": 8970, "details": {"contract": "ComplianceRegistry"}}
+{"ts": "2026-02-05T22:32:01.868776+00:00", "op": "get-contract", "used": 2898, "saved": 15389, "details": {"contract": "RoyaltyRouter"}}
+{"ts": "2026-02-05T22:32:02.897182+00:00", "op": "get-contract", "used": 960, "saved": 10242, "details": {"contract": "GovGovernor"}}
+{"ts": "2026-02-05T22:32:03.077963+00:00", "op": "get-contract", "used": 98, "saved": 11104, "details": {"contract": "GovTimelock"}}
+{"ts": "2026-02-05T22:32:03.675877+00:00", "op": "get-contract", "used": 2285, "saved": 8917, "details": {"contract": "ZKComplianceVerifier"}}
+{"ts": "2026-02-05T22:32:18.790404+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "InstitutionalNFT"}}
+{"ts": "2026-02-05T22:32:24.016375+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "InstitutionalNFT"}}
+{"ts": "2026-02-05T22:36:10.466369+00:00", "op": "list-contracts", "used": 1000, "saved": 194859, "details": {}}
+{"ts": "2026-02-05T22:36:11.404169+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "error handling"}}
+{"ts": "2026-02-05T22:36:58.468980+00:00", "op": "list-contracts", "used": 1000, "saved": 194859, "details": {}}
+{"ts": "2026-02-05T22:37:11.422810+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "vault"}}
+{"ts": "2026-02-05T22:37:12.551442+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T22:37:45.609732+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "lending"}}
+{"ts": "2026-02-05T22:37:46.438482+00:00", "op": "search", "used": 500, "saved": 195359, "details": {"query": "ERC-721"}}
+{"ts": "2026-02-05T22:37:47.335780+00:00", "op": "find-standard", "used": 500, "saved": 195359, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T22:37:48.232229+00:00", "op": "get-section", "used": 11, "saved": 26421, "details": {"section": "module-3"}}
+{"ts": "2026-02-05T22:40:09.205785+00:00", "op": "get-contract", "used": 1681, "saved": 3764, "details": {"contract": "IInstitutionalNFT"}}
+{"ts": "2026-02-05T22:40:10.346510+00:00", "op": "get-contract", "used": 489, "saved": 6590, "details": {"contract": "DeployInstitutionalNFT"}}
+{"ts": "2026-02-05T22:40:11.549443+00:00", "op": "get-contract", "used": 1080, "saved": 5999, "details": {"contract": "InstitutionalNFTTest"}}
+{"ts": "2026-02-05T22:41:55.499206+00:00", "op": "get-contract", "used": 1552, "saved": 2084, "details": {"contract": "InstitutionalNFT"}}
+{"ts": "2026-02-05T22:41:58.310004+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "institutional compliance whitelist"}}
+{"ts": "2026-02-05T22:42:03.075830+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T22:42:04.014221+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T22:42:04.859074+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T22:42:06.340932+00:00", "op": "outline", "used": 425, "saved": 3211, "details": {"module": "core.md"}}
+{"ts": "2026-02-05T22:42:14.110664+00:00", "op": "outline", "used": 425, "saved": 3211, "details": {"module": "core.md"}}
+{"ts": "2026-02-05T22:42:22.234918+00:00", "op": "outline", "used": 425, "saved": 3211, "details": {"module": "core.md"}}
+{"ts": "2026-02-05T22:42:22.281279+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-721"}}
+{"ts": "2026-02-05T22:52:22.721392+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T22:52:22.764771+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T22:52:22.808275+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T22:52:22.851695+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "vault"}}
+{"ts": "2026-02-05T22:52:22.894748+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T22:52:22.937940+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T22:52:22.981658+00:00", "op": "get-contract", "used": 1552, "saved": 2084, "details": {"contract": "InstitutionalNFT"}}
+{"ts": "2026-02-05T22:52:23.153152+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-721"}}
+{"ts": "2026-02-05T22:52:23.195181+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T22:52:23.238636+00:00", "op": "outline", "used": 425, "saved": 3211, "details": {"module": "core.md"}}
+{"ts": "2026-02-05T22:52:23.282076+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:01:16.320845+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:01:17.139414+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:01:18.085206+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:01:19.046384+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:01:20.834071+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:01:21.933746+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T23:01:23.563921+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:01:30.150427+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:01:32.390543+00:00", "op": "outline", "used": 2246, "saved": 8956, "details": {"module": "governance.md"}}
+{"ts": "2026-02-05T23:07:51.794429+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:07:52.832754+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:07:54.445433+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:07:57.383982+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:07:57.798233+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:07:58.447247+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-721"}}
+{"ts": "2026-02-05T23:08:00.628326+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:08:00.681140+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:10:02.726660+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:10:02.769558+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:10:02.812622+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:10:02.857380+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:10:02.903387+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "soulbound"}}
+{"ts": "2026-02-05T23:10:02.951225+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:10:02.995092+00:00", "op": "get-contract", "used": 1552, "saved": 2084, "details": {"contract": "InstitutionalNFT"}}
+{"ts": "2026-02-05T23:10:03.080475+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:10:03.166660+00:00", "op": "get-section", "used": 45, "saved": 18242, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:10:03.208706+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-721"}}
+{"ts": "2026-02-05T23:10:03.252279+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T23:10:03.296031+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-99999"}}
+{"ts": "2026-02-05T23:10:03.340203+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:10:03.383844+00:00", "op": "outline", "used": 2246, "saved": 8956, "details": {"module": "governance.md"}}
+{"ts": "2026-02-05T23:16:55.005920+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:16:55.054489+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:16:55.103956+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:16:55.149686+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:16:55.195204+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:16:55.241361+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:16:55.287828+00:00", "op": "get-section", "used": 45, "saved": 18242, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:16:55.334666+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-721"}}
+{"ts": "2026-02-05T23:16:55.379268+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:17:15.921098+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-99999"}}
+{"ts": "2026-02-05T23:20:33.897905+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:20:34.539249+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:20:35.274316+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:20:35.992679+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:20:36.741884+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:20:37.449362+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:20:38.311369+00:00", "op": "get-section", "used": 45, "saved": 18242, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:20:39.002901+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:20:39.681927+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T23:20:41.245915+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": ""}}
+{"ts": "2026-02-05T23:24:26.080067+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:24:26.151911+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:24:26.222267+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:24:26.294175+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:24:26.365574+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:24:26.442970+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:24:26.515330+00:00", "op": "get-section", "used": 45, "saved": 18242, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:24:26.585602+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:24:26.654983+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T23:24:26.795951+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": ""}}
+{"ts": "2026-02-05T23:24:33.472630+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": ""}}
+{"ts": "2026-02-05T23:24:42.465276+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:24:43.847908+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:24:45.148793+00:00", "op": "get-section", "used": 45, "saved": 18242, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:24:46.313583+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": ""}}
+{"ts": "2026-02-05T23:26:04.262685+00:00", "op": "list-modules", "used": 800, "saved": 196691, "details": {}}
+{"ts": "2026-02-05T23:26:04.308322+00:00", "op": "list-contracts", "used": 1000, "saved": 196491, "details": {}}
+{"ts": "2026-02-05T23:26:04.355380+00:00", "op": "list-standards", "used": 500, "saved": 196991, "details": {}}
+{"ts": "2026-02-05T23:26:04.401532+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": "lending"}}
+{"ts": "2026-02-05T23:26:04.448564+00:00", "op": "get-contract", "used": 1112, "saved": 17175, "details": {"contract": "FractionalVault"}}
+{"ts": "2026-02-05T23:26:04.493507+00:00", "op": "get-section", "used": 1192, "saved": 17095, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:26:04.539781+00:00", "op": "get-section", "used": 45, "saved": 18242, "details": {"section": "module-3-fractionalization-vault"}}
+{"ts": "2026-02-05T23:26:04.586991+00:00", "op": "outline", "used": 694, "saved": 17593, "details": {"module": "defi.md"}}
+{"ts": "2026-02-05T23:26:04.634285+00:00", "op": "find-standard", "used": 500, "saved": 196991, "details": {"standard": "ERC-6551"}}
+{"ts": "2026-02-05T23:26:04.728389+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": ""}}
+{"ts": "2026-02-05T23:26:10.993749+00:00", "op": "search", "used": 500, "saved": 196991, "details": {"query": ""}}

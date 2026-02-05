@@ -1,0 +1,126 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  CROSS-CHAIN BRIDGE SECURITY MODEL                           ║
+║                  Lock-Mint Architecture + Supply Invariants                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  ╔════════════════════════════════════════════════════════════════════════════╗
+  ║                     GLOBAL SUPPLY INVARIANT                                ║
+  ║                                                                            ║
+  ║   total_locked(source) >= SUM( total_minted(dest_i) ) for all chains      ║
+  ║                                                                            ║
+  ║   Violation of this invariant triggers IMMEDIATE Level 2 shutdown          ║
+  ╚════════════════════════════════════════════════════════════════════════════╝
+
+  ════════════════════════  BRIDGE: LOCK FLOW  ════════════════════════════
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  SOURCE CHAIN (e.g., Ethereum Mainnet)                                  │
+  │                                                                         │
+  │  ┌────────────────┐                                                     │
+  │  │  User initiates│     ┌────────────────────────────────────┐          │
+  │  │  bridge(amount,│────▶│  Pre-Bridge Checks:                │          │
+  │  │  destChain)    │     │  - Balance sufficient              │          │
+  │  │                │     │  - Destination chain supported     │          │
+  │  └────────────────┘     │  - Amount within bridge limits     │          │
+  │                         │  - Rate limit not exceeded          │          │
+  │                         └───────────────┬────────────────────┘          │
+  │                                         │ PASS                          │
+  │                                         ▼                               │
+  │  ┌──────────────────────────────────────────────────────────────────┐   │
+  │  │  LOCK CONTRACT                                                   │   │
+  │  │                                                                  │   │
+  │  │  token.transferFrom(user, lockVault, amount)                     │   │
+  │  │                                                                  │   │
+  │  │  Emit Locked(user, amount, destChainId, nonce, timestamp)       │   │
+  │  │                                                                  │   │
+  │  │  Update: totalLocked[destChainId] += amount                      │   │
+  │  └──────────────────────────────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      │ Event emitted
+                                      ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                     BRIDGE VALIDATOR NETWORK                            │
+  │                                                                         │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐ │
+  │  │Validator │  │Validator │  │Validator │  │Validator │  │Validator│ │
+  │  │   A      │  │   B      │  │   C      │  │   D      │  │   E     │ │
+  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬────┘ │
+  │       │              │              │              │              │     │
+  │       └──────────────┴──────┬───────┴──────────────┴──────────────┘     │
+  │                             │                                           │
+  │                             ▼                                           │
+  │  ┌──────────────────────────────────────────────────────────────────┐   │
+  │  │  CONSENSUS MODULE                                                │   │
+  │  │                                                                  │   │
+  │  │  Threshold: 3-of-5 validators must confirm                      │   │
+  │  │                                                                  │   │
+  │  │  Each validator independently:                                   │   │
+  │  │  1. Monitors source chain lock event                             │   │
+  │  │  2. Verifies finality (12+ confirmations on ETH)                │   │
+  │  │  3. Validates amount, nonce, destination                         │   │
+  │  │  4. Signs attestation                                            │   │
+  │  │                                                                  │   │
+  │  │  Fraud detection:                                                │   │
+  │  │  - Double-spend check (nonce uniqueness)                        │   │
+  │  │  - Amount mismatch detection                                     │   │
+  │  │  - Replay attack prevention                                      │   │
+  │  └──────────────────────────────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      │ 3-of-5 consensus
+                                      ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  DESTINATION CHAIN (e.g., Arbitrum, Base, Polygon)                      │
+  │                                                                         │
+  │  ┌──────────────────────────────────────────────────────────────────┐   │
+  │  │  MINT CONTRACT                                                   │   │
+  │  │                                                                  │   │
+  │  │  Verify: 3-of-5 validator signatures present                    │   │
+  │  │  Verify: nonce not already processed                             │   │
+  │  │  Verify: totalMinted + amount <= totalLocked (invariant)        │   │
+  │  │                                                                  │   │
+  │  │  bridgedToken.mint(user, amount)                                 │   │
+  │  │                                                                  │   │
+  │  │  Emit Minted(user, amount, sourceChainId, nonce, timestamp)     │   │
+  │  │                                                                  │   │
+  │  │  Update: totalMinted += amount                                   │   │
+  │  └──────────────────────────────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ════════════════════════  BRIDGE: UNLOCK FLOW  ══════════════════════════
+
+  Destination Chain                    Source Chain
+  ┌──────────────┐                     ┌──────────────┐
+  │ User burns   │  --> Validators --> │ Vault unlocks│
+  │ bridged      │      consensus      │ original     │
+  │ tokens       │      (3-of-5)       │ tokens       │
+  └──────────────┘                     └──────────────┘
+
+  ════════════════════  INVARIANT MONITORING  ═════════════════════════════
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  CROSS-CHAIN INVARIANT CHECKER (runs every block)                       │
+  │                                                                         │
+  │  ┌───────────────────────────────────────────────────────────────────┐  │
+  │  │                                                                   │  │
+  │  │   Source Chain         Dest Chain A      Dest Chain B     ...     │  │
+  │  │   ┌──────────┐        ┌──────────┐      ┌──────────┐            │  │
+  │  │   │ Locked:  │   >=   │ Minted:  │  +   │ Minted:  │  + ...    │  │
+  │  │   │ 10,000   │        │  4,000   │      │  3,500   │            │  │
+  │  │   └──────────┘        └──────────┘      └──────────┘            │  │
+  │  │                                                                   │  │
+  │  │   10,000 >= 4,000 + 3,500 + ... = 7,500  VALID                  │  │
+  │  │                                                                   │  │
+  │  └───────────────────────────────────────────────────────────────────┘  │
+  │                                                                         │
+  │  If INVALID: Trigger Level 2 Emergency Shutdown on ALL chains          │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  -->    Flow direction              3-of-5  Validator consensus threshold   │
+│  Lock   Tokens held in source vault Mint    Wrapped tokens on destination   │
+│  Nonce  Unique bridge tx identifier ╔═╗     Critical invariant boundary     │
+└──────────────────────────────────────────────────────────────────────────────┘

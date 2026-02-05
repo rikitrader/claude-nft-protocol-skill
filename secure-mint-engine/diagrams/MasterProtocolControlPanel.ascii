@@ -1,0 +1,87 @@
+╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                        MASTER PROTOCOL CONTROL PANEL                                            ║
+║                        Unified Engine Orchestration View                                        ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+    ┌──────────────────────────────────────────────────────────────────────────────────────┐
+    │                              EXTERNAL INPUTS                                         │
+    │   [Market Data]    [User Requests]    [Governance Votes]    [Oracle Feeds]           │
+    └────────┬─────────────────┬──────────────────┬──────────────────┬─────────────────────┘
+             │                 │                  │                  │
+             ▼                 ▼                  │                  │
+    ┌─────────────────┐ ┌─────────────────┐      │                  │
+    │  MARKET INTEL   │ │  INTAKE BRAIN   │      │                  │
+    │  ENGINE         │ │  ENGINE         │      │                  │
+    │                 │ │                 │      │                  │
+    │ - Competitors   │ │ - Request parse │      │                  │
+    │ - Market sizing │ │ - Route select  │      │                  │
+    │ - Trend detect  │ │ - Validation    │      │                  │
+    │ - Risk signals  │ │ - Config gen    │      │                  │
+    └────────┬────────┘ └────────┬────────┘      │                  │
+             │ market            │ config         │                  │
+             │ data              │ params         │                  │
+             ▼                   ▼                ▼                  ▼
+    ╔════════════════════════════════════════════════════════════════════════════╗
+    ║                         CORE PROTOCOL ENGINES                             ║
+    ║                                                                           ║
+    ║  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐     ║
+    ║  │  SECUREMINT      │<-->│  TREASURY        │<-->│  ORACLE          │     ║
+    ║  │  ENGINE          │    │  ENGINE           │    │  ENGINE          │     ║
+    ║  │                  │    │                   │    │                  │     ║
+    ║  │ mint()           │    │ deposit()         │    │ getPrice()      │     ║
+    ║  │ burn()           │    │ withdraw()        │    │ validate()      │     ║
+    ║  │ rateLimit()      │    │ rebalance()       │    │ staleness()     │     ║
+    ║  │ backingCheck()   │    │ yieldOptimize()   │    │ deviation()     │     ║
+    ║  │                  │    │                   │    │ consensus()     │     ║
+    ║  └───────┬──────────┘    └────────┬──────────┘    └────────┬────────┘     ║
+    ║          │                        │                        │              ║
+    ║          │    ┌───────────────────┼────────────────────────┘              ║
+    ║          │    │                   │                                       ║
+    ║          ▼    ▼                   ▼                                       ║
+    ║  ┌──────────────────┐    ┌──────────────────┐                            ║
+    ║  │  EVIDENCE         │    │  ENFORCEMENT     │                            ║
+    ║  │  ENGINE           │    │  ENGINE          │                            ║
+    ║  │                   │    │                  │                            ║
+    ║  │ logMint()        │    │ checkLimits()    │                            ║
+    ║  │ logBurn()        │    │ enforceRules()   │                            ║
+    ║  │ logTransfer()    │    │ flagViolation()  │                            ║
+    ║  │ auditTrail()     │    │ autoBlock()      │                            ║
+    ║  │                   │    │                  │                            ║
+    ║  └──────────────────┘    └──────────────────┘                            ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
+                    │                        │
+                    ▼                        ▼
+    ╔════════════════════════════════════════════════════════════════════════════╗
+    ║                      GOVERNANCE & SAFETY LAYER                            ║
+    ║                                                                           ║
+    ║  ┌──────────────────┐                    ┌──────────────────┐             ║
+    ║  │  GOVERNANCE       │                    │  EMERGENCY       │             ║
+    ║  │  ENGINE           │--- overrides ----->│  ENGINE          │             ║
+    ║  │                   │                    │                  │             ║
+    ║  │ propose()        │                    │ pauseMint()      │             ║
+    ║  │ vote()           │                    │ pauseTransfer()  │             ║
+    ║  │ execute()        │                    │ fullFreeze()     │             ║
+    ║  │ timelock()       │                    │ recover()        │             ║
+    ║  └──────────────────┘                    └──────────────────┘             ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
+
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │                        DATA FLOW MATRIX                                  │
+    ├──────────────┬───────────────────────────────────────────────────────────┤
+    │ MarketIntel  │ --> IntakeBrain (market data, risk signals)              │
+    │ IntakeBrain  │ --> SecureMint (config params, route selection)          │
+    │ SecureMint   │ <-> Treasury (backing verification, reserve status)     │
+    │ SecureMint   │ <-> Oracle (price validation, staleness checks)         │
+    │ SecureMint   │ --> Evidence (mint/burn logs, compliance records)        │
+    │ Enforcement  │ <-- Oracle + Treasury + Evidence (rule inputs)          │
+    │ Governance   │ --> All Engines (parameter updates, role changes)        │
+    │ Emergency    │ --> All Engines (pause/freeze commands)                  │
+    └──────────────┴───────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  -->   One-way data flow        <->   Bidirectional data flow               │
+│  ╔═╗   System boundary layer    ┌─┐   Engine component                      │
+│  [ ]   External input           ()    Function / method call                │
+└──────────────────────────────────────────────────────────────────────────────┘

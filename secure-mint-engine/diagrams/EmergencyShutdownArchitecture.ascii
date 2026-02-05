@@ -1,0 +1,121 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  EMERGENCY SHUTDOWN ARCHITECTURE                             ║
+║                  4-Level Escalation + Recovery Procedure                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │                      TRIGGER DETECTION                                   │
+  │                                                                          │
+  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐   │
+  │  │ Risk Score   │ │ Oracle       │ │ Exploit      │ │ Guardian     │   │
+  │  │ Engine       │ │ Circuit      │ │ Detection    │ │ Multisig     │   │
+  │  │ (automated)  │ │ Breaker      │ │ (automated)  │ │ (manual)     │   │
+  │  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘   │
+  │         └────────────────┴────────────────┴────────────────┘            │
+  │                                   │                                      │
+  └───────────────────────────────────┼──────────────────────────────────────┘
+                                      │
+                                      ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LEVEL 0: NORMAL OPERATIONS                                              ║
+  ║                                                                          ║
+  ║  Status: ALL SYSTEMS OPERATIONAL                                         ║
+  ║                                                                          ║
+  ║  - Minting:    ENABLED     - Transfers:  ENABLED                         ║
+  ║  - Burning:    ENABLED     - Governance: ENABLED                         ║
+  ║  - DeFi yield: ENABLED     - Bridges:    ENABLED                         ║
+  ║                                                                          ║
+  ║  Monitoring: Standard cadence (5-min intervals)                          ║
+  ╚════════════════════════════════╤══════════════════════════════════════════╝
+                                   │
+            Risk Score > 50  OR    │
+            Oracle anomaly         │
+                                   ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LEVEL 1: MINT PAUSE                                     [ELEVATED]      ║
+  ║                                                                          ║
+  ║  Trigger:  Automated (risk engine) or 1-of-3 guardian                    ║
+  ║                                                                          ║
+  ║  - Minting:    PAUSED      - Transfers:  ENABLED                         ║
+  ║  - Burning:    ENABLED     - Governance: ENABLED                         ║
+  ║  - DeFi yield: REDUCED     - Bridges:    ENABLED                         ║
+  ║                                                                          ║
+  ║  Actions:                                                                ║
+  ║  - Halt all new minting operations                                       ║
+  ║  - Burns still allowed (reduce supply pressure)                          ║
+  ║  - Increase monitoring to 30-second intervals                            ║
+  ║  - Notify risk committee via alerting system                             ║
+  ║  - Auto-resolve if risk score < 25 for 1 hour                           ║
+  ╚════════════════════════════════╤══════════════════════════════════════════╝
+                                   │
+            Risk Score > 75  OR    │
+            Exploit confirmed      │
+                                   ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LEVEL 2: TRANSFER PAUSE                                [CRITICAL]       ║
+  ║                                                                          ║
+  ║  Trigger:  2-of-3 guardian multisig or automated exploit detection       ║
+  ║                                                                          ║
+  ║  - Minting:    PAUSED      - Transfers:  PAUSED                          ║
+  ║  - Burning:    PAUSED      - Governance: ENABLED                         ║
+  ║  - DeFi yield: PAUSED      - Bridges:    PAUSED                          ║
+  ║                                                                          ║
+  ║  Actions:                                                                ║
+  ║  - Freeze all token transfers (except governance)                        ║
+  ║  - Pause bridge operations across all chains                             ║
+  ║  - Withdraw from DeFi positions to safe treasury                         ║
+  ║  - Begin incident response procedure                                     ║
+  ║  - Emergency governance vote initiated (24h fast-track)                  ║
+  ╚════════════════════════════════╤══════════════════════════════════════════╝
+                                   │
+            Active exploit  OR     │
+            3-of-3 guardian        │
+                                   ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LEVEL 3: FULL FREEZE                                   [EMERGENCY]      ║
+  ║                                                                          ║
+  ║  Trigger:  3-of-3 guardian multisig (unanimous)                          ║
+  ║                                                                          ║
+  ║  - Minting:    FROZEN      - Transfers:  FROZEN                          ║
+  ║  - Burning:    FROZEN      - Governance: FROZEN                          ║
+  ║  - DeFi yield: FROZEN      - Bridges:    FROZEN                          ║
+  ║                                                                          ║
+  ║  Actions:                                                                ║
+  ║  - Complete protocol freeze, no state changes allowed                    ║
+  ║  - Snapshot all balances and state                                       ║
+  ║  - External audit team engaged                                           ║
+  ║  - Public incident disclosure within 1 hour                              ║
+  ║  - Recovery plan development begins                                      ║
+  ╚════════════════════════════════╤══════════════════════════════════════════╝
+                                   │
+                                   ▼
+  ┌───────────────────────────────────────────────────────────────────────────┐
+  │                    RECOVERY PROCEDURE                                     │
+  │                                                                           │
+  │  Step 1: ROOT CAUSE ANALYSIS                                              │
+  │          Identify exploit vector, assess damage                           │
+  │                                        │                                  │
+  │                                        ▼                                  │
+  │  Step 2: PATCH AND AUDIT                                                  │
+  │          Deploy fix, external audit of patch                              │
+  │                                        │                                  │
+  │                                        ▼                                  │
+  │  Step 3: STATE VERIFICATION                                               │
+  │          Verify balances, reserves, invariants                            │
+  │                                        │                                  │
+  │                                        ▼                                  │
+  │  Step 4: GRADUAL RESTART                                                  │
+  │          Level 3 -> 2 -> 1 -> 0 (minimum 24h per level)                  │
+  │                                        │                                  │
+  │                                        ▼                                  │
+  │  Step 5: POST-MORTEM                                                      │
+  │          Public report, compensation plan, process improvements           │
+  └───────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  ENABLED   Function operating normally    PAUSED  Temporarily halted        │
+│  FROZEN    Completely locked, no changes  ╔═╗     Escalation level          │
+│  1-of-3    One guardian signature needed   3-of-3  Unanimous guardian vote   │
+└──────────────────────────────────────────────────────────────────────────────┘

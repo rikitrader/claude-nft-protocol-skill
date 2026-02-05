@@ -1,0 +1,66 @@
+# Claude Code ephemeral/private files
+.DS_Store
+cache/
+debug/
+file-history/
+history.jsonl
+paste-cache/
+plans/
+plugins/
+projects/
+sessions/
+shell-snapshots/
+telemetry/
+todos/
+tasks/
+settings.json
+settings.local.json
+
+# Third-party skills (installed via marketplaces)
+skills/backend-patterns/
+skills/clickhouse-io/
+skills/coding-standards/
+skills/configure-ecc/
+skills/continuous-learning/
+skills/continuous-learning-v2/
+skills/django-patterns/
+skills/django-security/
+skills/django-tdd/
+skills/django-verification/
+skills/drbinary-chat-plugin/
+skills/eval-harness/
+skills/federal-trial-counsel/
+skills/frontend-patterns/
+skills/golang-patterns/
+skills/golang-testing/
+skills/iterative-retrieval/
+skills/java-coding-standards/
+skills/jpa-patterns/
+skills/postgres-patterns/
+skills/project-guidelines-example/
+skills/python-patterns/
+skills/python-testing/
+skills/security-review/
+skills/springboot-patterns/
+skills/springboot-security/
+skills/springboot-tdd/
+skills/springboot-verification/
+skills/strategic-compact/
+skills/tdd-workflow/
+skills/ui-ux-pro-max-skill/
+skills/venezuela-super-lawyer/
+skills/verification-loop/
+
+# User rules (private config)
+rules/
+
+# Solidity build artifacts and dependencies
+secure-mint-engine/assets/lib/
+secure-mint-engine/assets/out/
+secure-mint-engine/assets/cache/
+secure-mint-engine/assets/broadcast/
+
+# Python
+__pycache__/
+*.pyc
+.env

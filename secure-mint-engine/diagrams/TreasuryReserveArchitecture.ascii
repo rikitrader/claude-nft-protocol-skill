@@ -1,0 +1,109 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  TREASURY RESERVE ARCHITECTURE                               ║
+║                  4-Tier Reserve System + Proof of Reserves                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+                         ┌───────────────────┐
+                         │  INCOMING          │
+                         │  DEPOSITS          │
+                         │                    │
+                         │  Collateral,       │
+                         │  Fees, Yield       │
+                         └────────┬───────────┘
+                                  │
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │       TIER ROUTER            │
+                    │                              │
+                    │  Allocates funds based on:   │
+                    │  - Target tier percentages    │
+                    │  - Current tier fill levels   │
+                    │  - Liquidity requirements     │
+                    │  - Risk parameters            │
+                    └──┬───────┬───────┬────────┬──┘
+                       │       │       │        │
+         ┌─────────────┘       │       │        └──────────────┐
+         │                     │       │                       │
+         ▼                     ▼       ▼                       ▼
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │  TIER 0      │  │  TIER 1      │  │  TIER 2      │  │  TIER 3      │
+  │  HOT WALLET  │  │  WARM        │  │  COLD        │  │  RWA         │
+  │              │  │  STORAGE     │  │  STORAGE     │  │  RESERVES    │
+  ├──────────────┤  ├──────────────┤  ├──────────────┤  ├──────────────┤
+  │              │  │              │  │              │  │              │
+  │  Target:     │  │  Target:     │  │  Target:     │  │  Target:     │
+  │  5-10%       │  │  15-25%      │  │  50-60%      │  │  10-20%      │
+  │              │  │              │  │              │  │              │
+  │  Access:     │  │  Access:     │  │  Access:     │  │  Access:     │
+  │  Instant     │  │  1-4 hours   │  │  24-48 hours │  │  3-7 days    │
+  │              │  │              │  │              │  │              │
+  │  Security:   │  │  Security:   │  │  Security:   │  │  Security:   │
+  │  1-of-3      │  │  2-of-3      │  │  3-of-5      │  │  4-of-7      │
+  │  multisig    │  │  multisig    │  │  multisig    │  │  multisig    │
+  │              │  │              │  │              │  │              │
+  │  Assets:     │  │  Assets:     │  │  Assets:     │  │  Assets:     │
+  │  USDC, USDT  │  │  USDC, USDT  │  │  US T-Bills  │  │  Real estate │
+  │  on-chain    │  │  Aave/Comp   │  │  Money market│  │  Commodities │
+  │              │  │  positions   │  │  Blue chip   │  │  T-Bonds     │
+  │              │  │              │  │  crypto      │  │  Corp bonds  │
+  │              │  │              │  │              │  │              │
+  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+         │                 │                 │                 │
+         └────────┬────────┴─────────┬───────┴─────────┬──────┘
+                  │                  │                  │
+                  ▼                  ▼                  ▼
+  ┌───────────────────────────────────────────────────────────────────────┐
+  │                      REBALANCING ENGINE                               │
+  │                                                                       │
+  │  Triggers:                                                            │
+  │  - Tier deviation > 5% from target allocation                        │
+  │  - Large mint/burn event (> 1% of supply)                            │
+  │  - Scheduled rebalance (weekly)                                       │
+  │  - Risk score change triggering defensive posture                    │
+  │                                                                       │
+  │  Constraints:                                                         │
+  │  - T0 never below 3% (emergency liquidity floor)                     │
+  │  - T2+T3 always >= 60% (stability guarantee)                         │
+  │  - Max single-tx move: 2% of total reserves                          │
+  └──────────────────────────────┬────────────────────────────────────────┘
+                                 │
+                                 ▼
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║                    PROOF OF RESERVES (PoR) ORACLE                    ║
+  ║                                                                      ║
+  ║  ┌──────────────────────────────────────────────────────────────┐    ║
+  ║  │  On-Chain Attestation (every 6 hours):                       │    ║
+  ║  │                                                              │    ║
+  ║  │  totalReserves = T0 + T1 + T2 + T3                          │    ║
+  ║  │  totalSupply   = token.totalSupply()                         │    ║
+  ║  │                                                              │    ║
+  ║  │  healthFactor  = totalReserves / totalSupply                 │    ║
+  ║  │                                                              │    ║
+  ║  │  REQUIRED: healthFactor >= 1.00 (fully backed)               │    ║
+  ║  │  TARGET:   healthFactor >= 1.05 (5% overcollateralized)      │    ║
+  ║  └──────────────────────────────────────────────────────────────┘    ║
+  ║                                                                      ║
+  ║  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐    ║
+  ║  │ Chainlink│  │ External │  │ Auditor  │  │ On-chain         │    ║
+  ║  │ PoR Feed │  │ Custodian│  │ Report   │  │ Balance          │    ║
+  ║  │          │  │ API      │  │ (monthly)│  │ Verification     │    ║
+  ║  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────────┬─────────┘    ║
+  ║       └──────────────┴─────────────┴─────────────────┘              ║
+  ║                              │                                       ║
+  ║                              ▼                                       ║
+  ║              ┌───────────────────────────────┐                      ║
+  ║              │  HEALTH FACTOR DASHBOARD       │                      ║
+  ║              │                                │                      ║
+  ║              │  >= 1.05  GREEN   Normal ops   │                      ║
+  ║              │  1.00-1.05 YELLOW  Alert       │                      ║
+  ║              │  < 1.00   RED     Mint pause   │                      ║
+  ║              └───────────────────────────────┘                      ║
+  ╚═══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  T0-T3  Reserve tier designation    PoR    Proof of Reserves                │
+│  RWA    Real World Assets           -->    Flow direction                    │
+│  n-of-m Multisig threshold          ╔═╗    Critical system boundary         │
+└──────────────────────────────────────────────────────────────────────────────┘

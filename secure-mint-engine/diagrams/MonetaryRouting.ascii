@@ -1,0 +1,84 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    MONETARY DESIGN ROUTING - DECISION TREE                  ║
+║                    Token Architecture Selection Engine                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+                         ┌───────────────────┐
+                         │  TOKEN DESIGN     │
+                         │  START            │
+                         └────────┬──────────┘
+                                  │
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │  Which blockchain ecosystem? │
+                    └──────┬──────────────┬────────┘
+                           │              │
+                    ┌──────▼──────┐ ┌─────▼───────┐
+                    │    EVM      │ │   SOLANA     │
+                    │ (Solidity)  │ │   (Rust)     │
+                    │             │ │              │
+                    │ ETH, BSC,   │ │ SPL Token    │
+                    │ Polygon,    │ │ Program      │
+                    │ Arbitrum,   │ │              │
+                    │ Base, Avax  │ │              │
+                    └──────┬──────┘ └─────┬───────┘
+                           │              │
+                           └──────┬───────┘
+                                  │
+                                  ▼
+                    ┌─────────────────────────────┐
+                    │  Minting allowed after TGE?  │
+                    └──────┬──────────────┬────────┘
+                           │              │
+                      YES  │              │  NO
+                           ▼              ▼
+              ┌────────────────┐  ┌────────────────────────┐
+              │ Is the token   │  │ Is it a community /    │
+              │ backed by      │  │ meme-driven token?     │
+              │ reserves?      │  └─────┬────────────┬─────┘
+              └───┬────────┬───┘        │            │
+                  │        │        YES │            │ NO
+              YES │        │ NO        ▼            ▼
+                  ▼        ▼    ┌────────────┐ ┌────────────┐
+         ┌──────────┐ ┌──────────┐│ MEMECOIN  │ │ FIXED      │
+         │ Is mint  │ │EMISSIONS ││ ROUTE     │ │ SUPPLY     │
+         │ oracle-  │ │ROUTE     │├────────────┤ │ ROUTE      │
+         │ gated?   │ │          ││            │ ├────────────┤
+         └──┬───┬───┘ │ Scheduled││ Fair launch│ │            │
+            │   │     │ inflation││ No mint    │ │ Capped     │
+        YES │   │ NO  │ Block    ││ post-TGE   │ │ supply     │
+            ▼   │     │ rewards  ││ LP-focused │ │ All tokens │
+   ┌────────────┐│    │ Halving  ││ Burn mechs │ │ at genesis │
+   │ SECURE     ││    │ curves   ││            │ │ Vesting    │
+   │ MINT       ││    │          ││            │ │ schedules  │
+   │ ROUTE      ││    └──────────┘│            │ │            │
+   ├────────────┤│                └────────────┘ └────────────┘
+   │            ││
+   │ Collateral ││          ┌──────────────────────────┐
+   │ backed     │└─────────▶│  CROSS-CHAIN ROUTE       │
+   │ Oracle     │           ├──────────────────────────┤
+   │ validated  │           │                          │
+   │ Rate       │           │ Multi-chain deployment   │
+   │ limited    │           │ Bridge lock-mint model   │
+   │ Evidence   │           │ Unified supply invariant │
+   │ logged     │           │ Chain-specific adapters  │
+   │            │           │                          │
+   └────────────┘           └──────────────────────────┘
+
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║  ROUTE SUMMARY                                                       ║
+  ╠═══════════════╦═══════════════╦═══════════╦═══════════╦══════════════╣
+  ║  SECURE_MINT  ║  EMISSIONS    ║  FIXED    ║  MEMECOIN ║  CROSS_CHAIN ║
+  ╠═══════════════╬═══════════════╬═══════════╬═══════════╬══════════════╣
+  ║ Stablecoins   ║ L1/L2 native  ║ Governance║ Community ║ Multi-chain  ║
+  ║ Backed assets ║ Staking yield  ║ Utility   ║ Fair      ║ Bridged      ║
+  ║ RWA tokens    ║ Mining rewards ║ Payment   ║ launch    ║ Wrapped      ║
+  ╚═══════════════╩═══════════════╩═══════════╩═══════════╩══════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                  │
+│                                                                          │
+│  -->   Decision flow            YES/NO  Branch condition                 │
+│  ┌─┐   Decision node            ╔═╗     Summary table                   │
+│  ROUTE  Terminal selection      TGE     Token Generation Event          │
+└──────────────────────────────────────────────────────────────────────────┘

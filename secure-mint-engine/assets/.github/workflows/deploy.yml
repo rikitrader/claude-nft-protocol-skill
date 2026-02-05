@@ -1,0 +1,86 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Target network'
+        required: true
+        type: choice
+        options:
+          - testnet
+          - mainnet
+      chain:
+        description: 'Target chain'
+        required: true
+        type: choice
+        options:
+          - ethereum
+          - arbitrum
+          - polygon
+          - base
+          - optimism
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r assets/python-engine/requirements.txt
+      - run: cd assets/python-engine && python securemint_cli.py preflight
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
+          TOKEN_ADDRESS: ${{ secrets.TOKEN_ADDRESS }}
+          POLICY_ADDRESS: ${{ secrets.POLICY_ADDRESS }}
+          ORACLE_ADDRESS: ${{ secrets.ORACLE_ADDRESS }}
+          TREASURY_ADDRESS: ${{ secrets.TREASURY_ADDRESS }}
+          BRIDGE_ADDRESS: ${{ secrets.BRIDGE_ADDRESS }}  # External bridge contract (not in codebase -- provided by bridge provider)
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          CHAIN_ID: ${{ secrets.CHAIN_ID }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: preflight
+    environment: ${{ inputs.network }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge script assets/scripts/Deploy.s.sol --rpc-url ${{ secrets.RPC_URL }} --broadcast --verify
+        env:
+          PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          # DeployConfig.getConfigFromEnv() requires these
+          DEPLOY_ADMIN: ${{ secrets.DEPLOY_ADMIN }}
+          DEPLOY_ORACLE_AGGREGATOR: ${{ secrets.DEPLOY_ORACLE_AGGREGATOR }}
+          DEPLOY_COLLATERAL_TOKEN: ${{ secrets.DEPLOY_COLLATERAL_TOKEN }}
+          DEPLOY_GUARDIAN: ${{ secrets.DEPLOY_GUARDIAN }}
+          DEPLOY_OPERATOR: ${{ secrets.DEPLOY_OPERATOR }}
+          DEPLOY_TREASURER: ${{ secrets.DEPLOY_TREASURER }}
+          DEPLOY_DAO: ${{ secrets.DEPLOY_DAO }}
+          DEPLOY_FEE_RECIPIENT: ${{ secrets.DEPLOY_FEE_RECIPIENT }}
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r assets/python-engine/requirements.txt
+      - run: cd assets/python-engine && python securemint_cli.py smoke-test
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
+          TOKEN_ADDRESS: ${{ secrets.TOKEN_ADDRESS }}
+          POLICY_ADDRESS: ${{ secrets.POLICY_ADDRESS }}
+          ORACLE_ADDRESS: ${{ secrets.ORACLE_ADDRESS }}
+          TREASURY_ADDRESS: ${{ secrets.TREASURY_ADDRESS }}
+          BRIDGE_ADDRESS: ${{ secrets.BRIDGE_ADDRESS }}  # External bridge contract (not in codebase -- provided by bridge provider)
+          CHAIN_ID: ${{ secrets.CHAIN_ID }}

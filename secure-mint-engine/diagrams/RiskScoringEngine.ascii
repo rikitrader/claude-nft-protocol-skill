@@ -1,0 +1,86 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      RISK SCORING ENGINE                                     ║
+║                      Real-Time Assessment and Classification                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │                     9 RISK METRICS (Weighted Inputs)                     │
+  │                                                                          │
+  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
+  │  │ M1: Oracle       │  │ M2: Collateral  │  │ M3: Liquidity   │         │
+  │  │ Health           │  │ Ratio           │  │ Depth           │         │
+  │  │ Weight: 15%      │  │ Weight: 20%     │  │ Weight: 10%     │         │
+  │  │                  │  │                 │  │                 │         │
+  │  │ Staleness,       │  │ Backing ratio   │  │ DEX pool depth  │         │
+  │  │ deviation,       │  │ vs minimum,     │  │ order book      │         │
+  │  │ uptime           │  │ trend direction │  │ slippage est.   │         │
+  │  └────────┬─────────┘  └────────┬────────┘  └────────┬────────┘         │
+  │           │                     │                     │                  │
+  │  ┌────────┴─────────┐  ┌───────┴─────────┐  ┌───────┴─────────┐        │
+  │  │ M4: Peg          │  │ M5: Volume      │  │ M6: Smart       │        │
+  │  │ Deviation        │  │ Anomaly         │  │ Contract Risk   │        │
+  │  │ Weight: 15%      │  │ Weight: 10%     │  │ Weight: 10%     │        │
+  │  │                  │  │                 │  │                 │        │
+  │  │ Current peg vs   │  │ Mint/burn vol   │  │ Audit status,   │        │
+  │  │ target, duration │  │ vs 30d average  │  │ upgrade risk,   │        │
+  │  │ of deviation     │  │ spike detect    │  │ complexity       │        │
+  │  └────────┬─────────┘  └────────┬────────┘  └────────┬────────┘        │
+  │           │                     │                     │                  │
+  │  ┌────────┴─────────┐  ┌───────┴─────────┐  ┌───────┴─────────┐        │
+  │  │ M7: Governance   │  │ M8: Market      │  │ M9: Cross-Chain │        │
+  │  │ Activity         │  │ Sentiment       │  │ Exposure        │        │
+  │  │ Weight: 5%       │  │ Weight: 5%      │  │ Weight: 10%     │        │
+  │  │                  │  │                 │  │                 │        │
+  │  │ Pending          │  │ Social signals  │  │ Bridge TVL,     │        │
+  │  │ proposals,       │  │ news sentiment  │  │ chain health,   │        │
+  │  │ vote turnout     │  │ fear/greed idx  │  │ invariant drift │        │
+  │  └────────┬─────────┘  └────────┬────────┘  └────────┬────────┘        │
+  └───────────┼─────────────────────┼─────────────────────┼────────────────┘
+              │                     │                     │
+              └──────────┬──────────┴──────────┬──────────┘
+                         │                     │
+                         ▼                     ▼
+              ┌────────────────────────────────────────┐
+              │         SCORE CALCULATION               │
+              │                                         │
+              │  riskScore = SUM(metric_i * weight_i)   │
+              │                                         │
+              │  Range: 0 (safe) ----------> 100 (crit) │
+              └───────────────────┬────────────────────┘
+                                  │
+                                  ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║                    TIER CLASSIFICATION & ACTION                          ║
+  ╠══════════╦═════════════╦════════════════════════════════════════════════╣
+  ║  TIER    ║  SCORE      ║  ACTION                                       ║
+  ╠══════════╬═════════════╬════════════════════════════════════════════════╣
+  ║          ║             ║                                                ║
+  ║  GREEN   ║  0 - 25     ║  Normal operations, no intervention           ║
+  ║          ║             ║  Standard monitoring cadence                   ║
+  ║          ║             ║                                                ║
+  ╠══════════╬═════════════╬════════════════════════════════════════════════╣
+  ║          ║             ║                                                ║
+  ║  YELLOW  ║  26 - 50    ║  Alert: Increase monitoring frequency         ║
+  ║          ║             ║  Notify risk committee, log elevated metrics   ║
+  ║          ║             ║                                                ║
+  ╠══════════╬═════════════╬════════════════════════════════════════════════╣
+  ║          ║             ║                                                ║
+  ║  ORANGE  ║  51 - 75    ║  Pause: Reduce rate limits by 50%             ║
+  ║          ║             ║  Tighten collateral requirements               ║
+  ║          ║             ║  Activate secondary oracles                    ║
+  ║          ║             ║                                                ║
+  ╠══════════╬═════════════╬════════════════════════════════════════════════╣
+  ║          ║             ║                                                ║
+  ║  RED     ║  76 - 100   ║  Emergency: Halt minting, activate shutdown   ║
+  ║          ║             ║  Trigger circuit breakers, notify all parties  ║
+  ║          ║             ║  Initiate emergency governance vote            ║
+  ║          ║             ║                                                ║
+  ╚══════════╩═════════════╩════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  M1-M9  Risk metric identifier      Weight  Contribution to total score     │
+│  SUM    Weighted summation           TVL     Total Value Locked              │
+│  DEX    Decentralized Exchange       RWA     Real World Assets               │
+└──────────────────────────────────────────────────────────────────────────────┘

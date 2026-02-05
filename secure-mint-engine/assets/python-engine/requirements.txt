@@ -1,0 +1,7 @@
+web3>=6.0.0
+python-dotenv>=1.0.0
+
+# Dev dependencies (install with: pip install -r requirements-dev.txt)
+# pytest>=8.0.0
+# ruff>=0.4.0
+# mypy>=1.10.0

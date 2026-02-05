@@ -1,0 +1,105 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     GOVERNANCE CONTROL FLOW                                  ║
+║                     DAO Proposal Lifecycle + Timelock                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  ┌──────────────────────┐
+  │  PROPOSAL CREATION   │
+  │                      │
+  │  Proposer submits:   │
+  │  - Title and desc    │
+  │  - Target contract   │
+  │  - Calldata          │
+  │  - Voting period     │
+  │                      │
+  │  Requirement:        │
+  │  >= 1% token supply  │
+  │  held by proposer    │
+  └──────────┬───────────┘
+             │
+             ▼
+  ┌──────────────────────┐     ┌───────────────────────────────────┐
+  │  DISCUSSION PERIOD   │     │  Duration: 48 hours               │
+  │                      │────▶│  Forum debate, risk assessment    │
+  │  Off-chain forum     │     │  Community feedback collected      │
+  │  Signal voting       │     │  Proposal may be amended          │
+  └──────────┬───────────┘     └───────────────────────────────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  VOTING PERIOD       │     Duration: 72 hours (configurable)
+  │                      │
+  │  ┌────────────────┐  │
+  │  │  FOR    ██████ │  │     Token-weighted voting
+  │  │  AGAINST ███   │  │     1 token = 1 vote
+  │  │  ABSTAIN █     │  │     Delegation supported
+  │  └────────────────┘  │
+  │                      │
+  └──────────┬───────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  QUORUM CHECK        │
+  │                      │
+  │  Required: >= 10%    │
+  │  of total supply     │     ┌───────────────────┐
+  │  participated         │     │                   │
+  │                      │     │  QUORUM NOT MET   │
+  │  Met? ───────────────┼─NO─▶│  Proposal fails   │
+  │                      │     │  Can be resubmit  │
+  └──────────┬───────────┘     └───────────────────┘
+             │ YES
+             ▼
+  ┌──────────────────────┐
+  │  RESULT              │
+  │                      │
+  │  FOR > AGAINST?      │     ┌───────────────────┐
+  │                      │     │                   │
+  │                      ├─NO─▶│  REJECTED         │
+  │                      │     │  Proposal archived│
+  └──────────┬───────────┘     │  Cooldown: 7 days │
+             │ YES             │  before resubmit  │
+             ▼                 └───────────────────┘
+  ╔══════════════════════╗
+  ║  TIMELOCK            ║     Duration: 48 hours (critical: 7 days)
+  ║                      ║
+  ║  Queued for          ║     ┌───────────────────────────────────┐
+  ║  delayed execution   ║     │  During timelock:                 │
+  ║                      ║────▶│  - Guardian can VETO (2/3 multi)  │
+  ║  Allows community    ║     │  - Community can EXIT if disagree │
+  ║  to react            ║     │  - Emergency cancel if exploit    │
+  ║                      ║     └───────────────────────────────────┘
+  ╚══════════╦═══════════╝
+             ║
+             ║ Timelock expires
+             ▼
+  ┌──────────────────────┐     ┌───────────────────────────────────┐
+  │  EXECUTION           │     │  Actions may include:             │
+  │                      │────▶│  - Update rate limits             │
+  │  Anyone can trigger  │     │  - Change collateral ratios       │
+  │  after timelock      │     │  - Add/remove oracle feeds        │
+  │                      │     │  - Upgrade contract (proxy)       │
+  │  tx.execute(         │     │  - Modify fee parameters          │
+  │    proposalId        │     │  - Change governance params       │
+  │  )                   │     │                                   │
+  └──────────────────────┘     └───────────────────────────────────┘
+
+  ╔═══════════════════════════════════════════════════════════════════════╗
+  ║  GOVERNANCE PARAMETERS                                               ║
+  ╠═════════════════════╦═══════════════════════════════════════════════╣
+  ║  Proposal threshold ║  1% of total supply                          ║
+  ║  Voting period      ║  72 hours (3 days)                           ║
+  ║  Quorum             ║  10% of total supply                         ║
+  ║  Standard timelock  ║  48 hours (2 days)                           ║
+  ║  Critical timelock  ║  168 hours (7 days)                          ║
+  ║  Guardian veto      ║  2-of-3 multisig                             ║
+  ║  Cooldown (reject)  ║  7 days before resubmission                  ║
+  ╚═════════════════════╩═══════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  -->   Sequential flow         ╔═╗  Critical stage (timelock)               │
+│  ██    Vote bar visualization  DAO  Decentralized Autonomous Organization   │
+│  YES/NO  Decision branch       tx   Transaction                             │
+└──────────────────────────────────────────────────────────────────────────────┘

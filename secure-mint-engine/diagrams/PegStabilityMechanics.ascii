@@ -1,0 +1,139 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    PEG STABILITY MECHANICS                                   ║
+║                    5-Layer Defense System                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+              TARGET PEG: $1.00
+              ──────────────────────────────────────────────────
+              $1.02 ........Upper soft band...................
+              $1.01 - - - - - - - - - - - - - - - - - - - - -
+              $1.00 ═══════════════ PEG ═══════════════════════
+              $0.99 - - - - - - - - - - - - - - - - - - - - -
+              $0.98 ........Lower soft band...................
+              ──────────────────────────────────────────────────
+
+
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LAYER 1: ARBITRAGE (Passive, Always Active)                             ║
+  ║  Deviation tolerance: +/- 0.5%                                           ║
+  ╠═══════════════════════════════════════════════════════════════════════════╣
+  ║                                                                          ║
+  ║  Price > $1.005:                      Price < $0.995:                     ║
+  ║  ┌──────────────────────┐             ┌──────────────────────┐           ║
+  ║  │ Arbitrageurs mint    │             │ Arbitrageurs buy     │           ║
+  ║  │ new tokens at $1.00  │             │ cheap tokens on DEX  │           ║
+  ║  │ and sell on DEX at   │             │ and redeem at $1.00  │           ║
+  ║  │ market price > $1.00 │             │ collateral value     │           ║
+  ║  │                      │             │                      │           ║
+  ║  │ Effect: Supply up,   │             │ Effect: Supply down, │           ║
+  ║  │ price pushed down    │             │ price pushed up      │           ║
+  ║  └──────────────────────┘             └──────────────────────┘           ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+                                  │
+                     Not restored │ Deviation > 1%
+                                  ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LAYER 2: PEG STABILITY MODULE (PSM) (Automated)                        ║
+  ║  Deviation tolerance: +/- 1.0%                                           ║
+  ╠═══════════════════════════════════════════════════════════════════════════╣
+  ║                                                                          ║
+  ║  ┌────────────────────────────────────────────────────────────────────┐  ║
+  ║  │                PSM CONTRACT                                        │  ║
+  ║  │                                                                    │  ║
+  ║  │  swap(tokenIn, tokenOut, amount)                                   │  ║
+  ║  │                                                                    │  ║
+  ║  │  Price > $1.01:                                                    │  ║
+  ║  │    PSM sells stableToken for USDC at $1.00 (zero slippage)        │  ║
+  ║  │    Fee: 0.1% (discourages but allows)                             │  ║
+  ║  │                                                                    │  ║
+  ║  │  Price < $0.99:                                                    │  ║
+  ║  │    PSM buys stableToken with USDC reserves at $1.00               │  ║
+  ║  │    Fee: 0.1%                                                       │  ║
+  ║  │                                                                    │  ║
+  ║  │  Capacity: Up to 10% of total supply per 24h                      │  ║
+  ║  └────────────────────────────────────────────────────────────────────┘  ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+                                  │
+                     Not restored │ Deviation > 2%
+                                  ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LAYER 3: INTEREST RATE ADJUSTMENT (Semi-Automated, Governance)         ║
+  ║  Deviation tolerance: +/- 2.0%                                           ║
+  ╠═══════════════════════════════════════════════════════════════════════════╣
+  ║                                                                          ║
+  ║  Price > $1.02 (excess demand):       Price < $0.98 (excess supply):     ║
+  ║  ┌──────────────────────┐             ┌──────────────────────┐           ║
+  ║  │ DECREASE borrow rate │             │ INCREASE borrow rate │           ║
+  ║  │ for minting          │             │ for minting          │           ║
+  ║  │                      │             │                      │           ║
+  ║  │ Makes it cheaper to  │             │ Makes it expensive   │           ║
+  ║  │ create new tokens    │             │ to hold debt         │           ║
+  ║  │ Encourages supply    │             │ Encourages repayment │           ║
+  ║  │ expansion            │             │ and supply reduction │           ║
+  ║  └──────────────────────┘             └──────────────────────┘           ║
+  ║                                                                          ║
+  ║  Adjustment curve:                                                       ║
+  ║  rate_delta = base_step * (deviation / target_band) ^ 2                 ║
+  ║  Applied every 6 hours via governance fast-track                        ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+                                  │
+                     Not restored │ Deviation > 3%
+                                  ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LAYER 4: COLLATERAL RATIO INCREASE (Governance Action)                  ║
+  ║  Deviation tolerance: +/- 3.0%                                           ║
+  ╠═══════════════════════════════════════════════════════════════════════════╣
+  ║                                                                          ║
+  ║  ┌────────────────────────────────────────────────────────────────────┐  ║
+  ║  │  Emergency governance proposal (24h fast-track):                   │  ║
+  ║  │                                                                    │  ║
+  ║  │  1. Increase minimum collateral ratio                              │  ║
+  ║  │     100% -> 110% -> 120% -> 150% (stepwise)                      │  ║
+  ║  │                                                                    │  ║
+  ║  │  2. Restrict collateral types                                      │  ║
+  ║  │     Remove volatile assets from accepted collateral                │  ║
+  ║  │                                                                    │  ║
+  ║  │  3. Increase liquidation incentives                                │  ║
+  ║  │     Bonus: 5% -> 8% -> 12% for liquidators                       │  ║
+  ║  │                                                                    │  ║
+  ║  │  4. Tighten rate limits                                            │  ║
+  ║  │     Reduce max mint per block by 75%                               │  ║
+  ║  └────────────────────────────────────────────────────────────────────┘  ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+                                  │
+                     Not restored │ Deviation > 5%
+                                  ▼
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║  LAYER 5: EMERGENCY REDEMPTION (Last Resort)                             ║
+  ║  Deviation tolerance: > 5.0%                                             ║
+  ╠═══════════════════════════════════════════════════════════════════════════╣
+  ║                                                                          ║
+  ║  ┌────────────────────────────────────────────────────────────────────┐  ║
+  ║  │  EMERGENCY REDEMPTION CONTRACT                                     │  ║
+  ║  │                                                                    │  ║
+  ║  │  1. Halt all new minting (Level 1 shutdown)                       │  ║
+  ║  │                                                                    │  ║
+  ║  │  2. Open direct redemption window:                                 │  ║
+  ║  │     Any holder can redeem tokens for underlying collateral         │  ║
+  ║  │     at $1.00 face value (pro-rata if reserves < 100%)             │  ║
+  ║  │                                                                    │  ║
+  ║  │  3. Redemption priority queue:                                     │  ║
+  ║  │     - Small holders first (< 10K tokens): immediate               │  ║
+  ║  │     - Medium holders (10K-1M): 24h delay                          │  ║
+  ║  │     - Large holders (> 1M): 72h delay                             │  ║
+  ║  │                                                                    │  ║
+  ║  │  4. Collateral waterfall:                                          │  ║
+  ║  │     T0 (Hot) -> T1 (Warm) -> T2 (Cold) -> T3 (RWA liquidation)  │  ║
+  ║  │                                                                    │  ║
+  ║  │  5. Post-redemption: assess viability of protocol continuation    │  ║
+  ║  └────────────────────────────────────────────────────────────────────┘  ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LEGEND                                                                      │
+│                                                                              │
+│  PSM    Peg Stability Module        DEX   Decentralized Exchange            │
+│  ╔═╗    Defense layer boundary      T0-T3 Treasury reserve tiers            │
+│  ═══    Peg target line             ..... Soft band boundary                │
+│  RWA    Real World Assets           APY   Annual Percentage Yield           │
+└──────────────────────────────────────────────────────────────────────────────┘
