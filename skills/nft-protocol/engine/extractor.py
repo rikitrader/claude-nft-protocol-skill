@@ -15,6 +15,15 @@ class Extractor:
 
     def _safe_path(self, module_file: str) -> Path:
         """Validate module_file to prevent path traversal attacks."""
+        # Reject empty input
+        if not module_file:
+            raise ValueError("Path traversal blocked: empty filename")
+        # Reject backslashes (Windows-style paths), slashes, and ..
+        if "\\" in module_file or "/" in module_file or ".." in module_file:
+            raise ValueError(f"Path traversal blocked: {module_file}")
+        # Reject dotfiles (hidden files)
+        if module_file.startswith("."):
+            raise ValueError(f"Path traversal blocked: {module_file}")
         # Only bare filenames allowed — reject any directory components
         safe_name = Path(module_file).name
         if safe_name != module_file:
