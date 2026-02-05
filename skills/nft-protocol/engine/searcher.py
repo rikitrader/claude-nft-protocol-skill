@@ -34,8 +34,10 @@ class Searcher:
 
     def _search_contracts(self, query: str) -> List[Dict[str, Any]]:
         matches = []
+        # Require minimum 2-char query for substring matching to avoid noise
+        min_len = len(query) >= 2
         for name, c in self.index.get("contracts", {}).items():
-            score = self._score(query, name, c)
+            score = self._score(query, name, c, min_len)
             if score > 0:
                 matches.append({
                     "name": name,
@@ -49,18 +51,23 @@ class Searcher:
 
     def _search_sections(self, query: str) -> List[Dict[str, Any]]:
         matches = []
+        min_len = len(query) >= 2
         for sec_id, s in self.index.get("sections", {}).items():
             title_lower = s.get("title", "").lower()
             summary_lower = s.get("summary", "").lower()
             score = 0
-            if query in title_lower:
+            if query == title_lower:
+                score += 20  # Exact match bonus
+            elif min_len and query in title_lower:
                 score += 10
-            if query in summary_lower:
+            if min_len and query in summary_lower:
                 score += 5
-            if query in sec_id:
+            if min_len and query in sec_id:
                 score += 8
-            # Fuzzy: check each query word
+            # Fuzzy: check each query word (only words >= 2 chars)
             for word in query.split():
+                if len(word) < 2:
+                    continue
                 if word in title_lower:
                     score += 3
                 if word in summary_lower:
@@ -91,16 +98,17 @@ class Searcher:
                 })
         return sorted(matches, key=lambda x: x["count"], reverse=True)
 
-    def _score(self, query: str, name: str, contract: Dict[str, Any]) -> int:
+    def _score(self, query: str, name: str, contract: Dict[str, Any],
+               min_len: bool = True) -> int:
         score = 0
         name_lower = name.lower()
         if query == name_lower:
-            score += 20
-        elif query in name_lower:
+            score += 20  # Exact match always scores
+        elif min_len and query in name_lower:
             score += 10
         # Check file path
         fp = (contract.get("file_path") or "").lower()
-        if query in fp:
+        if min_len and query in fp:
             score += 5
         # Check standards
         for std in contract.get("standards", []):
@@ -108,10 +116,12 @@ class Searcher:
                 score += 7
         # Check imports
         for imp in contract.get("imports", []):
-            if query in imp.lower():
+            if min_len and query in imp.lower():
                 score += 2
-        # Fuzzy word match
+        # Fuzzy word match (only words >= 2 chars)
         for word in query.split():
+            if len(word) < 2:
+                continue
             if word in name_lower:
                 score += 3
         return score
@@ -188,7 +198,7 @@ class Searcher:
             if p in name.lower():
                 suggestions.append(f"contract:{name}")
         for sec_id in self.index.get("sections", {}):
-            if p in sec_id:
+            if p in sec_id.lower():
                 suggestions.append(f"section:{sec_id}")
         for std in self.index.get("standards", {}):
             if p in std.lower():

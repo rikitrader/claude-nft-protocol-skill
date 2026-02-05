@@ -82,7 +82,19 @@ class Index:
     def load(cls, path: Path) -> "Index":
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError(f"Invalid index: expected dict, got {type(data).__name__}")
         idx = cls()
+        _expected_types = {
+            "modules": dict, "sections": dict, "contracts": dict,
+            "standards": dict, "stats": dict,
+            "version": str, "generated_at": str, "source_hash": str,
+        }
         for k, v in data.items():
+            if k in _expected_types and not isinstance(v, _expected_types[k]):
+                raise ValueError(
+                    f"Invalid index field '{k}': expected {_expected_types[k].__name__}, "
+                    f"got {type(v).__name__}"
+                )
             setattr(idx, k, v)
         return idx

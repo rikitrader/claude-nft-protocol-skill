@@ -5,7 +5,7 @@ import hashlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from .schema import CodeBlock, Contract, Index, ModuleInfo, Section
 
@@ -35,7 +35,7 @@ RE_IMPORT = re.compile(r'import\s+.*?["\'](.+?)["\']')
 RE_FILE_PATH = re.compile(r"^File:\s*`(.+?)`", re.IGNORECASE)
 
 
-def _slugify(text: str) -> str:
+def _slugify(text: str) -> str:  # noqa: used by _find_sections
     """Convert heading text to a URL-safe slug."""
     s = text.lower().strip()
     s = re.sub(r"[^a-z0-9\s-]", "", s)

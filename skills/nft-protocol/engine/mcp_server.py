@@ -222,10 +222,14 @@ class NFTProtocolMCPServer:
                 "content": [{"type": "text", "text": text}],
             })
         except Exception as e:
-            return self._response(req_id, {
-                "content": [{"type": "text", "text": f"Error: {e}"}],
-                "isError": True,
-            })
+            return self._tool_error(req_id, f"Error: {e}")
+
+    def _tool_error(self, req_id: Any, message: str) -> Dict[str, Any]:
+        """Return a tool error response per MCP spec."""
+        return self._response(req_id, {
+            "content": [{"type": "text", "text": message}],
+            "isError": True,
+        })
 
     def _response(self, req_id: Any, result: Any) -> Dict[str, Any]:
         return {"jsonrpc": "2.0", "id": req_id, "result": result}

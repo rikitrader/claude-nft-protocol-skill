@@ -12,24 +12,26 @@ from .extractor import Extractor
 from .tracker import TokenTracker, estimate_tokens
 
 
+DEFAULT_MODEL = os.environ.get("NFT_ENGINE_MODEL", "claude-sonnet-4-20250514")
+
+
+def _json_error(msg: str) -> None:
+    """Print a JSON error to stdout and exit."""
+    sys.stdout.write(json.dumps({"status": "error", "command": "batch", "error": msg}) + "\n")
+    sys.stdout.flush()
+    sys.exit(1)
+
+
 def _get_client():
     """Lazy import of anthropic SDK."""
     try:
         import anthropic
     except ImportError:
-        print(json.dumps({
-            "status": "error",
-            "error": "anthropic SDK not installed. Run: pip3 install anthropic",
-        }))
-        sys.exit(1)
+        _json_error("anthropic SDK not installed. Run: pip3 install anthropic")
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print(json.dumps({
-            "status": "error",
-            "error": "ANTHROPIC_API_KEY not set. Export it first.",
-        }))
-        sys.exit(1)
+        _json_error("ANTHROPIC_API_KEY not set. Export it first.")
 
     return anthropic.Anthropic(api_key=api_key)
 
@@ -38,7 +40,7 @@ class BatchProcessor:
     """Execute bulk operations via the Anthropic API."""
 
     def __init__(self, extractor: Extractor, tracker: TokenTracker,
-                 model: str = "claude-sonnet-4-20250514"):
+                 model: str = DEFAULT_MODEL):
         self.extractor = extractor
         self.tracker = tracker
         self.model = model

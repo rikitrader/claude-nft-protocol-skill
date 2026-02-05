@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict
+
+DEFAULT_MODEL = os.environ.get("NFT_ENGINE_MODEL", "claude-sonnet-4-20250514")
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 MODULES_DIR = SKILL_DIR / "modules"
@@ -23,17 +26,31 @@ def _load_index(command: str = "unknown") -> Dict[str, Any]:
     if not INDEX_PATH.exists():
         _out({"status": "error", "command": command,
               "error": "Index not found. Run: python3 -m engine build-index"})
-        sys.exit(1)
-    with open(INDEX_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+        sys.exit(2)
+    try:
+        with open(INDEX_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        _out({"status": "error", "command": command,
+              "error": f"Corrupt index JSON: {e}. Run: python3 -m engine build-index"})
+        sys.exit(3)
+    except PermissionError:
+        _out({"status": "error", "command": command,
+              "error": f"Permission denied reading {INDEX_PATH}"})
+        sys.exit(4)
 
 
 def cmd_build_index(args: argparse.Namespace) -> None:
     from .indexer import build_index
     from .schema import Index
 
-    idx = build_index(MODULES_DIR)
-    idx.save(INDEX_PATH)
+    try:
+        idx = build_index(MODULES_DIR)
+        idx.save(INDEX_PATH)
+    except Exception as e:
+        _out({"status": "error", "command": "build-index",
+              "error": f"Failed to build index: {e}"})
+        sys.exit(1)
     _out({
         "status": "ok",
         "command": "build-index",
@@ -235,12 +252,12 @@ def cmd_batch_generate(args: argparse.Namespace) -> None:
     if not isinstance(specs, list):
         _out({"status": "error", "command": "batch-generate",
               "error": "specs must be a JSON array"})
-        return
+        sys.exit(1)
     for i, spec in enumerate(specs):
         if not isinstance(spec, dict) or "base" not in spec or "prompt" not in spec:
             _out({"status": "error", "command": "batch-generate",
                   "error": f"specs[{i}] must have 'base' and 'prompt' keys"})
-            return
+            sys.exit(1)
     output_dir = Path(args.output_dir) if args.output_dir else None
     results = processor.generate_contracts(specs, max_workers=args.max_workers,
                                            output_dir=output_dir)
@@ -320,7 +337,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("batch-generate", help="Generate contracts via API")
     p.add_argument("--specs", required=True,
                    help='JSON array: [{"base":"Name","prompt":"..."}]')
-    p.add_argument("--model", default="claude-sonnet-4-20250514")
+    p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--max-workers", type=int, default=3)
     p.add_argument("--output-dir", default=None)
 
@@ -328,7 +345,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("batch-analyze", help="Analyze a module via API")
     p.add_argument("--module", required=True)
     p.add_argument("--prompt", required=True)
-    p.add_argument("--model", default="claude-sonnet-4-20250514")
+    p.add_argument("--model", default=DEFAULT_MODEL)
 
     # serve
     sub.add_parser("serve", help="Start MCP stdio server")
