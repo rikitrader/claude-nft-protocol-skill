@@ -102,10 +102,9 @@ def _find_sections(content: str, file_name: str) -> List[Dict[str, Any]]:
                 "start_line": i,
                 "line": line,
             })
-    # Compute end lines
+    # Compute end lines (each section ends just before the next heading)
     for j, sec in enumerate(sections):
         if j + 1 < len(sections):
-            # End just before the next same-or-higher-level heading
             sec["end_line"] = sections[j + 1]["start_line"] - 1
         else:
             sec["end_line"] = len(lines) - 1

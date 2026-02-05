@@ -104,7 +104,7 @@ All engine code is in `engine/` (stdlib only, no pip install needed). Batch comm
 
 | Module | Contracts | Sections | Key Standards |
 |--------|-----------|----------|---------------|
-| `core.md` | 1 | 7 | ERC-721, ERC-2981 |
+| `core.md` | 2 | 8 | ERC-721, ERC-2981 |
 | `marketplace.md` | 7 | 10 | ERC-721, ERC-2981 |
 | `minting.md` | 9 | 19 | ERC-721, ERC-2771, EIP-712 |
 | `defi.md` | 12 | 13 | ERC-721, ERC-4907 |
@@ -123,7 +123,7 @@ All engine code is in `engine/` (stdlib only, no pip install needed). Batch comm
 | `cicd.md` | 0 | 12 | GitHub Actions, CI pipeline |
 | `operations.md` | 0 | 26 | Incident response, monitoring |
 | `standards.md` | 2 | 5 | ERC-5169, ERC-5643, ERC-721 |
-| **Total** | **99** | **386** | **17 ERC standards** |
+| **Total** | **100** | **387** | **17 ERC standards** |
 
 ## Token Reduction Performance
 

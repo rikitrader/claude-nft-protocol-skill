@@ -1,11 +1,33 @@
 """Token usage tracking and cost reporting."""
 from __future__ import annotations
 
-import fcntl
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+# Platform-safe file locking
+if sys.platform == "win32":
+    try:
+        import msvcrt
+
+        def _lock(f: Any) -> None:
+            msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+        def _unlock(f: Any) -> None:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    except ImportError:
+        def _lock(f: Any) -> None: pass
+        def _unlock(f: Any) -> None: pass
+else:
+    import fcntl
+
+    def _lock(f: Any) -> None:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+
+    def _unlock(f: Any) -> None:
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
 class TokenTracker:
@@ -25,11 +47,11 @@ class TokenTracker:
             "details": details or {},
         }
         with open(self.log_path, "a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            _lock(f)
             try:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
             finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                _unlock(f)
 
     def report(self) -> Dict[str, Any]:
         """Generate cumulative usage report."""

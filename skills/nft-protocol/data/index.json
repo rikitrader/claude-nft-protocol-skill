@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated_at": "2026-02-05T22:21:14.772541+00:00",
-  "source_hash": "e72934225b559c1fa9895343a80be642644116c33b21345a72722f56524417e6",
+  "generated_at": "2026-02-05T22:41:48.543792+00:00",
+  "source_hash": "38ed057354e79ff138c84a678901cef80e19f36ed426fd9f708c0be44b8e390b",
   "modules": {
     "advanced-nfts.md": {
       "file_name": "advanced-nfts.md",
@@ -109,11 +109,12 @@
       "file_name": "core.md",
       "title": "Core Contracts",
       "description": "",
-      "size_bytes": 8014,
-      "line_count": 268,
+      "size_bytes": 14544,
+      "line_count": 472,
       "sections": [
         "core-contracts",
         "module-1-module-1-secure-erc-721-upgradeable-rbac-pause-royalties",
+        "module-1b-institutional-nft-compliance-lifecycle-upgradeable",
         "module-2-module-2-upgradeable-proxy-setup-hardhat-oz-upgrades",
         "installation",
         "hardhatconfigjs",
@@ -121,7 +122,8 @@
         "upgrade-script-scriptsupgradeerc721uupsjs"
       ],
       "contracts": [
-        "ERC721SecureUUPS"
+        "ERC721SecureUUPS",
+        "InstitutionalNFT"
       ],
       "standards": [
         "ERC-2981",
@@ -1416,14 +1418,29 @@
       ],
       "code_block_count": 1
     },
+    "module-1b-institutional-nft-compliance-lifecycle-upgradeable": {
+      "id": "module-1b-institutional-nft-compliance-lifecycle-upgradeable",
+      "title": "MODULE 1B: INSTITUTIONAL NFT (COMPLIANCE + LIFECYCLE + UPGRADEABLE)",
+      "level": 2,
+      "module_file": "core.md",
+      "start_line": 189,
+      "end_line": 392,
+      "byte_offset": 6124,
+      "byte_length": 6529,
+      "summary": "The primary institutional-grade NFT contract used across all tests, deployments, and integrations. Extends ERC721SecureUUPS with compliance whitelist, token lifecycle states, and per-token royalties.",
+      "contracts": [
+        "InstitutionalNFT"
+      ],
+      "code_block_count": 1
+    },
     "module-2-module-2-upgradeable-proxy-setup-hardhat-oz-upgrades": {
       "id": "module-2-module-2-upgradeable-proxy-setup-hardhat-oz-upgrades",
       "title": "MODULE 2: UPGRADEABLE PROXY SETUP (HARDHAT + OZ UPGRADES)",
       "level": 2,
       "module_file": "core.md",
-      "start_line": 189,
-      "end_line": 190,
-      "byte_offset": 6124,
+      "start_line": 393,
+      "end_line": 394,
+      "byte_offset": 12654,
       "byte_length": 61,
       "summary": "",
       "contracts": [],
@@ -1434,9 +1451,9 @@
       "title": "Installation",
       "level": 3,
       "module_file": "core.md",
-      "start_line": 191,
-      "end_line": 196,
-      "byte_offset": 6186,
+      "start_line": 395,
+      "end_line": 400,
+      "byte_offset": 12716,
       "byte_length": 122,
       "summary": "",
       "contracts": [],
@@ -1447,9 +1464,9 @@
       "title": "hardhat.config.js",
       "level": 3,
       "module_file": "core.md",
-      "start_line": 197,
-      "end_line": 207,
-      "byte_offset": 6309,
+      "start_line": 401,
+      "end_line": 411,
+      "byte_offset": 12839,
       "byte_length": 174,
       "summary": "",
       "contracts": [],
@@ -1460,9 +1477,9 @@
       "title": "Deploy Script: `scripts/deploy_erc721_uups.js`",
       "level": 3,
       "module_file": "core.md",
-      "start_line": 208,
-      "end_line": 244,
-      "byte_offset": 6484,
+      "start_line": 412,
+      "end_line": 448,
+      "byte_offset": 13014,
       "byte_length": 956,
       "summary": "",
       "contracts": [],
@@ -1473,9 +1490,9 @@
       "title": "Upgrade Script: `scripts/upgrade_erc721_uups.js`",
       "level": 3,
       "module_file": "core.md",
-      "start_line": 245,
-      "end_line": 267,
-      "byte_offset": 7441,
+      "start_line": 449,
+      "end_line": 471,
+      "byte_offset": 13971,
       "byte_length": 573,
       "summary": "",
       "contracts": [],
@@ -6260,6 +6277,30 @@
         "@openzeppelin/contracts/utils/Strings.sol"
       ]
     },
+    "InstitutionalNFT": {
+      "name": "InstitutionalNFT",
+      "module_file": "core.md",
+      "section_id": "module-1b-institutional-nft-compliance-lifecycle-upgradeable",
+      "language": "solidity",
+      "start_line": 195,
+      "end_line": 389,
+      "byte_offset": 6437,
+      "byte_length": 6210,
+      "file_path": "contracts/InstitutionalNFT.sol",
+      "standards": [
+        "ERC-2981",
+        "ERC-721"
+      ],
+      "imports": [
+        "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol",
+        "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol"
+      ]
+    },
     "FractionalVault": {
       "name": "FractionalVault",
       "module_file": "defi.md",
@@ -7887,6 +7928,7 @@
       "PhysicalRedemption",
       "SubscriptionNFT",
       "ERC721SecureUUPS",
+      "InstitutionalNFT",
       "FractionalVault",
       "NFTLending",
       "IPriceOracle",
@@ -7946,6 +7988,7 @@
     ],
     "ERC-2981": [
       "ERC721SecureUUPS",
+      "InstitutionalNFT",
       "NFTMarketplace",
       "MusicNFT",
       "VideoNFT"
@@ -7996,10 +8039,10 @@
   },
   "stats": {
     "total_modules": 19,
-    "total_sections": 386,
-    "total_contracts": 99,
-    "total_code_blocks": 174,
-    "total_source_bytes": 783437,
-    "total_source_lines": 26157
+    "total_sections": 387,
+    "total_contracts": 100,
+    "total_code_blocks": 175,
+    "total_source_bytes": 789967,
+    "total_source_lines": 26361
   }
 }

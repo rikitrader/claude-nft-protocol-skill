@@ -187,6 +187,210 @@ contract ERC721SecureUUPS is
 
 ---
 
+## MODULE 1B: INSTITUTIONAL NFT (COMPLIANCE + LIFECYCLE + UPGRADEABLE)
+
+The primary institutional-grade NFT contract used across all tests, deployments, and integrations. Extends ERC721SecureUUPS with compliance whitelist, token lifecycle states, and per-token royalties.
+
+File: `contracts/InstitutionalNFT.sol`
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/*
+INSTITUTIONAL NFT
+- Upgradeable UUPS proxy pattern
+- AccessControl: MINTER_ROLE, PAUSER_ROLE, COMPLIANCE_ROLE, UPGRADER_ROLE
+- Compliance whitelist (KYC-gated transfers)
+- Token lifecycle states (ACTIVE, LOCKED, FROZEN, BURNED)
+- ERC-2981 per-token royalties
+- Pausable transfers
+*/
+
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+contract InstitutionalNFT is
+    ERC721Upgradeable,
+    ERC721URIStorageUpgradeable,
+    ERC2981Upgradeable,
+    PausableUpgradeable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant MINTER_ROLE     = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE     = keccak256("PAUSER_ROLE");
+    bytes32 public constant COMPLIANCE_ROLE = keccak256("COMPLIANCE_ROLE");
+    bytes32 public constant UPGRADER_ROLE   = keccak256("UPGRADER_ROLE");
+
+    enum TokenState { ACTIVE, LOCKED, FROZEN, BURNED }
+
+    // Compliance whitelist
+    mapping(address => bool) public whitelisted;
+
+    // Token lifecycle states
+    mapping(uint256 => TokenState) public tokenStates;
+
+    // Events
+    event TokenMinted(uint256 indexed tokenId, address indexed to, string uri);
+    event TokenStateChanged(uint256 indexed tokenId, TokenState newState);
+    event ComplianceUpdated(address indexed account, bool whitelisted);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        address admin
+    ) public initializer {
+        __ERC721_init(name_, symbol_);
+        __ERC721URIStorage_init();
+        __ERC2981_init();
+        __Pausable_init();
+        __AccessControl_init();
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+
+        require(admin != address(0), "admin=0");
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(MINTER_ROLE, admin);
+        _grantRole(PAUSER_ROLE, admin);
+        _grantRole(COMPLIANCE_ROLE, admin);
+        _grantRole(UPGRADER_ROLE, admin);
+    }
+
+    // ==================== Compliance ====================
+
+    function updateWhitelist(address account, bool status)
+        external
+        onlyRole(COMPLIANCE_ROLE)
+    {
+        whitelisted[account] = status;
+        emit ComplianceUpdated(account, status);
+    }
+
+    function batchUpdateWhitelist(address[] calldata accounts, bool status)
+        external
+        onlyRole(COMPLIANCE_ROLE)
+    {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            whitelisted[accounts[i]] = status;
+            emit ComplianceUpdated(accounts[i], status);
+        }
+    }
+
+    // ==================== Minting ====================
+
+    function mint(
+        address to,
+        uint256 tokenId,
+        string memory uri,
+        uint96 royaltyBps
+    ) external onlyRole(MINTER_ROLE) nonReentrant whenNotPaused {
+        require(whitelisted[to], "Recipient not whitelisted");
+
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+        tokenStates[tokenId] = TokenState.ACTIVE;
+
+        // Set per-token royalty (recipient = minter's designated receiver = to)
+        if (royaltyBps > 0) {
+            _setTokenRoyalty(tokenId, to, royaltyBps);
+        }
+
+        emit TokenMinted(tokenId, to, uri);
+    }
+
+    function burn(uint256 tokenId) external {
+        require(
+            _isAuthorized(ownerOf(tokenId), msg.sender, tokenId),
+            "Not owner or approved"
+        );
+        tokenStates[tokenId] = TokenState.BURNED;
+        _burn(tokenId);
+        emit TokenStateChanged(tokenId, TokenState.BURNED);
+    }
+
+    // ==================== Token Lifecycle ====================
+
+    function setTokenState(uint256 tokenId, TokenState newState)
+        external
+        onlyRole(COMPLIANCE_ROLE)
+    {
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
+        require(newState != TokenState.BURNED, "Use burn() instead");
+        tokenStates[tokenId] = newState;
+        emit TokenStateChanged(tokenId, newState);
+    }
+
+    // ==================== Pause ====================
+
+    function pause() external onlyRole(PAUSER_ROLE) { _pause(); }
+    function unpause() external onlyRole(PAUSER_ROLE) { _unpause(); }
+
+    // ==================== Transfer Hooks ====================
+
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override
+        whenNotPaused
+        returns (address)
+    {
+        address from = super._update(to, tokenId, auth);
+
+        // Skip compliance on mint (from=0) and burn (to=0)
+        if (from != address(0) && to != address(0)) {
+            require(whitelisted[from], "Sender not whitelisted");
+            require(whitelisted[to], "Recipient not whitelisted");
+            require(
+                tokenStates[tokenId] == TokenState.ACTIVE,
+                "Token not in ACTIVE state"
+            );
+        }
+
+        return from;
+    }
+
+    // ==================== Overrides ====================
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable, ERC2981Upgradeable, AccessControlUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
+    function _authorizeUpgrade(address)
+        internal
+        override
+        onlyRole(UPGRADER_ROLE)
+    {}
+}
+```
+
+---
+
 ## MODULE 2: UPGRADEABLE PROXY SETUP (HARDHAT + OZ UPGRADES)
 
 ### Installation

@@ -19,9 +19,9 @@ def _out(data: Any) -> None:
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def _load_index() -> Dict[str, Any]:
+def _load_index(command: str = "unknown") -> Dict[str, Any]:
     if not INDEX_PATH.exists():
-        _out({"status": "error",
+        _out({"status": "error", "command": command,
               "error": "Index not found. Run: python3 -m engine build-index"})
         sys.exit(1)
     with open(INDEX_PATH, "r", encoding="utf-8") as f:
@@ -60,7 +60,7 @@ def cmd_search(args: argparse.Namespace) -> None:
     from .searcher import Searcher
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("search")
     searcher = Searcher(index)
     results = searcher.search(args.query, args.type)
 
@@ -78,7 +78,7 @@ def cmd_get_contract(args: argparse.Namespace) -> None:
     from .extractor import Extractor
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("get-contract")
     extractor = Extractor(index, MODULES_DIR)
     result = extractor.get_contract(args.name)
 
@@ -105,7 +105,7 @@ def cmd_get_section(args: argparse.Namespace) -> None:
     from .extractor import Extractor
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("get-section")
     extractor = Extractor(index, MODULES_DIR)
     result = extractor.get_section(args.id, outline_only=args.outline)
 
@@ -131,7 +131,7 @@ def cmd_list_modules(args: argparse.Namespace) -> None:
     from .searcher import Searcher
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("list-modules")
     searcher = Searcher(index)
     result = searcher.list_modules()
 
@@ -147,7 +147,7 @@ def cmd_list_contracts(args: argparse.Namespace) -> None:
     from .searcher import Searcher
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("list-contracts")
     searcher = Searcher(index)
     result = searcher.list_contracts()
 
@@ -163,7 +163,7 @@ def cmd_list_standards(args: argparse.Namespace) -> None:
     from .searcher import Searcher
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("list-standards")
     searcher = Searcher(index)
     result = searcher.list_standards()
 
@@ -179,7 +179,7 @@ def cmd_find_standard(args: argparse.Namespace) -> None:
     from .searcher import Searcher
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("find-standard")
     searcher = Searcher(index)
     result = searcher.find_by_standard(args.standard)
 
@@ -196,7 +196,7 @@ def cmd_outline(args: argparse.Namespace) -> None:
     from .extractor import Extractor
     from .tracker import TokenTracker
 
-    index = _load_index()
+    index = _load_index("outline")
     extractor = Extractor(index, MODULES_DIR)
     result = extractor.get_module_outline(args.module)
 
@@ -226,7 +226,7 @@ def cmd_batch_generate(args: argparse.Namespace) -> None:
     from .tracker import TokenTracker
     from .batch import BatchProcessor
 
-    index = _load_index()
+    index = _load_index("batch-generate")
     extractor = Extractor(index, MODULES_DIR)
     tracker = TokenTracker(LOG_PATH)
     processor = BatchProcessor(extractor, tracker, model=args.model)
@@ -252,7 +252,7 @@ def cmd_batch_analyze(args: argparse.Namespace) -> None:
     from .tracker import TokenTracker
     from .batch import BatchProcessor
 
-    index = _load_index()
+    index = _load_index("batch-analyze")
     extractor = Extractor(index, MODULES_DIR)
     tracker = TokenTracker(LOG_PATH)
     processor = BatchProcessor(extractor, tracker, model=args.model)
