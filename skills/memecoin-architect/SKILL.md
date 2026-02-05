@@ -221,7 +221,7 @@ For full repo generation with all files (Anchor programs, TypeScript scripts, CI
 **Locked Defaults:**
 - Token Supply: 1,000,000,000
 - Decimals: 9
-- LP Token Amount: 70,000,000 (7%)
+- LP Token Amount: 700,000,000 (70%)
 - LP USDC Amount: 100,000
 - Distribution Wallets: 10
 

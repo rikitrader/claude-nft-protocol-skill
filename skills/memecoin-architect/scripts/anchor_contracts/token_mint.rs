@@ -3,6 +3,7 @@
 // =============================================================================
 // SECURITY: No mint authority retained after initialization
 // CONSTRAINT: Total supply is immutable post-deploy
+// COMPAT: Uses token_interface — works with both SPL Token and Token-2022
 // =============================================================================
 
 use anchor_lang::prelude::*;
@@ -128,13 +129,14 @@ pub struct Initialize<'info> {
     pub mint_state: Account<'info, MintState>,
 
     #[account(mut)]
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
+    /// Accepts both SPL Token and Token-2022
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 #[derive(Accounts)]
@@ -149,14 +151,14 @@ pub struct MintAndRevoke<'info> {
     pub mint_state: Account<'info, MintState>,
 
     #[account(mut)]
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = treasury_token_account.mint == mint.key() @ MemeError::MintMismatch,
         constraint = treasury_token_account.owner == treasury_owner.key() @ MemeError::OwnerMismatch,
     )]
-    pub treasury_token_account: Account<'info, TokenAccount>,
+    pub treasury_token_account: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: Treasury PDA or known wallet that owns the token account
     pub treasury_owner: UncheckedAccount<'info>,
@@ -164,7 +166,8 @@ pub struct MintAndRevoke<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    pub token_program: Program<'info, Token>,
+    /// Accepts both SPL Token and Token-2022
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 // =============================================================================

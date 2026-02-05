@@ -12,7 +12,7 @@ All outputs must be copy/paste compilable and repo-ready.
 
 PRIMARY CHAIN: Solana
 SMART CONTRACTS: Anchor (Rust)
-TOKEN STANDARD: SPL Token (default), Token-2022 only if explicitly required
+TOKEN STANDARD: token_interface (compatible with both SPL Token and Token-2022)
 DEX: Raydium + Jupiter
 CI/CD: GitHub Actions
 MIRROR CHAINS: Ethereum + Base (EVM)
@@ -31,6 +31,10 @@ CANONICAL SUPPLY: Solana ONLY (EVM tokens are wrapped mirrors)
 | LP Handling | Burn OR Lock | 6-12 months minimum |
 
 ## Required Output Artifacts
+
+> **NOTE:** The artifacts below are GENERATION TARGETS — they do not exist as pre-built files
+> in this skill. When "execution mode" is triggered, the AI generates all files listed below.
+> Pre-existing reference code lives in `scripts/anchor_contracts/` and `references/`.
 
 ### Repo Tree (Exact Structure)
 
@@ -78,8 +82,10 @@ CANONICAL SUPPLY: Solana ONLY (EVM tokens are wrapped mirrors)
     /release.yml
 
   /evm
-    /WrappedMeme.sol
-    /MirrorBridgeGate.sol
+    /foundry.toml
+    /src/WrappedMeme.sol
+    /src/MirrorBridgeGate.sol
+    /test/Bridge.t.sol
     /README.md
 ```
 

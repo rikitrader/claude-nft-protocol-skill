@@ -57,10 +57,10 @@ Operating a bridge or exchange may require:
 |--------------|------------|-------|
 | United States | High | SEC enforcement active |
 | China | Prohibited | Crypto banned |
-| India | Uncertain | Regulatory flux |
-| EU | Medium | MiCA regulations |
-| Singapore | Medium | MAS guidelines |
-| UAE | Lower | Crypto-friendly |
+| India | High | 30% crypto tax + 1% TDS on transfers |
+| EU | High | MiCA fully in force since Dec 2024; licensing required |
+| Singapore | Medium | MAS licensing framework |
+| UAE | Medium-Low | VARA licensing required in Dubai; relatively crypto-friendly |
 
 ### Recommended Practices
 
@@ -205,8 +205,10 @@ NO GUARANTEE OF STABILITY IS PROVIDED.
 | US | SEC | Securities |
 | US | CFTC | Commodities |
 | US | FinCEN | Money transmission |
-| EU | ESMA | Markets |
-| Singapore | MAS | Payments |
+| EU | ESMA | MiCA enforcement, markets |
+| Singapore | MAS | Payments, licensing |
+| UAE | VARA | Virtual assets (Dubai) |
+| India | SEBI / RBI | Securities / banking oversight |
 
 ### Industry Organizations
 
