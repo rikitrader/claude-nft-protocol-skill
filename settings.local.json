@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sudo find:*)",
+      "Bash(git init:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "cloudflare-docs",
+    "cloudflare-bindings",
+    "cloudflare-builds",
+    "cloudflare-observability",
+    "cloudflare-browser",
+    "cloudflare-containers",
+    "cloudflare-radar",
+    "cloudflare-logpush",
+    "cloudflare-ai-gateway",
+    "cloudflare-autorag",
+    "cloudflare-audit-logs",
+    "cloudflare-dns-analytics",
+    "cloudflare-dex",
+    "cloudflare-casb",
+    "cloudflare-graphql",
+    "n8n"
+  ]
+}
