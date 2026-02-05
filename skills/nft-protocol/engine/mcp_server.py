@@ -205,7 +205,11 @@ class NFTProtocolMCPServer:
                 from .indexer import build_index
                 idx = build_index(MODULES_DIR)
                 idx.save(INDEX_PATH)
-                self.index = None  # Force reload
+                # Reset all state so _ensure_loaded() rebuilds from fresh index
+                self.index = None
+                self.extractor = None
+                self.searcher = None
+                self.tracker = None
                 self._ensure_loaded()
                 result = {"status": "ok", "stats": self.index.get("stats", {})}
             elif tool_name == "nft_check_index":

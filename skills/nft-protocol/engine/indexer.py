@@ -35,7 +35,7 @@ RE_IMPORT = re.compile(r'import\s+.*?["\'](.+?)["\']')
 RE_FILE_PATH = re.compile(r"^File:\s*`(.+?)`", re.IGNORECASE)
 
 
-def _slugify(text: str) -> str:  # noqa: used by _find_sections
+def _slugify(text: str) -> str:
     """Convert heading text to a URL-safe slug."""
     s = text.lower().strip()
     s = re.sub(r"[^a-z0-9\s-]", "", s)

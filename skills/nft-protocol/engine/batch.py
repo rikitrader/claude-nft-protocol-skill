@@ -117,10 +117,16 @@ class BatchProcessor:
 
             # Optionally save to file
             if output_dir:
-                # Sanitize filename
+                # Sanitize filename — strip everything except alnum, dash, underscore
                 safe_name = "".join(c for c in base_name if c.isalnum() or c in "-_")
                 output_dir.mkdir(parents=True, exist_ok=True)
-                out_file = output_dir / f"{safe_name}_modified.sol"
+                out_file = (output_dir / f"{safe_name}_modified.sol").resolve()
+                # Verify output stays inside output_dir
+                try:
+                    out_file.relative_to(output_dir.resolve())
+                except ValueError:
+                    return {"name": base_name, "status": "error",
+                            "error": f"Output path escapes output_dir: {out_file}"}
                 out_file.write_text(output_text, encoding="utf-8")
                 result["output_file"] = str(out_file)
 
@@ -147,8 +153,8 @@ class BatchProcessor:
         if module_file not in modules:
             return {"status": "error", "error": f"Module '{module_file}' not found"}
 
-        # Read full module content
-        path = self.extractor.modules_dir / module_file
+        # Read full module content (use _safe_path to prevent path traversal)
+        path = self.extractor._safe_path(module_file)
         content = path.read_text(encoding="utf-8")
 
         system_msg = (

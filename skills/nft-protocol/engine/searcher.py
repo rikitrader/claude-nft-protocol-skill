@@ -16,6 +16,10 @@ class Searcher:
         q = query.lower().strip()
         results: Dict[str, Any] = {"query": query, "contracts": [], "sections": [], "standards": []}
 
+        if not q:
+            results["total_results"] = 0
+            return results
+
         if search_type in ("all", "contract"):
             results["contracts"] = self._search_contracts(q)
 

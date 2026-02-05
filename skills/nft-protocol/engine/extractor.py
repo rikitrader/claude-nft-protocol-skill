@@ -17,11 +17,14 @@ class Extractor:
         """Validate module_file to prevent path traversal attacks."""
         # Strip any directory components — only bare filenames allowed
         safe_name = Path(module_file).name
-        path = (self.modules_dir / safe_name).resolve()
-        # Verify the resolved path is inside modules_dir
-        if not str(path).startswith(str(self.modules_dir.resolve())):
+        resolved = (self.modules_dir / safe_name).resolve()
+        modules_resolved = self.modules_dir.resolve()
+        # Verify the resolved path is inside modules_dir (symlink-safe)
+        try:
+            resolved.relative_to(modules_resolved)
+        except ValueError:
             raise ValueError(f"Path traversal blocked: {module_file}")
-        return path
+        return resolved
 
     def _read_range(self, module_file: str, byte_offset: int, byte_length: int) -> str:
         """Read a byte range from a module file with bounds validation."""

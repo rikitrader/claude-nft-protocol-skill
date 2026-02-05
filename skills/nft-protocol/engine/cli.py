@@ -258,9 +258,14 @@ def cmd_batch_generate(args: argparse.Namespace) -> None:
             _out({"status": "error", "command": "batch-generate",
                   "error": f"specs[{i}] must have 'base' and 'prompt' keys"})
             sys.exit(1)
-    output_dir = Path(args.output_dir) if args.output_dir else None
-    results = processor.generate_contracts(specs, max_workers=args.max_workers,
-                                           output_dir=output_dir)
+    output_dir = Path(args.output_dir).resolve() if args.output_dir else None
+    try:
+        results = processor.generate_contracts(specs, max_workers=args.max_workers,
+                                               output_dir=output_dir)
+    except Exception as e:
+        _out({"status": "error", "command": "batch-generate",
+              "error": f"Generation failed: {e}"})
+        sys.exit(1)
     _out({"status": "ok", "command": "batch-generate", "result": results})
 
 
