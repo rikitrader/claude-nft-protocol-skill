@@ -15,11 +15,13 @@ class Extractor:
 
     def _safe_path(self, module_file: str) -> Path:
         """Validate module_file to prevent path traversal attacks."""
-        # Strip any directory components — only bare filenames allowed
+        # Only bare filenames allowed — reject any directory components
         safe_name = Path(module_file).name
+        if safe_name != module_file:
+            raise ValueError(f"Path traversal blocked: {module_file}")
         resolved = (self.modules_dir / safe_name).resolve()
         modules_resolved = self.modules_dir.resolve()
-        # Verify the resolved path is inside modules_dir (symlink-safe)
+        # Belt-and-suspenders: verify resolved path is inside modules_dir
         try:
             resolved.relative_to(modules_resolved)
         except ValueError:
