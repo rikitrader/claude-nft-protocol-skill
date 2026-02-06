@@ -19,7 +19,30 @@ MIRROR CHAINS: Ethereum + Base (EVM)
 CANONICAL SUPPLY: Solana ONLY (EVM tokens are wrapped mirrors)
 ```
 
+## Phase 0 Dependency
+
+Execution mode works best with a `MEMECOIN_BRIEF.md` from Phase 0.
+
+**If brief exists:** Use brief values (Section 7: "Design Parameters") to override
+the locked defaults below. The brief provides token name, ticker, chain selection,
+and any parameter overrides derived from market research.
+
+**If brief does NOT exist:** Prompt the user:
+> "No MEMECOIN_BRIEF.md found. Options:
+> 1. Run Phase 0 first (recommended) — say 'phase 0' or 'research'
+> 2. Proceed with locked defaults (skip research)
+> 3. Provide a brief manually"
+
+When proceeding without a brief, all locked defaults apply and a WARNING
+is included in the generated README.md:
+> "NOTE: This repo was generated without Phase 0 research. Market fit,
+> naming, and chain selection were not validated."
+
 ## Research-Backed Defaults (Locked)
+
+> These defaults are used when no `MEMECOIN_BRIEF.md` is provided.
+> When a brief exists, values from Section 7 ("Design Parameters")
+> of the brief take precedence.
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
@@ -40,6 +63,7 @@ CANONICAL SUPPLY: Solana ONLY (EVM tokens are wrapped mirrors)
 
 ```
 /repo
+  /MEMECOIN_BRIEF.md          # Phase 0 output (if available)
   /Anchor.toml
   /Cargo.toml
   /package.json
@@ -87,6 +111,72 @@ CANONICAL SUPPLY: Solana ONLY (EVM tokens are wrapped mirrors)
     /src/MirrorBridgeGate.sol
     /test/Bridge.t.sol
     /README.md
+
+  /frontend                          # Module 8: Aura UI Engine
+    /package.json
+    /tsconfig.json
+    /next.config.ts
+    /tailwind.config.ts
+    /.env.example
+    /src
+      /app
+        /layout.tsx                  # Root layout + wallet providers
+        /page.tsx                    # Dashboard home (Bento grid)
+        /globals.css                 # Design tokens + glassmorphic utils
+      /components
+        /dashboard
+          /BurnMeter.tsx             # Animated burn ring
+          /TreasuryCard.tsx          # Balance + sparkline
+          /PriceChart.tsx            # Candlestick via Recharts
+          /HolderMap.tsx             # Top holders donut
+          /LPStatus.tsx              # LP lock countdown
+          /GovernancePanel.tsx       # Proposals + votes
+          /PauseIndicator.tsx        # Emergency beacon
+          /SupplyTicker.tsx          # Live supply counter
+        /wallet
+          /WalletProvider.tsx        # Solana wallet adapter wrapper
+          /ConnectButton.tsx         # Styled connect button
+      /hooks
+        /useTokenMetrics.ts          # Burn/supply/treasury data
+        /usePriceData.ts             # Jupiter price feed
+      /lib
+        /anchor-client.ts            # IDL + program connection
+        /constants.ts                # Program IDs, RPC endpoints
+
+  /scripts
+    /security                        # Module 10: Vigilante Suite
+      /jito_lp_add.ts               # JITO-bundled LP addition
+      /lock_metadata.ts             # Metadata immutability script
+      /verify_authorities.ts        # Post-deploy authority checker
+      /anti_sniper_config.ts        # Anti-bot tier configuration
+
+  /marketing                         # Module 9: Narrative Forge
+    /threads
+      /launch_thread.md              # 5-part X/Twitter alpha thread
+      /milestone_thread.md           # Burn/holder milestone template
+    /announcements
+      /telegram_launch.md            # Telegram announcement
+      /discord_launch.md             # Discord embed format
+    /visuals
+      /meme_prompts.md               # 10 DALL-E/Midjourney prompts
+      /brand_guide.md                # Colors, fonts, logo rules
+    /whitepaper
+      /whitepaper_template.md        # Structured whitepaper
+    /media_kit
+      /one_pager.md                  # Single-page project summary
+
+  /growth                            # Module 11: Propulsion
+    /dex_trackers
+      /dexscreener_setup.md          # Profile claim guide
+      /dextools_setup.md             # DEXT Force listing guide
+    /listings
+      /coingecko_application.md      # CG listing checklist
+      /cmc_application.md            # CMC listing checklist
+      /jupiter_strict.md             # Jupiter strict list app
+    /outreach
+      /kol_research_brief.md         # KOL identification template
+    /community
+      /growth_playbook.md            # 30-day growth plan
 ```
 
 ## Program Requirements

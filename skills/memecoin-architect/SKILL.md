@@ -1,6 +1,6 @@
 ---
 name: memecoin-architect
-description: Production-grade memecoin system architect for Solana, Base, and Ethereum. This skill should be used when designing tokenomics, writing Anchor smart contracts, creating Pump-style launch mechanics, building liquidity strategies, implementing burn mechanics, treasury systems, governance, dashboards, CI/CD pipelines, or cross-chain mirror deployments. Triggers on memecoin design, token launch, Solana token, Anchor contracts, DEX liquidity, anti-rug mechanics, or viral token architecture.
+description: Production-grade memecoin system architect for Solana, Base, and Ethereum. This skill should be used when designing tokenomics, writing Anchor smart contracts, creating Pump-style launch mechanics, building liquidity strategies, implementing burn mechanics, treasury systems, governance, dashboards, CI/CD pipelines, cross-chain mirror deployments, frontend dashboards, marketing content, MEV/sniper protection, or post-launch growth. Triggers on memecoin design, token launch, Solana token, Anchor contracts, DEX liquidity, anti-rug mechanics, viral token architecture, market research, brainstorm, competitor analysis, chain selection, dashboard UI, narrative forge, content strategy, anti-bot, fair launch, DEXScreener, CoinGecko listing, or KOL outreach.
 ---
 
 # Memecoin Architect
@@ -8,6 +8,42 @@ description: Production-grade memecoin system architect for Solana, Base, and Et
 Production-grade memecoin system design for Solana (primary), Base, and Ethereum.
 
 This is NOT a "mint & pray" system. This is **follow-the-money architecture**.
+
+## Workflow
+
+```
+Phase 0: Research & Brainstorm    ← ENTRY POINT (start here)
+    |
+    v  produces MEMECOIN_BRIEF.md
+Phase 1: Design (Modules 1-7)    ← Tokenomics, burns, treasury, governance
+    |
+    v
+Phase 2: Execute                  ← Full repo generation ("execution mode")
+    |
+    v
+Phase 3: Pre-Deploy -> Deploy -> Post-Deploy
+```
+
+### Phase 0: Research & Brainstorm
+
+**THE FIRST STEP.** Before designing tokenomics or writing contracts, research the market.
+
+Reference `references/phase0_research_brainstorm.md` for the full research engine.
+
+**Trigger:** "research", "brainstorm", "phase 0", "market analysis", or starting any new memecoin project.
+
+**Produces:** `MEMECOIN_BRIEF.md` — a structured research document that feeds all downstream phases.
+
+**Modules:**
+- R1: Market Landscape Analysis (web search for real-time data)
+- R2: Competitor Deep-Dive (3-5 competitors analyzed)
+- R3: Chain Selection (weighted scoring matrix with elimination rules)
+- R4: Naming & Branding Brainstorm (5-10 candidates scored)
+- R5: Utility & Narrative Design (launch hook, retention, revenue model)
+
+**Go/No-Go Gate:** Phase 0 produces a GO / CAUTION / NO-GO recommendation before proceeding to design. A NO-GO halts the project with clear reasoning.
+
+**Skip:** Phase 0 can be skipped only if the user provides a pre-existing brief or explicitly says "skip research" / "use defaults".
 
 ## Core Principles
 
@@ -18,6 +54,9 @@ This is NOT a "mint & pray" system. This is **follow-the-money architecture**.
 - On-chain metrics visible
 
 ## Chain Selection (2026 Reality)
+
+> **Note:** When a `MEMECOIN_BRIEF.md` exists from Phase 0, the chain selection
+> from R3 (weighted scoring) overrides this default matrix.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -52,6 +91,10 @@ This is NOT a "mint & pray" system. This is **follow-the-money architecture**.
 │ Dashboard     │ Real-time metrics         │
 │ Stability     │ Buyback + Burn (Soft)     │
 │ Emergency     │ Pause / Lock / Alert      │
+│ Aura UI       │ Glassmorphic Dashboard    │
+│ Narrative     │ Content + Media Kit       │
+│ Vigilante     │ MEV / Sniper Protection   │
+│ Propulsion    │ Post-Launch Growth        │
 └──────────────────────────────────────────┘
 ```
 
@@ -182,6 +225,63 @@ Meme token with stabilization mechanics WITHOUT becoming a regulated stablecoin.
 - ❌ No yield promises
 - ✅ Disclosures baked into metadata
 
+## Module 8: "Aura" Luxury UI Engine
+
+Next.js glassmorphic dashboard for real-time on-chain visualization.
+
+Reference `references/aura_ui_engine.md` for full specs.
+
+**Components:** BurnMeter, TreasuryCard, PriceChart, HolderMap, LPStatus, GovernancePanel, PauseIndicator, SupplyTicker
+
+**Stack:** Next.js 15 + Tailwind CSS 4 + Recharts + Framer Motion + @solana/wallet-adapter
+
+**Trigger:** Included automatically in execution mode repo generation.
+
+## Module 9: "Narrative Forge" Content Engine
+
+AI-powered marketing asset generator.
+
+Reference `references/narrative_forge.md` for templates and prompts.
+
+**Outputs:**
+- 5-part X/Twitter launch thread (AIDA framework)
+- 10 DALL-E/Midjourney meme prompts
+- Telegram/Discord announcement templates
+- Whitepaper PDF structure
+- Brand guide + media kit
+
+**Trigger:** "generate marketing", "narrative forge", or after Phase 0 brief is complete.
+
+## Module 10: "Vigilante" Security Suite
+
+MEV and sniper protection for fair launches.
+
+Reference `references/vigilante_security.md` for implementation details.
+
+**Protections:**
+- JITO-bundled LP addition (private mempool)
+- Anti-bot time-weighted swap caps (first 30 min)
+- Metadata immutability scripts (one-click lock)
+- Authority verification (post-deploy checker)
+- Sandwich attack mitigation guidance
+
+**Trigger:** Included in execution mode. Security scripts auto-generated.
+
+## Module 11: "Propulsion" Post-Launch Growth
+
+Automated growth pipeline for token visibility and community scaling.
+
+Reference `references/propulsion_post_launch.md` for full playbook.
+
+**Pipeline:**
+- DEXScreener / DEXTools profile setup
+- CoinGecko + CoinMarketCap listing applications
+- Jupiter strict list application
+- KOL research and outreach briefs
+- 30-day community growth playbook
+
+**Trigger:** "post-launch", "growth", "propulsion", "get listed", or after Phase 3 deploy.
+
 ## Resources
 
 ### Anchor Contracts
@@ -208,11 +308,16 @@ Reference `scripts/deploy/` for CI/CD:
 
 ### References
 
+- `references/phase0_research_brainstorm.md` - Phase 0 research engine (market, chain scoring, naming, utility)
 - `references/cross_chain_mirror.md` - ETH/Base bridging strategy
 - `references/tokenomics_template.md` - Full tokenomics design template
 - `references/security_checklist.md` - Exploit surface analysis
 - `references/regulatory_notes.md` - Compliance considerations
 - `references/execution_master_prompt.md` - Full repo generation mode
+- `references/aura_ui_engine.md` - Glassmorphic dashboard specs (Module 8)
+- `references/narrative_forge.md` - Content strategy engine (Module 9)
+- `references/vigilante_security.md` - MEV/sniper protection suite (Module 10)
+- `references/propulsion_post_launch.md` - Post-launch growth engine (Module 11)
 
 ## Execution Mode
 
@@ -225,12 +330,16 @@ For full repo generation with all files (Anchor programs, TypeScript scripts, CI
 - LP USDC Amount: 100,000
 - Distribution Wallets: 10
 
-**Trigger:** "generate full repo", "execution mode", or "DO IT ALL"
+**Phase 0 Trigger:** "research", "brainstorm", "phase 0", or "market analysis"
+**Execution Trigger:** "generate full repo", "execution mode", or "DO IT ALL"
+
+When starting a new project, Phase 0 runs first. Skip only if the user provides a pre-existing `MEMECOIN_BRIEF.md` or says "skip research" / "use defaults".
 
 ## Deliverables Checklist
 
 When designing a memecoin system, produce:
 
+0. ☐ MEMECOIN_BRIEF.md (Phase 0 research output)
 1. ☐ Tokenomics table
 2. ☐ Mint + burn flow diagram (ASCII)
 3. ☐ Treasury architecture
@@ -240,6 +349,10 @@ When designing a memecoin system, produce:
 7. ☐ Smart contract constraints
 8. ☐ Deployment checklist
 9. ☐ Post-launch growth playbook
+10. ☐ Frontend dashboard (Aura UI)
+11. ☐ Marketing assets (Narrative Forge)
+12. ☐ Security scripts (Vigilante Suite)
+13. ☐ Listing applications (Propulsion)
 
 ## Global Constraints (Enforce Always)
 
