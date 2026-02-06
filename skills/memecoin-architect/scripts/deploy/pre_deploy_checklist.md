@@ -64,6 +64,43 @@ Complete ALL items before mainnet deployment. Each item is MANDATORY.
 - [ ] Pool parameters verified
 - [ ] Initial liquidity amount: _____________
 
+## Governance Program
+
+### Governance Deployment
+- [ ] Governance multisig program deployed
+- [ ] Signer set matches intended guardians
+- [ ] Threshold configured (recommended: 3/5 or higher)
+- [ ] Spend cap per transaction set
+- [ ] Proposal expiry set (24h recommended)
+
+### Program IDs: Governance
+| Program | Devnet ID | Mainnet ID |
+|---------|-----------|------------|
+| Governance Multisig | | |
+
+## Metadata Immutability
+
+### Metaplex Metadata
+- [ ] Metadata `isMutable` set to `false`
+- [ ] Update authority revoked (set to None/system program)
+- [ ] Verified via `lock_metadata.ts` script
+- [ ] Name, symbol, URI confirmed correct before locking
+
+### Token-2022 Extensions (if applicable)
+- [ ] Metadata extension locked
+- [ ] No transfer-fee authority (or documented reason)
+
+## Vigilante Security Checks
+
+### Authority Verification
+- [ ] `verify_authorities.ts` run — all 6 checks PASS (exit code 0)
+- [ ] Screenshot/log of verification saved
+
+### LP Protection
+- [ ] JITO bundle used for LP addition (private mempool)
+- [ ] OR standard TX with anti-sniper awareness documented
+- [ ] LP tokens locked/burned — TX ID: _____________
+
 ## Code Verification
 
 ### Audit Status

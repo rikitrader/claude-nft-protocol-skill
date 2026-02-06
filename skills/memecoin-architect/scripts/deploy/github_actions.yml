@@ -291,7 +291,7 @@ jobs:
           # Check 4: Multi-sig treasury
           echo ""
           echo "☐ Treasury multi-sig..."
-          if grep -r "threshold" programs/treasury_vault/; then
+          if grep -r "threshold" programs/governance_multisig/ programs/treasury_vault/; then
             echo "  ✅ Multi-sig threshold found"
           else
             echo "  ❌ FAIL: No multi-sig protection found"

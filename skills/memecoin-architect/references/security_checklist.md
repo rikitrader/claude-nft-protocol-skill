@@ -202,6 +202,45 @@ token::set_authority(
 - Multiple oracle sources
 - Circuit breakers on large swings
 
+## MEV & Sniper Protection (Vigilante Suite)
+
+### Launch Protection
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| JITO-bundled LP addition | ☐ | LP added via private mempool |
+| Anti-bot time caps (first 30 min) | ☐ | Swap caps enforced in first blocks |
+| Metadata locked immutable | ☐ | `lock_metadata.ts` run post-deploy |
+| All authorities verified | ☐ | `verify_authorities.ts` passes (exit 0) |
+
+### MEV Mitigation
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| Jito tip configured | ☐ | 0.01+ SOL recommended |
+| Fallback TX warning reviewed | ☐ | Standard TX visible to snipers |
+| Slippage protection in UI | ☐ | Max 1-3% slippage enforced |
+| Jupiter priority fees enabled | ☐ | Dynamic fee estimation |
+
+### Post-Deploy Authority Verification
+
+Run `verify_authorities.ts` and confirm ALL 6 checks pass:
+
+| Check | Expected | Status |
+|-------|----------|--------|
+| 1. Mint Authority | None | ☐ |
+| 2. Freeze Authority | None | ☐ |
+| 3. Metadata Update Authority | None | ☐ |
+| 4. Metadata isMutable | false | ☐ |
+| 5. Token Account Ownership | PDA-owned | ☐ |
+| 6. LP Lock Status | Locked/Burned | ☐ |
+
+```bash
+# Run verification
+TOKEN_MINT=<ADDRESS> ts-node scripts/security/verify_authorities.ts
+# Must exit with code 0
+```
+
 ## Audit Preparation
 
 ### Documentation Required

@@ -1,0 +1,184 @@
+/* =============================================================================
+   AURA DESIGN SYSTEM — GLOBAL STYLES
+   =============================================================================
+   Glassmorphic dark theme with Tailwind CSS 4 custom properties.
+   Colors, typography, and utility classes for the Aura dashboard.
+   ============================================================================= */
+
+@import "tailwindcss";
+
+/* =============================================================================
+   DESIGN TOKENS (CSS Custom Properties)
+   ============================================================================= */
+
+:root {
+    /* Primary palette */
+    --aura-cyan:            #00F0FF;
+    --aura-purple:          #9B59FF;
+    --aura-orange:          #FF6B35;
+
+    /* Background gradient */
+    --aura-bg-from:         #0A0A0F;
+    --aura-bg-to:           #12121A;
+
+    /* Surface / Glass */
+    --aura-surface:         rgba(255, 255, 255, 0.05);
+    --aura-surface-hover:   rgba(255, 255, 255, 0.08);
+    --aura-border:          rgba(255, 255, 255, 0.08);
+    --aura-border-hover:    rgba(255, 255, 255, 0.15);
+
+    /* Text */
+    --aura-text-primary:    #FFFFFF;
+    --aura-text-secondary:  rgba(255, 255, 255, 0.6);
+    --aura-text-muted:      rgba(255, 255, 255, 0.3);
+
+    /* Radii */
+    --radius-card:          16px;
+    --radius-button:        12px;
+
+    /* Shadows */
+    --aura-glow-cyan:       0 0 20px rgba(0, 240, 255, 0.15);
+    --aura-glow-purple:     0 0 20px rgba(155, 89, 255, 0.15);
+    --aura-glow-orange:     0 0 20px rgba(255, 107, 53, 0.15);
+}
+
+/* =============================================================================
+   BASE STYLES
+   ============================================================================= */
+
+html {
+    color-scheme: dark;
+}
+
+body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    background: linear-gradient(135deg, var(--aura-bg-from), var(--aura-bg-to));
+    color: var(--aura-text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* =============================================================================
+   GLASSMORPHIC UTILITIES
+   ============================================================================= */
+
+.glass {
+    background: var(--aura-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--aura-border);
+    border-radius: var(--radius-card);
+}
+
+.glass-hover:hover {
+    background: var(--aura-surface-hover);
+    border-color: var(--aura-border-hover);
+}
+
+.glass-glow-cyan {
+    box-shadow: var(--aura-glow-cyan);
+}
+
+.glass-glow-purple {
+    box-shadow: var(--aura-glow-purple);
+}
+
+.glass-glow-orange {
+    box-shadow: var(--aura-glow-orange);
+}
+
+/* =============================================================================
+   BENTO GRID
+   ============================================================================= */
+
+.bento-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+@media (min-width: 1280px) {
+    .bento-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.bento-span-2 {
+    grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+    .bento-span-2 {
+        grid-column: span 1;
+    }
+}
+
+/* =============================================================================
+   SCROLLBAR (Dark theme)
+   ============================================================================= */
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* =============================================================================
+   SIDEBAR & ADMIN UTILITIES
+   ============================================================================= */
+
+.sidebar-nav a.active {
+    background: var(--aura-surface-hover);
+    color: var(--aura-text-primary);
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: var(--aura-surface);
+    border: 1px solid var(--aura-border);
+    border-radius: var(--radius-card);
+    overflow-x: auto;
+}
+
+/* =============================================================================
+   FORM UTILITIES
+   ============================================================================= */
+
+input[type="text"],
+input[type="number"] {
+    transition: border-color 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+    border-color: rgba(0, 240, 255, 0.4);
+}
+
+/* =============================================================================
+   LANDING PAGE UTILITIES
+   ============================================================================= */
+
+.hero-gradient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+}

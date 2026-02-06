@@ -3,10 +3,11 @@
 // =============================================================================
 // PRINCIPLE: Burns are MECHANICAL, not emotional
 // CONSTRAINT: No manual burn buttons - all burns rule-based
+// COMPAT: Uses token_interface — works with both SPL Token and Token-2022
 // =============================================================================
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
+use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
 
 declare_id!("REPLACE_WITH_YOUR_PROGRAM_ID");
 
@@ -76,7 +77,7 @@ pub mod burn_controller {
             let cpi_program = ctx.accounts.token_program.to_account_info();
             let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-            token::burn(cpi_ctx, burn_amount)?;
+            token_interface::burn(cpi_ctx, burn_amount)?;
 
             // Update state
             state.total_burned = state.total_burned
@@ -133,7 +134,7 @@ pub mod burn_controller {
             let cpi_program = ctx.accounts.token_program.to_account_info();
             let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
 
-            token::burn(cpi_ctx, total_burn)?;
+            token_interface::burn(cpi_ctx, total_burn)?;
 
             // Update state
             state.milestones_reached = expected_milestones;
@@ -174,7 +175,7 @@ pub mod burn_controller {
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        token::burn(cpi_ctx, amount)?;
+        token_interface::burn(cpi_ctx, amount)?;
 
         // Update state
         state.total_burned = state.total_burned
@@ -237,7 +238,7 @@ pub struct Initialize<'info> {
     )]
     pub burn_state: Account<'info, BurnState>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -256,13 +257,13 @@ pub struct ExecuteTradeBurn<'info> {
     pub burn_state: Account<'info, BurnState>,
 
     #[account(mut)]
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = token_account.mint == mint.key() @ BurnError::MintMismatch,
     )]
-    pub token_account: Account<'info, TokenAccount>,
+    pub token_account: InterfaceAccount<'info, TokenAccount>,
 
     /// Must be the authorized_caller stored in burn_state (DEX hook or integration)
     #[account(
@@ -270,7 +271,8 @@ pub struct ExecuteTradeBurn<'info> {
     )]
     pub token_authority: Signer<'info>,
 
-    pub token_program: Program<'info, Token>,
+    /// Accepts both SPL Token and Token-2022
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 #[derive(Accounts)]
@@ -284,14 +286,14 @@ pub struct CheckMilestoneBurn<'info> {
     pub burn_state: Account<'info, BurnState>,
 
     #[account(mut)]
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = burn_reserve.mint == mint.key() @ BurnError::MintMismatch,
         constraint = burn_reserve.owner == burn_authority.key() @ BurnError::ReserveOwnerMismatch,
     )]
-    pub burn_reserve: Account<'info, TokenAccount>,
+    pub burn_reserve: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: PDA authority for burns
     #[account(
@@ -300,7 +302,8 @@ pub struct CheckMilestoneBurn<'info> {
     )]
     pub burn_authority: UncheckedAccount<'info>,
 
-    pub token_program: Program<'info, Token>,
+    /// Accepts both SPL Token and Token-2022
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 #[derive(Accounts)]
@@ -315,13 +318,13 @@ pub struct TreasuryBuybackBurn<'info> {
     pub burn_state: Account<'info, BurnState>,
 
     #[account(mut)]
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         constraint = treasury_token_account.mint == mint.key() @ BurnError::MintMismatch,
     )]
-    pub treasury_token_account: Account<'info, TokenAccount>,
+    pub treasury_token_account: InterfaceAccount<'info, TokenAccount>,
 
     /// Must be the burn_state.authority (treasury signer)
     pub treasury_authority: Signer<'info>,
@@ -330,7 +333,8 @@ pub struct TreasuryBuybackBurn<'info> {
     #[account(constraint = authority.key() == burn_state.authority @ BurnError::Unauthorized)]
     pub authority: UncheckedAccount<'info>,
 
-    pub token_program: Program<'info, Token>,
+    /// Accepts both SPL Token and Token-2022
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 #[derive(Accounts)]

@@ -1,0 +1,4528 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-02-06T06:40:47.432459+00:00",
+  "source_hash": "28a068ca29e7856d4cea03e78a471e72e7aad1c596576299b3c5f22a7362cabe",
+  "sections": {
+    "reference/aurauiengine/module-8-aura-luxury-ui-engine": {
+      "id": "reference/aurauiengine/module-8-aura-luxury-ui-engine",
+      "title": "Module 8: \"Aura\" Luxury UI Engine",
+      "level": 1,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 36,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/purpose": {
+      "id": "reference/aurauiengine/purpose",
+      "title": "Purpose",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 2,
+      "end_line": 5,
+      "byte_offset": 37,
+      "byte_length": 236,
+      "summary": "Generate a production-ready Next.js dashboard that visualizes on-chain token metrics in real-time. The UI must instill trust, look premium, and integrate seamlessly with the Anchor programs produced b",
+      "category": "reference"
+    },
+    "reference/aurauiengine/design-system": {
+      "id": "reference/aurauiengine/design-system",
+      "title": "Design System",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 6,
+      "end_line": 7,
+      "byte_offset": 274,
+      "byte_length": 17,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/visual-language": {
+      "id": "reference/aurauiengine/visual-language",
+      "title": "Visual Language",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 8,
+      "end_line": 29,
+      "byte_offset": 292,
+      "byte_length": 1579,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/component-library": {
+      "id": "reference/aurauiengine/component-library",
+      "title": "Component Library",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 30,
+      "end_line": 42,
+      "byte_offset": 1872,
+      "byte_length": 761,
+      "summary": "| Component | Description | Data Source | |-----------|-------------|-------------| | `BurnMeter` | Animated ring showing total burned vs supply | burn_controller events | | `TreasuryCard` | Balance +",
+      "category": "reference"
+    },
+    "reference/aurauiengine/tech-stack": {
+      "id": "reference/aurauiengine/tech-stack",
+      "title": "Tech Stack",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 43,
+      "end_line": 60,
+      "byte_offset": 2634,
+      "byte_length": 1294,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/repo-tree-frontend-addition": {
+      "id": "reference/aurauiengine/repo-tree-frontend-addition",
+      "title": "Repo Tree (Frontend Addition)",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 61,
+      "end_line": 114,
+      "byte_offset": 3929,
+      "byte_length": 1688,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/key-components": {
+      "id": "reference/aurauiengine/key-components",
+      "title": "Key Components",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 115,
+      "end_line": 116,
+      "byte_offset": 5618,
+      "byte_length": 18,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/burnmeter": {
+      "id": "reference/aurauiengine/burnmeter",
+      "title": "BurnMeter",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 117,
+      "end_line": 141,
+      "byte_offset": 5637,
+      "byte_length": 934,
+      "summary": "Real-time animated ring showing burn progress.",
+      "category": "reference"
+    },
+    "reference/aurauiengine/treasurycard": {
+      "id": "reference/aurauiengine/treasurycard",
+      "title": "TreasuryCard",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 142,
+      "end_line": 163,
+      "byte_offset": 6572,
+      "byte_length": 747,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/pricechart": {
+      "id": "reference/aurauiengine/pricechart",
+      "title": "PriceChart",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 164,
+      "end_line": 186,
+      "byte_offset": 7320,
+      "byte_length": 1067,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/wallet-integration": {
+      "id": "reference/aurauiengine/wallet-integration",
+      "title": "Wallet Integration",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 187,
+      "end_line": 188,
+      "byte_offset": 8388,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/supported-wallets": {
+      "id": "reference/aurauiengine/supported-wallets",
+      "title": "Supported Wallets",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 189,
+      "end_line": 198,
+      "byte_offset": 8411,
+      "byte_length": 395,
+      "summary": "| Wallet | Adapter | Priority | |--------|---------|----------| | Phantom | `@solana/wallet-adapter-phantom` | Primary | | Solflare | `@solana/wallet-adapter-solflare` | Secondary | | Backpack | `@sol",
+      "category": "reference"
+    },
+    "reference/aurauiengine/walletprovider-pattern": {
+      "id": "reference/aurauiengine/walletprovider-pattern",
+      "title": "WalletProvider Pattern",
+      "level": 3,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 199,
+      "end_line": 207,
+      "byte_offset": 8807,
+      "byte_length": 269,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/data-fetching-strategy": {
+      "id": "reference/aurauiengine/data-fetching-strategy",
+      "title": "Data Fetching Strategy",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 208,
+      "end_line": 227,
+      "byte_offset": 9077,
+      "byte_length": 1803,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/responsive-bento-grid": {
+      "id": "reference/aurauiengine/responsive-bento-grid",
+      "title": "Responsive Bento Grid",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 228,
+      "end_line": 258,
+      "byte_offset": 10881,
+      "byte_length": 1180,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/environment-variables": {
+      "id": "reference/aurauiengine/environment-variables",
+      "title": "Environment Variables",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 259,
+      "end_line": 261,
+      "byte_offset": 12062,
+      "byte_length": 29,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/aurauiengine/envexample": {
+      "id": "reference/aurauiengine/envexample",
+      "title": ".env.example",
+      "level": 1,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 262,
+      "end_line": 269,
+      "byte_offset": 12092,
+      "byte_length": 227,
+      "summary": "NEXT_PUBLIC_RPC_ENDPOINT=https://api.mainnet-beta.solana.com NEXT_PUBLIC_TOKEN_MINT=<MINT_ADDRESS> NEXT_PUBLIC_PROGRAM_ID=<PROGRAM_ID> NEXT_PUBLIC_TREASURY_PDA=<TREASURY_PDA> NEXT_PUBLIC_NETWORK=mainn",
+      "category": "reference"
+    },
+    "reference/aurauiengine/integration-with-execution-mode": {
+      "id": "reference/aurauiengine/integration-with-execution-mode",
+      "title": "Integration with Execution Mode",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 270,
+      "end_line": 279,
+      "byte_offset": 12320,
+      "byte_length": 481,
+      "summary": "When \"execution mode\" generates the full repo, the `/frontend` directory is included with: 1. All component files with placeholder program IDs 2. `anchor-client.ts` auto-configured from generated IDL ",
+      "category": "reference"
+    },
+    "reference/aurauiengine/deployment-targets": {
+      "id": "reference/aurauiengine/deployment-targets",
+      "title": "Deployment Targets",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 280,
+      "end_line": 287,
+      "byte_offset": 12802,
+      "byte_length": 302,
+      "summary": "| Platform | Command | Notes | |----------|---------|-------| | Vercel | `vercel deploy` | Recommended, zero-config for Next.js | | Cloudflare Pages | `npx wrangler pages deploy .next` | Edge-first, g",
+      "category": "reference"
+    },
+    "reference/aurauiengine/security-considerations": {
+      "id": "reference/aurauiengine/security-considerations",
+      "title": "Security Considerations",
+      "level": 2,
+      "source_file": "references/aura_ui_engine.md",
+      "start_line": 288,
+      "end_line": 295,
+      "byte_offset": 13105,
+      "byte_length": 254,
+      "summary": "- No private keys in frontend code - All wallet signing via adapter (client-side only) - RPC endpoint should use rate-limited proxy in production - CSP headers configured in `next.config.ts` - No serv",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/cross-chain-mirror-strategy-ethbase": {
+      "id": "reference/crosschainmirror/cross-chain-mirror-strategy-ethbase",
+      "title": "Cross-Chain Mirror Strategy (ETH/Base)",
+      "level": 1,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 41,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/canonical-supply-model": {
+      "id": "reference/crosschainmirror/canonical-supply-model",
+      "title": "Canonical Supply Model",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 2,
+      "end_line": 32,
+      "byte_offset": 42,
+      "byte_length": 2531,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/core-rules": {
+      "id": "reference/crosschainmirror/core-rules",
+      "title": "Core Rules",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 33,
+      "end_line": 47,
+      "byte_offset": 2574,
+      "byte_length": 384,
+      "summary": "1. **No Independent Minting** - ETH/Base contracts CANNOT mint without Solana lock proof - Supply parity enforced at all times",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/bridge-flow": {
+      "id": "reference/crosschainmirror/bridge-flow",
+      "title": "Bridge Flow",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 48,
+      "end_line": 49,
+      "byte_offset": 2959,
+      "byte_length": 15,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/solana-ethbase-lock-mint": {
+      "id": "reference/crosschainmirror/solana-ethbase-lock-mint",
+      "title": "Solana → ETH/Base (Lock & Mint)",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 50,
+      "end_line": 59,
+      "byte_offset": 2975,
+      "byte_length": 257,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/ethbase-solana-burn-unlock": {
+      "id": "reference/crosschainmirror/ethbase-solana-burn-unlock",
+      "title": "ETH/Base → Solana (Burn & Unlock)",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 60,
+      "end_line": 70,
+      "byte_offset": 3233,
+      "byte_length": 276,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/evm-contract-requirements": {
+      "id": "reference/crosschainmirror/evm-contract-requirements",
+      "title": "EVM Contract Requirements",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 71,
+      "end_line": 72,
+      "byte_offset": 3510,
+      "byte_length": 29,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/wrappedmemesol-erc-20": {
+      "id": "reference/crosschainmirror/wrappedmemesol-erc-20",
+      "title": "WrappedMeme.sol (ERC-20)",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 73,
+      "end_line": 139,
+      "byte_offset": 3540,
+      "byte_length": 2204,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/mirrorbridgegatesol": {
+      "id": "reference/crosschainmirror/mirrorbridgegatesol",
+      "title": "MirrorBridgeGate.sol",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 140,
+      "end_line": 261,
+      "byte_offset": 5745,
+      "byte_length": 3930,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/supply-parity-enforcement": {
+      "id": "reference/crosschainmirror/supply-parity-enforcement",
+      "title": "Supply Parity Enforcement",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 262,
+      "end_line": 263,
+      "byte_offset": 9676,
+      "byte_length": 29,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/monitoring-requirements": {
+      "id": "reference/crosschainmirror/monitoring-requirements",
+      "title": "Monitoring Requirements",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 264,
+      "end_line": 272,
+      "byte_offset": 9706,
+      "byte_length": 329,
+      "summary": "| Metric | Check Frequency | Alert Threshold | |--------|-----------------|-----------------| | Solana locked balance | Every block | Mismatch > 0.1% | | EVM total supply | Every block | != Solana loc",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/parity-formula": {
+      "id": "reference/crosschainmirror/parity-formula",
+      "title": "Parity Formula",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 273,
+      "end_line": 281,
+      "byte_offset": 10036,
+      "byte_length": 182,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/security-considerations": {
+      "id": "reference/crosschainmirror/security-considerations",
+      "title": "Security Considerations",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 282,
+      "end_line": 283,
+      "byte_offset": 10219,
+      "byte_length": 27,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/bridge-attack-vectors": {
+      "id": "reference/crosschainmirror/bridge-attack-vectors",
+      "title": "Bridge Attack Vectors",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 284,
+      "end_line": 301,
+      "byte_offset": 10247,
+      "byte_length": 435,
+      "summary": "1. **Fake Lock Proofs** - Mitigation: Cryptographic verification of Solana transactions - Multiple oracle confirmation",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/operational-security": {
+      "id": "reference/crosschainmirror/operational-security",
+      "title": "Operational Security",
+      "level": 3,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 302,
+      "end_line": 313,
+      "byte_offset": 10683,
+      "byte_length": 361,
+      "summary": "- [ ] Bridge contracts audited - [ ] Verifier logic audited - [ ] Rate limits configured - [ ] Authorized relayers configured (processLock restricted) - [ ] Two-step bridgeGate transfer completed - [ ",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/deployment-sequence": {
+      "id": "reference/crosschainmirror/deployment-sequence",
+      "title": "Deployment Sequence",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 314,
+      "end_line": 348,
+      "byte_offset": 11045,
+      "byte_length": 945,
+      "summary": "1. **Deploy EVM Contracts**",
+      "category": "reference"
+    },
+    "reference/crosschainmirror/why-this-model-works": {
+      "id": "reference/crosschainmirror/why-this-model-works",
+      "title": "Why This Model Works",
+      "level": 2,
+      "source_file": "references/cross_chain_mirror.md",
+      "start_line": 349,
+      "end_line": 370,
+      "byte_offset": 11991,
+      "byte_length": 441,
+      "summary": "1. **Regulatory Clarity** - Single canonical supply - Clear chain of custody - Auditable cross-chain flow",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/execution-master-prompt-full-repo-generation-mode": {
+      "id": "reference/executionmasterprompt/execution-master-prompt-full-repo-generation-mode",
+      "title": "Execution Master Prompt — Full Repo Generation Mode",
+      "level": 1,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 0,
+      "end_line": 3,
+      "byte_offset": 0,
+      "byte_length": 147,
+      "summary": "When triggered with full execution mode, generate a complete, repo-ready memecoin system.",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/system-configuration": {
+      "id": "reference/executionmasterprompt/system-configuration",
+      "title": "System Configuration",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 4,
+      "end_line": 20,
+      "byte_offset": 148,
+      "byte_length": 508,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/phase-0-dependency": {
+      "id": "reference/executionmasterprompt/phase-0-dependency",
+      "title": "Phase 0 Dependency",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 21,
+      "end_line": 39,
+      "byte_offset": 657,
+      "byte_length": 788,
+      "summary": "Execution mode works best with a `MEMECOIN_BRIEF.md` from Phase 0.",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/research-backed-defaults-locked": {
+      "id": "reference/executionmasterprompt/research-backed-defaults-locked",
+      "title": "Research-Backed Defaults (Locked)",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 40,
+      "end_line": 54,
+      "byte_offset": 1446,
+      "byte_length": 557,
+      "summary": "> These defaults are used when no `MEMECOIN_BRIEF.md` is provided. > When a brief exists, values from Section 7 (\"Design Parameters\") > of the brief take precedence.",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/required-output-artifacts": {
+      "id": "reference/executionmasterprompt/required-output-artifacts",
+      "title": "Required Output Artifacts",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 55,
+      "end_line": 60,
+      "byte_offset": 2004,
+      "byte_length": 306,
+      "summary": "> **NOTE:** The artifacts below are GENERATION TARGETS — they do not exist as pre-built files > in this skill. When \"execution mode\" is triggered, the AI generates all files listed below. > Pre-existi",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/repo-tree-exact-structure": {
+      "id": "reference/executionmasterprompt/repo-tree-exact-structure",
+      "title": "Repo Tree (Exact Structure)",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 61,
+      "end_line": 223,
+      "byte_offset": 2311,
+      "byte_length": 6448,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/program-requirements": {
+      "id": "reference/executionmasterprompt/program-requirements",
+      "title": "Program Requirements",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 224,
+      "end_line": 234,
+      "byte_offset": 8760,
+      "byte_length": 313,
+      "summary": "All programs MUST include: - Anchor error codes - Events (`emit!()`) for critical actions - PDA seeds documented in code comments - Explicit access control checks - Pause checks where relevant - Spend",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/global-security-rules": {
+      "id": "reference/executionmasterprompt/global-security-rules",
+      "title": "Global Security Rules",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 235,
+      "end_line": 243,
+      "byte_offset": 9074,
+      "byte_length": 494,
+      "summary": "1. **FIXED SUPPLY**: Mint only once. After distribution, mint authority = None 2. **FREEZE AUTHORITY**: Must be None (unless explicitly required) 3. **TREASURY**: PDA-owned vault; spends only via Gove",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/program-interfaces": {
+      "id": "reference/executionmasterprompt/program-interfaces",
+      "title": "Program Interfaces",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 244,
+      "end_line": 245,
+      "byte_offset": 9569,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/tokenmint": {
+      "id": "reference/executionmasterprompt/tokenmint",
+      "title": "token_mint",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 246,
+      "end_line": 252,
+      "byte_offset": 9592,
+      "byte_length": 140,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/burncontroller": {
+      "id": "reference/executionmasterprompt/burncontroller",
+      "title": "burn_controller",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 253,
+      "end_line": 257,
+      "byte_offset": 9733,
+      "byte_length": 87,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/treasuryvault": {
+      "id": "reference/executionmasterprompt/treasuryvault",
+      "title": "treasury_vault",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 258,
+      "end_line": 264,
+      "byte_offset": 9821,
+      "byte_length": 160,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/governancemultisig": {
+      "id": "reference/executionmasterprompt/governancemultisig",
+      "title": "governance_multisig",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 265,
+      "end_line": 272,
+      "byte_offset": 9982,
+      "byte_length": 202,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/emergencypause": {
+      "id": "reference/executionmasterprompt/emergencypause",
+      "title": "emergency_pause",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 273,
+      "end_line": 280,
+      "byte_offset": 10185,
+      "byte_length": 157,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/typescript-scripts-requirements": {
+      "id": "reference/executionmasterprompt/typescript-scripts-requirements",
+      "title": "TypeScript Scripts Requirements",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 281,
+      "end_line": 294,
+      "byte_offset": 10343,
+      "byte_length": 478,
+      "summary": "Generate deployable TypeScript scripts (Solana web3 + SPL Token) that:",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/adaptation-points": {
+      "id": "reference/executionmasterprompt/adaptation-points",
+      "title": "Adaptation Points",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 295,
+      "end_line": 302,
+      "byte_offset": 10822,
+      "byte_length": 142,
+      "summary": "Mark exact lines that might change for: - Pool keys - Market accounts - Transaction building - SDK version differences",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/cicd-requirements": {
+      "id": "reference/executionmasterprompt/cicd-requirements",
+      "title": "CI/CD Requirements",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 303,
+      "end_line": 304,
+      "byte_offset": 10965,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/ciyml-must": {
+      "id": "reference/executionmasterprompt/ciyml-must",
+      "title": "ci.yml MUST:",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 305,
+      "end_line": 313,
+      "byte_offset": 10988,
+      "byte_length": 211,
+      "summary": "- Install deps - rustfmt + clippy - anchor build - anchor test (local validator) - TypeScript lint + typecheck - Generate IDLs and store as artifacts - Compute deterministic program binary hash",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/releaseyml-must": {
+      "id": "reference/executionmasterprompt/releaseyml-must",
+      "title": "release.yml MUST:",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 314,
+      "end_line": 319,
+      "byte_offset": 11200,
+      "byte_length": 158,
+      "summary": "- Require manual approval step - Deploy to devnet - Run post-deploy smoke tests - Gated promotion to mainnet with checklist enforcement",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/cross-chain-mirror-ethbase": {
+      "id": "reference/executionmasterprompt/cross-chain-mirror-ethbase",
+      "title": "Cross-Chain Mirror (ETH/Base)",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 320,
+      "end_line": 321,
+      "byte_offset": 11359,
+      "byte_length": 33,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/wrappedmemesol-requirements": {
+      "id": "reference/executionmasterprompt/wrappedmemesol-requirements",
+      "title": "WrappedMeme.sol Requirements:",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 322,
+      "end_line": 326,
+      "byte_offset": 11393,
+      "byte_length": 121,
+      "summary": "- mint/burn restricted ONLY to MirrorBridgeGate - No owner mint - Events for mint/burn",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/mirrorbridgegatesol-requirements": {
+      "id": "reference/executionmasterprompt/mirrorbridgegatesol-requirements",
+      "title": "MirrorBridgeGate.sol Requirements:",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 327,
+      "end_line": 332,
+      "byte_offset": 11515,
+      "byte_length": 196,
+      "summary": "- Pluggable verifier interface for \"Solana lock proof\" - Mint only upon valid proof - Burn triggers unlock workflow off-chain - Rate limits + pause function",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/rules": {
+      "id": "reference/executionmasterprompt/rules",
+      "title": "Rules:",
+      "level": 3,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 333,
+      "end_line": 337,
+      "byte_offset": 11712,
+      "byte_length": 116,
+      "summary": "- No chain can mint independently - Supply parity must be enforceable - Solana remains \"source of truth\"",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/output-format": {
+      "id": "reference/executionmasterprompt/output-format",
+      "title": "Output Format",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 338,
+      "end_line": 352,
+      "byte_offset": 11829,
+      "byte_length": 250,
+      "summary": "1. Start with FILE TREE 2. Output each file as:",
+      "category": "reference"
+    },
+    "reference/executionmasterprompt/trigger": {
+      "id": "reference/executionmasterprompt/trigger",
+      "title": "Trigger",
+      "level": 2,
+      "source_file": "references/execution_master_prompt.md",
+      "start_line": 353,
+      "end_line": 356,
+      "byte_offset": 12080,
+      "byte_length": 147,
+      "summary": "When user requests \"generate full repo\", \"execution mode\", or \"DO IT ALL\", output the complete repository with all files and contents.",
+      "category": "reference"
+    },
+    "reference/narrativeforge/module-9-narrative-forge-content-strategy-engine": {
+      "id": "reference/narrativeforge/module-9-narrative-forge-content-strategy-engine",
+      "title": "Module 9: \"Narrative Forge\" — Content Strategy Engine",
+      "level": 1,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 58,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/purpose": {
+      "id": "reference/narrativeforge/purpose",
+      "title": "Purpose",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 2,
+      "end_line": 5,
+      "byte_offset": 59,
+      "byte_length": 239,
+      "summary": "Transform the research brief and token identity into launch-ready marketing assets. This module bridges the gap between \"we have a token\" and \"people are talking about it.\" All output is templated, on",
+      "category": "reference"
+    },
+    "reference/narrativeforge/triggers": {
+      "id": "reference/narrativeforge/triggers",
+      "title": "Triggers",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 6,
+      "end_line": 12,
+      "byte_offset": 299,
+      "byte_length": 234,
+      "summary": "Activate Narrative Forge when: - Phase 0 `MEMECOIN_BRIEF.md` is complete (narrative section populated) - User says \"generate marketing\", \"create content\", \"narrative forge\" - Execution mode includes `",
+      "category": "reference"
+    },
+    "reference/narrativeforge/output-artifacts": {
+      "id": "reference/narrativeforge/output-artifacts",
+      "title": "Output Artifacts",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 13,
+      "end_line": 38,
+      "byte_offset": 534,
+      "byte_length": 1026,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/thread-generator": {
+      "id": "reference/narrativeforge/thread-generator",
+      "title": "Thread Generator",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 39,
+      "end_line": 40,
+      "byte_offset": 1561,
+      "byte_length": 20,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/launch-thread-template-5-part": {
+      "id": "reference/narrativeforge/launch-thread-template-5-part",
+      "title": "Launch Thread Template (5-part)",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 41,
+      "end_line": 76,
+      "byte_offset": 1582,
+      "byte_length": 2795,
+      "summary": "The launch thread follows the **AIDA framework** (Attention, Interest, Desire, Action):",
+      "category": "reference"
+    },
+    "reference/narrativeforge/thread-variables-from-memecoinbriefmd": {
+      "id": "reference/narrativeforge/thread-variables-from-memecoinbriefmd",
+      "title": "Thread Variables (from MEMECOIN_BRIEF.md)",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 77,
+      "end_line": 90,
+      "byte_offset": 4378,
+      "byte_length": 632,
+      "summary": "| Variable | Source | Example | |----------|--------|---------| | `{TOKEN_NAME}` | R4 recommended name | \"RIBBIT\" | | `{TICKER}` | R4 recommended ticker | \"$RBBT\" | | `{NARRATIVE}` | R5 narrative.one_",
+      "category": "reference"
+    },
+    "reference/narrativeforge/example-launch-thread": {
+      "id": "reference/narrativeforge/example-launch-thread",
+      "title": "Example Launch Thread",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 91,
+      "end_line": 93,
+      "byte_offset": 5011,
+      "byte_length": 38,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/thread-tokenname-launch": {
+      "id": "reference/narrativeforge/thread-tokenname-launch",
+      "title": "Thread: {TOKEN_NAME} Launch",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 94,
+      "end_line": 133,
+      "byte_offset": 5050,
+      "byte_length": 904,
+      "summary": "**1/5** 🧵 {NARRATIVE}",
+      "category": "reference"
+    },
+    "reference/narrativeforge/meme-prompt-generator": {
+      "id": "reference/narrativeforge/meme-prompt-generator",
+      "title": "Meme Prompt Generator",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 134,
+      "end_line": 135,
+      "byte_offset": 5955,
+      "byte_length": 25,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/prompt-template-format": {
+      "id": "reference/narrativeforge/prompt-template-format",
+      "title": "Prompt Template Format",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 136,
+      "end_line": 144,
+      "byte_offset": 5981,
+      "byte_length": 219,
+      "summary": "Each prompt is designed for DALL-E 3 or Midjourney v6+ and follows the token's visual identity from R4.",
+      "category": "reference"
+    },
+    "reference/narrativeforge/generated-prompts-10-variations": {
+      "id": "reference/narrativeforge/generated-prompts-10-variations",
+      "title": "Generated Prompts (10 variations)",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 145,
+      "end_line": 159,
+      "byte_offset": 6201,
+      "byte_length": 1472,
+      "summary": "| # | Type | Prompt Template | |---|------|-----------------| | 1 | Hero | `{STYLE}, {MASCOT} standing triumphantly on a pile of {COMPETITOR_TOKENS}, {CHAIN} logo glowing in background, cinematic ligh",
+      "category": "reference"
+    },
+    "reference/narrativeforge/visual-identity-variables": {
+      "id": "reference/narrativeforge/visual-identity-variables",
+      "title": "Visual Identity Variables",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 160,
+      "end_line": 168,
+      "byte_offset": 7674,
+      "byte_length": 367,
+      "summary": "| Variable | Source | Description | |----------|--------|-------------| | `{STYLE}` | R4 logo_concept | \"pixel art\", \"3D render\", \"anime style\" | | `{MASCOT}` | R4 name + concept | \"cartoon frog\", \"cy",
+      "category": "reference"
+    },
+    "reference/narrativeforge/telegram-announcement-templates": {
+      "id": "reference/narrativeforge/telegram-announcement-templates",
+      "title": "Telegram Announcement Templates",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 169,
+      "end_line": 170,
+      "byte_offset": 8042,
+      "byte_length": 35,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/launch-announcement": {
+      "id": "reference/narrativeforge/launch-announcement",
+      "title": "Launch Announcement",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 171,
+      "end_line": 173,
+      "byte_offset": 8078,
+      "byte_length": 36,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/tokenname-launch-announcement": {
+      "id": "reference/narrativeforge/tokenname-launch-announcement",
+      "title": "{TOKEN_NAME} Launch Announcement",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 174,
+      "end_line": 204,
+      "byte_offset": 8115,
+      "byte_length": 649,
+      "summary": "🚀 **{TOKEN_NAME} ({TICKER}) IS LIVE!** 🚀",
+      "category": "reference"
+    },
+    "reference/narrativeforge/whitepaper-structure": {
+      "id": "reference/narrativeforge/whitepaper-structure",
+      "title": "Whitepaper Structure",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 205,
+      "end_line": 206,
+      "byte_offset": 8765,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/template-sections": {
+      "id": "reference/narrativeforge/template-sections",
+      "title": "Template Sections",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 207,
+      "end_line": 223,
+      "byte_offset": 8790,
+      "byte_length": 1050,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/pdf-styling": {
+      "id": "reference/narrativeforge/pdf-styling",
+      "title": "PDF Styling",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 224,
+      "end_line": 237,
+      "byte_offset": 9841,
+      "byte_length": 408,
+      "summary": "| Element | Specification | |---------|---------------| | Page size | Letter (8.5 x 11) | | Margins | 1 inch all sides | | Header font | Space Grotesk Bold | | Body font | Inter Regular | | Code font ",
+      "category": "reference"
+    },
+    "reference/narrativeforge/brand-guide-template": {
+      "id": "reference/narrativeforge/brand-guide-template",
+      "title": "Brand Guide Template",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 238,
+      "end_line": 239,
+      "byte_offset": 10250,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/generated-brand-guide": {
+      "id": "reference/narrativeforge/generated-brand-guide",
+      "title": "Generated Brand Guide",
+      "level": 3,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 240,
+      "end_line": 278,
+      "byte_offset": 10275,
+      "byte_length": 911,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/media-kit-one-pager": {
+      "id": "reference/narrativeforge/media-kit-one-pager",
+      "title": "Media Kit: One-Pager",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 279,
+      "end_line": 306,
+      "byte_offset": 11187,
+      "byte_length": 1910,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/narrativeforge/downstream-integration": {
+      "id": "reference/narrativeforge/downstream-integration",
+      "title": "Downstream Integration",
+      "level": 2,
+      "source_file": "references/narrative_forge.md",
+      "start_line": 307,
+      "end_line": 315,
+      "byte_offset": 13098,
+      "byte_length": 332,
+      "summary": "| Consumer | Fields Used | |----------|-------------| | Module 8 (Aura UI) | brand_guide colors, typography | | Module 11 (Propulsion) | media_kit for KOL outreach | | Execution Mode | All marketing/ ",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/phase-0-research-brainstorm-engine": {
+      "id": "reference/phase0researchbrainstorm/phase-0-research-brainstorm-engine",
+      "title": "Phase 0: Research & Brainstorm Engine",
+      "level": 1,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 40,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/purpose": {
+      "id": "reference/phase0researchbrainstorm/purpose",
+      "title": "Purpose",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 2,
+      "end_line": 7,
+      "byte_offset": 41,
+      "byte_length": 402,
+      "summary": "Phase 0 is the **mandatory entry point** for any new memecoin project. Before designing tokenomics, writing contracts, or generating a repo, research the market. This phase produces a `MEMECOIN_BRIEF.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/triggers": {
+      "id": "reference/phase0researchbrainstorm/triggers",
+      "title": "Triggers",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 8,
+      "end_line": 15,
+      "byte_offset": 444,
+      "byte_length": 281,
+      "summary": "Activate Phase 0 when the user says: - \"research\", \"brainstorm\", \"phase 0\", \"market analysis\" - \"I want to launch a memecoin\" (implies research needed first) - \"new memecoin project\" or \"memecoin idea",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/research-modules": {
+      "id": "reference/phase0researchbrainstorm/research-modules",
+      "title": "Research Modules",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 16,
+      "end_line": 21,
+      "byte_offset": 726,
+      "byte_length": 164,
+      "summary": "Phase 0 consists of 5 research modules executed in order. Each module produces structured output that feeds into the `MEMECOIN_BRIEF.md`.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/module-r1-market-landscape-analysis": {
+      "id": "reference/phase0researchbrainstorm/module-r1-market-landscape-analysis",
+      "title": "Module R1: Market Landscape Analysis",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 22,
+      "end_line": 51,
+      "byte_offset": 891,
+      "byte_length": 1088,
+      "summary": "**Method:** Web search for real-time data.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/module-r2-competitor-deep-dive": {
+      "id": "reference/phase0researchbrainstorm/module-r2-competitor-deep-dive",
+      "title": "Module R2: Competitor Deep-Dive",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 52,
+      "end_line": 91,
+      "byte_offset": 1980,
+      "byte_length": 1103,
+      "summary": "**Method:** Analyze 3-5 direct competitors in the user's chosen or emerging narrative.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/module-r3-chain-selection-weighted-scoring": {
+      "id": "reference/phase0researchbrainstorm/module-r3-chain-selection-weighted-scoring",
+      "title": "Module R3: Chain Selection (Weighted Scoring)",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 92,
+      "end_line": 129,
+      "byte_offset": 3084,
+      "byte_length": 1494,
+      "summary": "**Method:** Evaluate 3+ chains using a weighted scoring matrix.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/module-r4-naming-branding-brainstorm": {
+      "id": "reference/phase0researchbrainstorm/module-r4-naming-branding-brainstorm",
+      "title": "Module R4: Naming & Branding Brainstorm",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 130,
+      "end_line": 166,
+      "byte_offset": 4579,
+      "byte_length": 1212,
+      "summary": "**Method:** Generate 5-10 candidate names, score each.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/module-r5-utility-narrative-design": {
+      "id": "reference/phase0researchbrainstorm/module-r5-utility-narrative-design",
+      "title": "Module R5: Utility & Narrative Design",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 167,
+      "end_line": 200,
+      "byte_offset": 5792,
+      "byte_length": 1197,
+      "summary": "**Method:** Define what makes this token more than \"mint & pray\".",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/gono-go-gate": {
+      "id": "reference/phase0researchbrainstorm/gono-go-gate",
+      "title": "Go/No-Go Gate",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 201,
+      "end_line": 204,
+      "byte_offset": 6990,
+      "byte_length": 82,
+      "summary": "After completing all 5 modules, evaluate the project viability.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/go-criteria-all-must-be-true": {
+      "id": "reference/phase0researchbrainstorm/go-criteria-all-must-be-true",
+      "title": "GO Criteria (ALL must be true)",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 205,
+      "end_line": 214,
+      "byte_offset": 7073,
+      "byte_length": 402,
+      "summary": "| # | Criterion | Threshold | |---|-----------|-----------| | G-1 | Selected chain weighted score | >= 6.0 / 10 | | G-2 | At least 1 candidate name memetic score | >= 7 / 10 | | G-3 | Narrative one-li",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/caution-criteria-proceed-with-documented-risk": {
+      "id": "reference/phase0researchbrainstorm/caution-criteria-proceed-with-documented-risk",
+      "title": "CAUTION Criteria (proceed with documented risk)",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 215,
+      "end_line": 221,
+      "byte_offset": 7476,
+      "byte_length": 190,
+      "summary": "- Chain score 5.0-5.9 - All candidate names memetic_score < 7 but >= 5 - Narrative similar to 3+ existing tokens - Single revenue source",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/no-go-criteria-any-triggers-no-go": {
+      "id": "reference/phase0researchbrainstorm/no-go-criteria-any-triggers-no-go",
+      "title": "NO-GO Criteria (ANY triggers NO-GO)",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 222,
+      "end_line": 234,
+      "byte_offset": 7667,
+      "byte_length": 400,
+      "summary": "| # | Criterion | Trigger | |---|-----------|---------| | N-1 | Chain score | < 5.0 | | N-2 | No viable name/ticker combination | All eliminated | | N-3 | Regulatory hard-block in primary market | Con",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/memecoinbriefmd-output-schema": {
+      "id": "reference/phase0researchbrainstorm/memecoinbriefmd-output-schema",
+      "title": "MEMECOIN_BRIEF.md Output Schema",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 235,
+      "end_line": 239,
+      "byte_offset": 8068,
+      "byte_length": 96,
+      "summary": "When Phase 0 completes, generate this document:",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/memecoin-brief-token-name": {
+      "id": "reference/phase0researchbrainstorm/memecoin-brief-token-name",
+      "title": "MEMECOIN BRIEF: [TOKEN NAME]",
+      "level": 1,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 240,
+      "end_line": 241,
+      "byte_offset": 8165,
+      "byte_length": 31,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/meta": {
+      "id": "reference/phase0researchbrainstorm/meta",
+      "title": "Meta",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 242,
+      "end_line": 247,
+      "byte_offset": 8197,
+      "byte_length": 157,
+      "summary": "- **Generated:** [date] - **Phase 0 Status:** [GO / CAUTION / NO-GO] - **Confidence:** [0-100]% - **Data Sources:** [count] web searches cited below",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/1-market-snapshot": {
+      "id": "reference/phase0researchbrainstorm/1-market-snapshot",
+      "title": "1. Market Snapshot",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 248,
+      "end_line": 250,
+      "byte_offset": 8355,
+      "byte_length": 83,
+      "summary": "[R1 output: landscape table, trending narratives, sentiment]",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/2-competitor-analysis": {
+      "id": "reference/phase0researchbrainstorm/2-competitor-analysis",
+      "title": "2. Competitor Analysis",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 251,
+      "end_line": 253,
+      "byte_offset": 8439,
+      "byte_length": 85,
+      "summary": "[R2 output: 3-5 competitor profiles, gap analysis diagram]",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/3-chain-selection": {
+      "id": "reference/phase0researchbrainstorm/3-chain-selection",
+      "title": "3. Chain Selection",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 254,
+      "end_line": 256,
+      "byte_offset": 8525,
+      "byte_length": 81,
+      "summary": "[R3 output: scoring matrix, selected chain, mirror chains]",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/4-name-branding": {
+      "id": "reference/phase0researchbrainstorm/4-name-branding",
+      "title": "4. Name & Branding",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 257,
+      "end_line": 259,
+      "byte_offset": 8607,
+      "byte_length": 83,
+      "summary": "[R4 output: candidate table, recommended pick, logo concept]",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/5-narrative-utility": {
+      "id": "reference/phase0researchbrainstorm/5-narrative-utility",
+      "title": "5. Narrative & Utility",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 260,
+      "end_line": 262,
+      "byte_offset": 8691,
+      "byte_length": 95,
+      "summary": "[R5 output: one-liner, launch strategy, retention, revenue, roadmap]",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/6-gono-go-assessment": {
+      "id": "reference/phase0researchbrainstorm/6-gono-go-assessment",
+      "title": "6. Go/No-Go Assessment",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 263,
+      "end_line": 265,
+      "byte_offset": 8787,
+      "byte_length": 95,
+      "summary": "[Scorecard table with PASS/FAIL per criterion, final recommendation]",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/7-design-parameters": {
+      "id": "reference/phase0researchbrainstorm/7-design-parameters",
+      "title": "7. Design Parameters",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 266,
+      "end_line": 280,
+      "byte_offset": 8883,
+      "byte_length": 604,
+      "summary": "These values feed downstream phases and override locked defaults when provided:",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/sources": {
+      "id": "reference/phase0researchbrainstorm/sources",
+      "title": "Sources",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 281,
+      "end_line": 288,
+      "byte_offset": 9488,
+      "byte_length": 78,
+      "summary": "- [URL 1] - [description] - [URL 2] - [description] - ...",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/downstream-consumption": {
+      "id": "reference/phase0researchbrainstorm/downstream-consumption",
+      "title": "Downstream Consumption",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 289,
+      "end_line": 307,
+      "byte_offset": 9567,
+      "byte_length": 830,
+      "summary": "How each downstream phase uses the brief:",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/manual-research-fallback": {
+      "id": "reference/phase0researchbrainstorm/manual-research-fallback",
+      "title": "Manual Research Fallback",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 308,
+      "end_line": 311,
+      "byte_offset": 10398,
+      "byte_length": 198,
+      "summary": "If web search is unavailable (offline mode, restricted environment), use this questionnaire instead. The user provides answers manually; the output format is identical.",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/manual-research-questionnaire": {
+      "id": "reference/phase0researchbrainstorm/manual-research-questionnaire",
+      "title": "Manual Research Questionnaire",
+      "level": 3,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 312,
+      "end_line": 340,
+      "byte_offset": 10597,
+      "byte_length": 847,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/phase0researchbrainstorm/staleness-warning": {
+      "id": "reference/phase0researchbrainstorm/staleness-warning",
+      "title": "Staleness Warning",
+      "level": 2,
+      "source_file": "references/phase0_research_brainstorm.md",
+      "start_line": 341,
+      "end_line": 346,
+      "byte_offset": 11445,
+      "byte_length": 240,
+      "summary": "The brief includes a generation date. Downstream phases should warn if the brief is older than 7 days:",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/module-11-propulsion-post-launch-growth-engine": {
+      "id": "reference/propulsionpostlaunch/module-11-propulsion-post-launch-growth-engine",
+      "title": "Module 11: \"Propulsion\" Post-Launch Growth Engine",
+      "level": 1,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 52,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/purpose": {
+      "id": "reference/propulsionpostlaunch/purpose",
+      "title": "Purpose",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 2,
+      "end_line": 5,
+      "byte_offset": 53,
+      "byte_length": 215,
+      "summary": "Automate the post-launch growth pipeline: DEX tracker visibility, influencer outreach, listing applications, and community scaling. This module converts a \"launched token\" into a \"discoverable project",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/triggers": {
+      "id": "reference/propulsionpostlaunch/triggers",
+      "title": "Triggers",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 6,
+      "end_line": 12,
+      "byte_offset": 269,
+      "byte_length": 208,
+      "summary": "Activate Propulsion when: - Token is deployed and trading on DEX (Phase 3 complete) - User says \"post-launch\", \"growth\", \"propulsion\", \"get listed\" - Execution mode includes `--with-growth` flag",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/growth-pipeline": {
+      "id": "reference/propulsionpostlaunch/growth-pipeline",
+      "title": "Growth Pipeline",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 13,
+      "end_line": 29,
+      "byte_offset": 478,
+      "byte_length": 1464,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/output-artifacts": {
+      "id": "reference/propulsionpostlaunch/output-artifacts",
+      "title": "Output Artifacts",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 30,
+      "end_line": 53,
+      "byte_offset": 1943,
+      "byte_length": 934,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/dex-tracker-setup": {
+      "id": "reference/propulsionpostlaunch/dex-tracker-setup",
+      "title": "DEX Tracker Setup",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 54,
+      "end_line": 55,
+      "byte_offset": 2878,
+      "byte_length": 21,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/dexscreener": {
+      "id": "reference/propulsionpostlaunch/dexscreener",
+      "title": "DEXScreener",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 56,
+      "end_line": 86,
+      "byte_offset": 2900,
+      "byte_length": 2013,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/dextools": {
+      "id": "reference/propulsionpostlaunch/dextools",
+      "title": "DEXTools",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 87,
+      "end_line": 113,
+      "byte_offset": 4914,
+      "byte_length": 1738,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/listing-applications": {
+      "id": "reference/propulsionpostlaunch/listing-applications",
+      "title": "Listing Applications",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 114,
+      "end_line": 115,
+      "byte_offset": 6653,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/coingecko-application": {
+      "id": "reference/propulsionpostlaunch/coingecko-application",
+      "title": "CoinGecko Application",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 116,
+      "end_line": 156,
+      "byte_offset": 6678,
+      "byte_length": 2726,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/coinmarketcap-application": {
+      "id": "reference/propulsionpostlaunch/coinmarketcap-application",
+      "title": "CoinMarketCap Application",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 157,
+      "end_line": 186,
+      "byte_offset": 9405,
+      "byte_length": 1951,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/jupiter-strict-list": {
+      "id": "reference/propulsionpostlaunch/jupiter-strict-list",
+      "title": "Jupiter Strict List",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 187,
+      "end_line": 216,
+      "byte_offset": 11357,
+      "byte_length": 1955,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/kol-outreach": {
+      "id": "reference/propulsionpostlaunch/kol-outreach",
+      "title": "KOL Outreach",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 217,
+      "end_line": 218,
+      "byte_offset": 13313,
+      "byte_length": 16,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/research-brief-generator": {
+      "id": "reference/propulsionpostlaunch/research-brief-generator",
+      "title": "Research Brief Generator",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 219,
+      "end_line": 263,
+      "byte_offset": 13330,
+      "byte_length": 2975,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/outreach-dos-and-donts": {
+      "id": "reference/propulsionpostlaunch/outreach-dos-and-donts",
+      "title": "Outreach Do's and Don'ts",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 264,
+      "end_line": 274,
+      "byte_offset": 16306,
+      "byte_length": 401,
+      "summary": "| Do | Don't | |----|-------| | Personalize every message | Mass DM the same template | | Offer fair compensation | Promise unrealistic returns | | Provide media kit + facts | Ask them to \"shill\" | | ",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/community-growth-playbook": {
+      "id": "reference/propulsionpostlaunch/community-growth-playbook",
+      "title": "Community Growth Playbook",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 275,
+      "end_line": 276,
+      "byte_offset": 16708,
+      "byte_length": 29,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/30-day-plan": {
+      "id": "reference/propulsionpostlaunch/30-day-plan",
+      "title": "30-Day Plan",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 277,
+      "end_line": 318,
+      "byte_offset": 16738,
+      "byte_length": 3017,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/engagement-kpis": {
+      "id": "reference/propulsionpostlaunch/engagement-kpis",
+      "title": "Engagement KPIs",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 319,
+      "end_line": 329,
+      "byte_offset": 19756,
+      "byte_length": 415,
+      "summary": "| Metric | Week 1 | Week 2 | Week 3 | Week 4 | |--------|--------|--------|--------|--------| | Unique holders | 200 | 1,000 | 3,000 | 5,000 | | Telegram members | 500 | 2,000 | 5,000 | 10,000 | | Dai",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/ethical-guidelines": {
+      "id": "reference/propulsionpostlaunch/ethical-guidelines",
+      "title": "Ethical Guidelines",
+      "level": 3,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 330,
+      "end_line": 357,
+      "byte_offset": 20172,
+      "byte_length": 1810,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/propulsionpostlaunch/downstream-integration": {
+      "id": "reference/propulsionpostlaunch/downstream-integration",
+      "title": "Downstream Integration",
+      "level": 2,
+      "source_file": "references/propulsion_post_launch.md",
+      "start_line": 358,
+      "end_line": 367,
+      "byte_offset": 21983,
+      "byte_length": 414,
+      "summary": "| Consumer | Fields Used | |----------|-------------| | Module 8 (Aura UI) | Dashboard link for DEX tracker profiles | | Module 9 (Narrative Forge) | Media kit for KOL outreach packages | | Module 10 ",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/regulatory-considerations": {
+      "id": "reference/regulatorynotes/regulatory-considerations",
+      "title": "Regulatory Considerations",
+      "level": 1,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 28,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/disclaimer": {
+      "id": "reference/regulatorynotes/disclaimer",
+      "title": "Disclaimer",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 2,
+      "end_line": 5,
+      "byte_offset": 29,
+      "byte_length": 181,
+      "summary": "This document provides general educational information only. It is NOT legal advice. Consult qualified legal counsel in your jurisdiction before launching any token.",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/key-regulatory-risks": {
+      "id": "reference/regulatorynotes/key-regulatory-risks",
+      "title": "Key Regulatory Risks",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 6,
+      "end_line": 7,
+      "byte_offset": 211,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/securities-classification": {
+      "id": "reference/regulatorynotes/securities-classification",
+      "title": "Securities Classification",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 8,
+      "end_line": 23,
+      "byte_offset": 236,
+      "byte_length": 347,
+      "summary": "**The Howey Test (US):**",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/stablecoin-regulations": {
+      "id": "reference/regulatorynotes/stablecoin-regulations",
+      "title": "Stablecoin Regulations",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 24,
+      "end_line": 38,
+      "byte_offset": 584,
+      "byte_length": 363,
+      "summary": "If your token claims ANY price stability: - May trigger banking regulations - May require reserves - May need licensing",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/money-transmission": {
+      "id": "reference/regulatorynotes/money-transmission",
+      "title": "Money Transmission",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 39,
+      "end_line": 50,
+      "byte_offset": 948,
+      "byte_length": 276,
+      "summary": "Operating a bridge or exchange may require: - Money transmitter license (US) - Similar licenses in other jurisdictions - AML/KYC procedures",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/jurisdiction-considerations": {
+      "id": "reference/regulatorynotes/jurisdiction-considerations",
+      "title": "Jurisdiction Considerations",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 51,
+      "end_line": 52,
+      "byte_offset": 1225,
+      "byte_length": 31,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/high-risk-jurisdictions": {
+      "id": "reference/regulatorynotes/high-risk-jurisdictions",
+      "title": "High-Risk Jurisdictions",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 53,
+      "end_line": 63,
+      "byte_offset": 1257,
+      "byte_length": 454,
+      "summary": "| Jurisdiction | Risk Level | Notes | |--------------|------------|-------| | United States | High | SEC enforcement active | | China | Prohibited | Crypto banned | | India | High | 30% crypto tax + 1",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/recommended-practices": {
+      "id": "reference/regulatorynotes/recommended-practices",
+      "title": "Recommended Practices",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 64,
+      "end_line": 80,
+      "byte_offset": 1712,
+      "byte_length": 364,
+      "summary": "1. **Geo-blocking** - Block US IPs from token sale - Clear terms of service - Country restrictions documented",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/required-disclosures": {
+      "id": "reference/regulatorynotes/required-disclosures",
+      "title": "Required Disclosures",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 81,
+      "end_line": 82,
+      "byte_offset": 2077,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/token-disclosure-template": {
+      "id": "reference/regulatorynotes/token-disclosure-template",
+      "title": "Token Disclosure Template",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 83,
+      "end_line": 85,
+      "byte_offset": 2102,
+      "byte_length": 42,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/token-name-disclosure": {
+      "id": "reference/regulatorynotes/token-name-disclosure",
+      "title": "[TOKEN NAME] DISCLOSURE",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 86,
+      "end_line": 87,
+      "byte_offset": 2145,
+      "byte_length": 27,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/risk-warning": {
+      "id": "reference/regulatorynotes/risk-warning",
+      "title": "Risk Warning",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 88,
+      "end_line": 91,
+      "byte_offset": 2173,
+      "byte_length": 126,
+      "summary": "This token is highly speculative and may lose all value. Only participate with funds you can afford to lose.",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/not-securities": {
+      "id": "reference/regulatorynotes/not-securities",
+      "title": "Not Securities",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 92,
+      "end_line": 95,
+      "byte_offset": 2300,
+      "byte_length": 132,
+      "summary": "This token is NOT an investment contract, security, or financial instrument. No returns are promised or implied.",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/no-guarantee": {
+      "id": "reference/regulatorynotes/no-guarantee",
+      "title": "No Guarantee",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 96,
+      "end_line": 102,
+      "byte_offset": 2433,
+      "byte_length": 136,
+      "summary": "There is no guarantee of: - Price appreciation - Liquidity availability - Project continuation - Any financial outcome",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/regulatory-status": {
+      "id": "reference/regulatorynotes/regulatory-status",
+      "title": "Regulatory Status",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 103,
+      "end_line": 107,
+      "byte_offset": 2570,
+      "byte_length": 156,
+      "summary": "This token has not been registered with or approved by any regulatory authority. Participation may not be legal in your jurisdiction.",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/technical-risks": {
+      "id": "reference/regulatorynotes/technical-risks",
+      "title": "Technical Risks",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 108,
+      "end_line": 116,
+      "byte_offset": 2727,
+      "byte_length": 160,
+      "summary": "- Smart contract bugs - Network failures - Oracle manipulation - Bridge vulnerabilities",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/stablecoin-adjacent-disclosure": {
+      "id": "reference/regulatorynotes/stablecoin-adjacent-disclosure",
+      "title": "Stablecoin-Adjacent Disclosure",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 117,
+      "end_line": 121,
+      "byte_offset": 2888,
+      "byte_length": 85,
+      "summary": "If using treasury buyback mechanics:",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/stability-mechanism-disclosure": {
+      "id": "reference/regulatorynotes/stability-mechanism-disclosure",
+      "title": "STABILITY MECHANISM DISCLOSURE",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 122,
+      "end_line": 139,
+      "byte_offset": 2974,
+      "byte_length": 412,
+      "summary": "This token implements treasury buyback mechanics that MAY provide price support. This is NOT: - A guaranteed price floor - A redemption promise - A stablecoin peg - An investment product",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/marketing-guidelines": {
+      "id": "reference/regulatorynotes/marketing-guidelines",
+      "title": "Marketing Guidelines",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 140,
+      "end_line": 141,
+      "byte_offset": 3387,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/prohibited-claims": {
+      "id": "reference/regulatorynotes/prohibited-claims",
+      "title": "Prohibited Claims",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 142,
+      "end_line": 150,
+      "byte_offset": 3412,
+      "byte_length": 174,
+      "summary": "❌ \"Guaranteed returns\" ❌ \"Risk-free investment\" ❌ \"Price will go up\" ❌ \"Better than stocks/bonds\" ❌ \"Passive income\" ❌ \"Financial freedom\"",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/acceptable-claims": {
+      "id": "reference/regulatorynotes/acceptable-claims",
+      "title": "Acceptable Claims",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 151,
+      "end_line": 159,
+      "byte_offset": 3587,
+      "byte_length": 191,
+      "summary": "✅ \"Community-driven project\" ✅ \"Fixed supply token\" ✅ \"Transparent tokenomics\" ✅ \"Open source contracts\" ✅ \"Governance participation\" ✅ \"Ecosystem utility\"",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/compliance-checklist": {
+      "id": "reference/regulatorynotes/compliance-checklist",
+      "title": "Compliance Checklist",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 160,
+      "end_line": 161,
+      "byte_offset": 3779,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/pre-launch": {
+      "id": "reference/regulatorynotes/pre-launch",
+      "title": "Pre-Launch",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 162,
+      "end_line": 172,
+      "byte_offset": 3804,
+      "byte_length": 279,
+      "summary": "| Item | Status | |------|--------| | Legal opinion obtained | ☐ | | Entity structure established | ☐ | | Terms of service drafted | ☐ | | Risk disclosures published | ☐ | | Geo-restrictions implement",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/ongoing": {
+      "id": "reference/regulatorynotes/ongoing",
+      "title": "Ongoing",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 173,
+      "end_line": 181,
+      "byte_offset": 4084,
+      "byte_length": 204,
+      "summary": "| Item | Frequency | |------|-----------| | Regulatory monitoring | Weekly | | Legal review of announcements | Each | | Terms of service update | Quarterly | | Compliance training | Annual |",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/tax-considerations": {
+      "id": "reference/regulatorynotes/tax-considerations",
+      "title": "Tax Considerations",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 182,
+      "end_line": 183,
+      "byte_offset": 4289,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/for-token-holders": {
+      "id": "reference/regulatorynotes/for-token-holders",
+      "title": "For Token Holders",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 184,
+      "end_line": 190,
+      "byte_offset": 4312,
+      "byte_length": 138,
+      "summary": "- May be taxable as property (US) - Capital gains on sale - Potential income on airdrops - Record-keeping required",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/for-project": {
+      "id": "reference/regulatorynotes/for-project",
+      "title": "For Project",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 191,
+      "end_line": 197,
+      "byte_offset": 4451,
+      "byte_length": 151,
+      "summary": "- Token sales may be taxable - Treasury activities may create liability - International tax implications - Proper accounting required",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/resources": {
+      "id": "reference/regulatorynotes/resources",
+      "title": "Resources",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 198,
+      "end_line": 199,
+      "byte_offset": 4603,
+      "byte_length": 13,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/regulatory-bodies": {
+      "id": "reference/regulatorynotes/regulatory-bodies",
+      "title": "Regulatory Bodies",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 200,
+      "end_line": 211,
+      "byte_offset": 4617,
+      "byte_length": 358,
+      "summary": "| Jurisdiction | Body | Focus | |--------------|------|-------| | US | SEC | Securities | | US | CFTC | Commodities | | US | FinCEN | Money transmission | | EU | ESMA | MiCA enforcement, markets | | S",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/industry-organizations": {
+      "id": "reference/regulatorynotes/industry-organizations",
+      "title": "Industry Organizations",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 212,
+      "end_line": 217,
+      "byte_offset": 4976,
+      "byte_length": 89,
+      "summary": "- Blockchain Association - DeFi Education Fund - Coin Center",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/legal-firms-crypto-focused": {
+      "id": "reference/regulatorynotes/legal-firms-crypto-focused",
+      "title": "Legal Firms (Crypto-Focused)",
+      "level": 3,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 218,
+      "end_line": 225,
+      "byte_offset": 5066,
+      "byte_length": 138,
+      "summary": "(Research and verify current standing) - Anderson Kill - Debevoise & Plimpton - Fenwick & West - Cooley",
+      "category": "reference"
+    },
+    "reference/regulatorynotes/final-notes": {
+      "id": "reference/regulatorynotes/final-notes",
+      "title": "Final Notes",
+      "level": 2,
+      "source_file": "references/regulatory_notes.md",
+      "start_line": 226,
+      "end_line": 247,
+      "byte_offset": 5205,
+      "byte_length": 455,
+      "summary": "1. **Get Legal Advice** - This document is educational only - Laws change frequently - Enforcement varies",
+      "category": "reference"
+    },
+    "reference/securitychecklist/security-checklist-exploit-analysis": {
+      "id": "reference/securitychecklist/security-checklist-exploit-analysis",
+      "title": "Security Checklist & Exploit Analysis",
+      "level": 1,
+      "source_file": "references/security_checklist.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 40,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/smart-contract-security": {
+      "id": "reference/securitychecklist/smart-contract-security",
+      "title": "Smart Contract Security",
+      "level": 2,
+      "source_file": "references/security_checklist.md",
+      "start_line": 2,
+      "end_line": 3,
+      "byte_offset": 41,
+      "byte_length": 27,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/token-mint-program": {
+      "id": "reference/securitychecklist/token-mint-program",
+      "title": "Token Mint Program",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 4,
+      "end_line": 13,
+      "byte_offset": 69,
+      "byte_length": 385,
+      "summary": "| Check | Status | Notes | |-------|--------|-------| | Fixed supply enforced | ☐ | `minted` flag prevents re-mint | | Mint authority revoked | ☐ | Set to None after distribution | | Freeze authority ",
+      "category": "reference"
+    },
+    "reference/securitychecklist/burn-controller": {
+      "id": "reference/securitychecklist/burn-controller",
+      "title": "Burn Controller",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 14,
+      "end_line": 22,
+      "byte_offset": 455,
+      "byte_length": 298,
+      "summary": "| Check | Status | Notes | |-------|--------|-------| | Burns require user signature | ☐ | Cannot burn others' tokens | | Burn rate capped | ☐ | Max 5% (500 bps) | | No manual burn button | ☐ | All bu",
+      "category": "reference"
+    },
+    "reference/securitychecklist/treasury-vault": {
+      "id": "reference/securitychecklist/treasury-vault",
+      "title": "Treasury Vault",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 23,
+      "end_line": 32,
+      "byte_offset": 754,
+      "byte_length": 309,
+      "summary": "| Check | Status | Notes | |-------|--------|-------| | PDA ownership | ☐ | No direct signer control | | Multi-sig required | ☐ | Threshold ≥ 2 | | Spend caps enforced | ☐ | Daily limit active | | Pro",
+      "category": "reference"
+    },
+    "reference/securitychecklist/emergency-controls": {
+      "id": "reference/securitychecklist/emergency-controls",
+      "title": "Emergency Controls",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 33,
+      "end_line": 42,
+      "byte_offset": 1064,
+      "byte_length": 335,
+      "summary": "| Check | Status | Notes | |-------|--------|-------| | Time-limited pause | ☐ | Max 6 hours | | Cooldown enforced | ☐ | 24h between pauses | | Cannot mint during pause | ☐ | No mint functions callabl",
+      "category": "reference"
+    },
+    "reference/securitychecklist/exploit-surface-analysis": {
+      "id": "reference/securitychecklist/exploit-surface-analysis",
+      "title": "Exploit Surface Analysis",
+      "level": 2,
+      "source_file": "references/security_checklist.md",
+      "start_line": 43,
+      "end_line": 44,
+      "byte_offset": 1400,
+      "byte_length": 28,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/known-attack-vectors": {
+      "id": "reference/securitychecklist/known-attack-vectors",
+      "title": "Known Attack Vectors",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 45,
+      "end_line": 46,
+      "byte_offset": 1429,
+      "byte_length": 25,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/1-reentrancy": {
+      "id": "reference/securitychecklist/1-reentrancy",
+      "title": "1. Reentrancy",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 47,
+      "end_line": 70,
+      "byte_offset": 1455,
+      "byte_length": 543,
+      "summary": "**Risk Level:** Medium **Applies To:** All programs",
+      "category": "reference"
+    },
+    "reference/securitychecklist/2-missing-signer-checks": {
+      "id": "reference/securitychecklist/2-missing-signer-checks",
+      "title": "2. Missing Signer Checks",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 71,
+      "end_line": 90,
+      "byte_offset": 1999,
+      "byte_length": 401,
+      "summary": "**Risk Level:** Critical **Applies To:** All programs",
+      "category": "reference"
+    },
+    "reference/securitychecklist/3-missing-owner-checks": {
+      "id": "reference/securitychecklist/3-missing-owner-checks",
+      "title": "3. Missing Owner Checks",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 91,
+      "end_line": 109,
+      "byte_offset": 2401,
+      "byte_length": 415,
+      "summary": "**Risk Level:** Critical **Applies To:** Token operations",
+      "category": "reference"
+    },
+    "reference/securitychecklist/4-pda-seed-collisions": {
+      "id": "reference/securitychecklist/4-pda-seed-collisions",
+      "title": "4. PDA Seed Collisions",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 110,
+      "end_line": 123,
+      "byte_offset": 2817,
+      "byte_length": 296,
+      "summary": "**Risk Level:** Medium **Applies To:** PDA-based accounts",
+      "category": "reference"
+    },
+    "reference/securitychecklist/5-integer-overflowunderflow": {
+      "id": "reference/securitychecklist/5-integer-overflowunderflow",
+      "title": "5. Integer Overflow/Underflow",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 124,
+      "end_line": 137,
+      "byte_offset": 3114,
+      "byte_length": 303,
+      "summary": "**Risk Level:** High **Applies To:** All math operations",
+      "category": "reference"
+    },
+    "reference/securitychecklist/6-unchecked-mint-authority": {
+      "id": "reference/securitychecklist/6-unchecked-mint-authority",
+      "title": "6. Unchecked Mint Authority",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 138,
+      "end_line": 152,
+      "byte_offset": 3418,
+      "byte_length": 313,
+      "summary": "**Risk Level:** Critical **Applies To:** Token mint",
+      "category": "reference"
+    },
+    "reference/securitychecklist/governance-attack-vectors": {
+      "id": "reference/securitychecklist/governance-attack-vectors",
+      "title": "Governance Attack Vectors",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 153,
+      "end_line": 154,
+      "byte_offset": 3732,
+      "byte_length": 30,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/1-flash-loan-governance-attack": {
+      "id": "reference/securitychecklist/1-flash-loan-governance-attack",
+      "title": "1. Flash Loan Governance Attack",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 155,
+      "end_line": 162,
+      "byte_offset": 3763,
+      "byte_length": 203,
+      "summary": "**Risk:** Attacker borrows tokens to vote, then returns",
+      "category": "reference"
+    },
+    "reference/securitychecklist/2-treasury-drain-attack": {
+      "id": "reference/securitychecklist/2-treasury-drain-attack",
+      "title": "2. Treasury Drain Attack",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 163,
+      "end_line": 170,
+      "byte_offset": 3967,
+      "byte_length": 174,
+      "summary": "**Risk:** Compromised signer drains treasury",
+      "category": "reference"
+    },
+    "reference/securitychecklist/3-proposal-spam-attack": {
+      "id": "reference/securitychecklist/3-proposal-spam-attack",
+      "title": "3. Proposal Spam Attack",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 171,
+      "end_line": 178,
+      "byte_offset": 4142,
+      "byte_length": 190,
+      "summary": "**Risk:** Flood governance with spam proposals",
+      "category": "reference"
+    },
+    "reference/securitychecklist/dexliquidity-attack-vectors": {
+      "id": "reference/securitychecklist/dexliquidity-attack-vectors",
+      "title": "DEX/Liquidity Attack Vectors",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 179,
+      "end_line": 180,
+      "byte_offset": 4333,
+      "byte_length": 33,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/1-lp-rug-pull": {
+      "id": "reference/securitychecklist/1-lp-rug-pull",
+      "title": "1. LP Rug Pull",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 181,
+      "end_line": 187,
+      "byte_offset": 4367,
+      "byte_length": 125,
+      "summary": "**Risk:** Owner removes liquidity",
+      "category": "reference"
+    },
+    "reference/securitychecklist/2-sandwich-attack": {
+      "id": "reference/securitychecklist/2-sandwich-attack",
+      "title": "2. Sandwich Attack",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 188,
+      "end_line": 195,
+      "byte_offset": 4493,
+      "byte_length": 165,
+      "summary": "**Risk:** MEV bots front-run trades",
+      "category": "reference"
+    },
+    "reference/securitychecklist/3-oracle-manipulation": {
+      "id": "reference/securitychecklist/3-oracle-manipulation",
+      "title": "3. Oracle Manipulation",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 196,
+      "end_line": 203,
+      "byte_offset": 4659,
+      "byte_length": 160,
+      "summary": "**Risk:** Price oracle manipulated",
+      "category": "reference"
+    },
+    "reference/securitychecklist/mev-sniper-protection-vigilante-suite": {
+      "id": "reference/securitychecklist/mev-sniper-protection-vigilante-suite",
+      "title": "MEV & Sniper Protection (Vigilante Suite)",
+      "level": 2,
+      "source_file": "references/security_checklist.md",
+      "start_line": 204,
+      "end_line": 205,
+      "byte_offset": 4820,
+      "byte_length": 45,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/launch-protection": {
+      "id": "reference/securitychecklist/launch-protection",
+      "title": "Launch Protection",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 206,
+      "end_line": 214,
+      "byte_offset": 4866,
+      "byte_length": 374,
+      "summary": "| Check | Status | Notes | |-------|--------|-------| | JITO-bundled LP addition | ☐ | LP added via private mempool | | Anti-bot time caps (first 30 min) | ☐ | Swap caps enforced in first blocks | | M",
+      "category": "reference"
+    },
+    "reference/securitychecklist/mev-mitigation": {
+      "id": "reference/securitychecklist/mev-mitigation",
+      "title": "MEV Mitigation",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 215,
+      "end_line": 223,
+      "byte_offset": 5241,
+      "byte_length": 330,
+      "summary": "| Check | Status | Notes | |-------|--------|-------| | Jito tip configured | ☐ | 0.01+ SOL recommended | | Fallback TX warning reviewed | ☐ | Standard TX visible to snipers | | Slippage protection in",
+      "category": "reference"
+    },
+    "reference/securitychecklist/post-deploy-authority-verification": {
+      "id": "reference/securitychecklist/post-deploy-authority-verification",
+      "title": "Post-Deploy Authority Verification",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 224,
+      "end_line": 237,
+      "byte_offset": 5572,
+      "byte_length": 419,
+      "summary": "Run `verify_authorities.ts` and confirm ALL 6 checks pass:",
+      "category": "reference"
+    },
+    "reference/securitychecklist/run-verification": {
+      "id": "reference/securitychecklist/run-verification",
+      "title": "Run verification",
+      "level": 1,
+      "source_file": "references/security_checklist.md",
+      "start_line": 238,
+      "end_line": 239,
+      "byte_offset": 5992,
+      "byte_length": 86,
+      "summary": "TOKEN_MINT=<ADDRESS> ts-node scripts/security/verify_authorities.ts",
+      "category": "reference"
+    },
+    "reference/securitychecklist/must-exit-with-code-0": {
+      "id": "reference/securitychecklist/must-exit-with-code-0",
+      "title": "Must exit with code 0",
+      "level": 1,
+      "source_file": "references/security_checklist.md",
+      "start_line": 240,
+      "end_line": 242,
+      "byte_offset": 6079,
+      "byte_length": 28,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/audit-preparation": {
+      "id": "reference/securitychecklist/audit-preparation",
+      "title": "Audit Preparation",
+      "level": 2,
+      "source_file": "references/security_checklist.md",
+      "start_line": 243,
+      "end_line": 244,
+      "byte_offset": 6108,
+      "byte_length": 21,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/documentation-required": {
+      "id": "reference/securitychecklist/documentation-required",
+      "title": "Documentation Required",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 245,
+      "end_line": 261,
+      "byte_offset": 6130,
+      "byte_length": 305,
+      "summary": "1. **Architecture Document** - System overview - Component interactions - Data flow diagrams",
+      "category": "reference"
+    },
+    "reference/securitychecklist/pre-audit-checklist": {
+      "id": "reference/securitychecklist/pre-audit-checklist",
+      "title": "Pre-Audit Checklist",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 262,
+      "end_line": 272,
+      "byte_offset": 6436,
+      "byte_length": 255,
+      "summary": "| Task | Status | |------|--------| | All tests passing | ☐ | | Code coverage >80% | ☐ | | No compiler warnings | ☐ | | Documentation complete | ☐ | | Deployment scripts tested | ☐ | | Access controls",
+      "category": "reference"
+    },
+    "reference/securitychecklist/recommended-auditors-solana": {
+      "id": "reference/securitychecklist/recommended-auditors-solana",
+      "title": "Recommended Auditors (Solana)",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 273,
+      "end_line": 288,
+      "byte_offset": 6692,
+      "byte_length": 230,
+      "summary": "1. **Tier 1 (Comprehensive)** - OtterSec - Neodyme - Halborn",
+      "category": "reference"
+    },
+    "reference/securitychecklist/incident-response": {
+      "id": "reference/securitychecklist/incident-response",
+      "title": "Incident Response",
+      "level": 2,
+      "source_file": "references/security_checklist.md",
+      "start_line": 289,
+      "end_line": 290,
+      "byte_offset": 6923,
+      "byte_length": 21,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/severity-levels": {
+      "id": "reference/securitychecklist/severity-levels",
+      "title": "Severity Levels",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 291,
+      "end_line": 299,
+      "byte_offset": 6945,
+      "byte_length": 327,
+      "summary": "| Level | Description | Response Time | |-------|-------------|---------------| | P0 - Critical | Active exploit, funds at risk | Immediate | | P1 - High | Vulnerability found, no active exploit | < 4",
+      "category": "reference"
+    },
+    "reference/securitychecklist/response-procedure": {
+      "id": "reference/securitychecklist/response-procedure",
+      "title": "Response Procedure",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 300,
+      "end_line": 301,
+      "byte_offset": 7273,
+      "byte_length": 23,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/securitychecklist/p0-critical": {
+      "id": "reference/securitychecklist/p0-critical",
+      "title": "P0 - Critical",
+      "level": 4,
+      "source_file": "references/security_checklist.md",
+      "start_line": 302,
+      "end_line": 322,
+      "byte_offset": 7297,
+      "byte_length": 414,
+      "summary": "1. **Immediate (0-5 min)** - Activate emergency pause - Alert all guardians",
+      "category": "reference"
+    },
+    "reference/securitychecklist/contact-chain": {
+      "id": "reference/securitychecklist/contact-chain",
+      "title": "Contact Chain",
+      "level": 3,
+      "source_file": "references/security_checklist.md",
+      "start_line": 323,
+      "end_line": 331,
+      "byte_offset": 7712,
+      "byte_length": 151,
+      "summary": "| Role | Primary | Backup | |------|---------|--------| | Security Lead | | | | Dev Lead | | | | Community Lead | | | | Legal | | |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/tokenomics-design-template": {
+      "id": "reference/tokenomicstemplate/tokenomics-design-template",
+      "title": "Tokenomics Design Template",
+      "level": 1,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 29,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/basic-parameters": {
+      "id": "reference/tokenomicstemplate/basic-parameters",
+      "title": "Basic Parameters",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 2,
+      "end_line": 11,
+      "byte_offset": 30,
+      "byte_length": 231,
+      "summary": "| Parameter | Value | Notes | |-----------|-------|-------| | Token Name | | | | Symbol | | | | Total Supply | 1,000,000,000 | Fixed, immutable | | Decimals | 9 | Solana standard | | Chain | Solana | ",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/distribution": {
+      "id": "reference/tokenomicstemplate/distribution",
+      "title": "Distribution",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 12,
+      "end_line": 33,
+      "byte_offset": 262,
+      "byte_length": 1702,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/distribution-breakdown": {
+      "id": "reference/tokenomicstemplate/distribution-breakdown",
+      "title": "Distribution Breakdown",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 34,
+      "end_line": 42,
+      "byte_offset": 1965,
+      "byte_length": 379,
+      "summary": "| Allocation | Percentage | Tokens | Unlock Schedule | |------------|------------|--------|-----------------| | Liquidity Pool | 70% | 700,000,000 | Immediate (LP locked) | | Community/Airdrop | 15% |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/vesting-schedules": {
+      "id": "reference/tokenomicstemplate/vesting-schedules",
+      "title": "Vesting Schedules",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 43,
+      "end_line": 44,
+      "byte_offset": 2345,
+      "byte_length": 21,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/team-vesting": {
+      "id": "reference/tokenomicstemplate/team-vesting",
+      "title": "Team Vesting",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 45,
+      "end_line": 52,
+      "byte_offset": 2367,
+      "byte_length": 389,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/treasury-release-example": {
+      "id": "reference/tokenomicstemplate/treasury-release-example",
+      "title": "Treasury Release (Example)",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 53,
+      "end_line": 61,
+      "byte_offset": 2757,
+      "byte_length": 188,
+      "summary": "| Quarter | Available | Cumulative | |---------|-----------|------------| | Q1 | 10M | 10M | | Q2 | 15M | 25M | | Q3 | 25M | 50M | | Q4+ | Governance | - |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/burn-mechanics": {
+      "id": "reference/tokenomicstemplate/burn-mechanics",
+      "title": "Burn Mechanics",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 62,
+      "end_line": 63,
+      "byte_offset": 2946,
+      "byte_length": 18,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/automatic-burns": {
+      "id": "reference/tokenomicstemplate/automatic-burns",
+      "title": "Automatic Burns",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 64,
+      "end_line": 71,
+      "byte_offset": 2965,
+      "byte_length": 237,
+      "summary": "| Trigger | Burn Rate | Notes | |---------|-----------|-------| | Every Trade | 1% (100 bps) | Taken from transaction | | Volume Milestone | 10M per 100M vol | Treasury reserve | | NFT Mint | 1000 tok",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/burn-projection": {
+      "id": "reference/tokenomicstemplate/burn-projection",
+      "title": "Burn Projection",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 72,
+      "end_line": 83,
+      "byte_offset": 3203,
+      "byte_length": 236,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/treasury-economics": {
+      "id": "reference/tokenomicstemplate/treasury-economics",
+      "title": "Treasury Economics",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 84,
+      "end_line": 85,
+      "byte_offset": 3440,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/revenue-sources": {
+      "id": "reference/tokenomicstemplate/revenue-sources",
+      "title": "Revenue Sources",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 86,
+      "end_line": 94,
+      "byte_offset": 3463,
+      "byte_length": 321,
+      "summary": "| Source | Estimated Annual | Notes | |--------|------------------|-------| | NFT Sales | $500K-2M | Primary collection + derivatives | | Merchandise | $100K-500K | Physical + digital | | Partnerships",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/treasury-allocation-policy": {
+      "id": "reference/tokenomicstemplate/treasury-allocation-policy",
+      "title": "Treasury Allocation Policy",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 95,
+      "end_line": 103,
+      "byte_offset": 3785,
+      "byte_length": 283,
+      "summary": "| Category | Max % | Purpose | |----------|-------|---------| | Marketing | 40% | Growth, KOLs, campaigns | | Development | 30% | Protocol improvements | | Buyback & Burn | 20% | Price support, deflat",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/liquidity-strategy": {
+      "id": "reference/tokenomicstemplate/liquidity-strategy",
+      "title": "Liquidity Strategy",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 104,
+      "end_line": 105,
+      "byte_offset": 4069,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/initial-pool": {
+      "id": "reference/tokenomicstemplate/initial-pool",
+      "title": "Initial Pool",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 106,
+      "end_line": 117,
+      "byte_offset": 4092,
+      "byte_length": 275,
+      "summary": "| Metric | Value | |--------|-------| | Pair | TOKEN/USDC | | Initial Token | 700,000,000 (70%) | | Initial USDC | $100,000 | | Initial Price | $0.000143 | | Initial MCap | $143,000 | | LP Lock | 12 m",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/liquidity-targets": {
+      "id": "reference/tokenomicstemplate/liquidity-targets",
+      "title": "Liquidity Targets",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 118,
+      "end_line": 125,
+      "byte_offset": 4368,
+      "byte_length": 204,
+      "summary": "| Market Cap | Target LP Depth | Slippage (10K swap) | |------------|-----------------|---------------------| | $1M | $200K | ~2.5% | | $10M | $1M | ~0.5% | | $100M | $5M | ~0.1% |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/governance": {
+      "id": "reference/tokenomicstemplate/governance",
+      "title": "Governance",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 126,
+      "end_line": 127,
+      "byte_offset": 4573,
+      "byte_length": 14,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/phase-1-centralized-month-0-6": {
+      "id": "reference/tokenomicstemplate/phase-1-centralized-month-0-6",
+      "title": "Phase 1: Centralized (Month 0-6)",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 128,
+      "end_line": 133,
+      "byte_offset": 4588,
+      "byte_length": 146,
+      "summary": "- Team multi-sig controls treasury - Community feedback via Telegram/Discord - Transparent spending reports",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/phase-2-hybrid-month-6-12": {
+      "id": "reference/tokenomicstemplate/phase-2-hybrid-month-6-12",
+      "title": "Phase 2: Hybrid (Month 6-12)",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 134,
+      "end_line": 139,
+      "byte_offset": 4735,
+      "byte_length": 127,
+      "summary": "- Snapshot voting for major decisions - Community proposals - Team retains veto for security",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/phase-3-dao-month-12": {
+      "id": "reference/tokenomicstemplate/phase-3-dao-month-12",
+      "title": "Phase 3: DAO (Month 12+)",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 140,
+      "end_line": 145,
+      "byte_offset": 4863,
+      "byte_length": 107,
+      "summary": "- On-chain governance - Token-weighted voting - Full treasury control to DAO",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/risk-factors": {
+      "id": "reference/tokenomicstemplate/risk-factors",
+      "title": "Risk Factors",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 146,
+      "end_line": 147,
+      "byte_offset": 4971,
+      "byte_length": 16,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/supply-risks": {
+      "id": "reference/tokenomicstemplate/supply-risks",
+      "title": "Supply Risks",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 148,
+      "end_line": 155,
+      "byte_offset": 4988,
+      "byte_length": 198,
+      "summary": "| Risk | Mitigation | |------|------------| | Infinite mint | Mint authority revoked | | Team dump | 12mo cliff + 24mo vest | | Whale concentration | Distribution to 10+ wallets |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/liquidity-risks": {
+      "id": "reference/tokenomicstemplate/liquidity-risks",
+      "title": "Liquidity Risks",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 156,
+      "end_line": 163,
+      "byte_offset": 5187,
+      "byte_length": 168,
+      "summary": "| Risk | Mitigation | |------|------------| | LP rug | LP locked/burned | | Low liquidity | Treasury LP support | | DEX attack | Emergency pause |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/governance-risks": {
+      "id": "reference/tokenomicstemplate/governance-risks",
+      "title": "Governance Risks",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 164,
+      "end_line": 171,
+      "byte_offset": 5356,
+      "byte_length": 182,
+      "summary": "| Risk | Mitigation | |------|------------| | Treasury drain | Daily spend caps | | Hostile takeover | Time-locks on changes | | Apathy | Incentivized voting |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/key-metrics-to-track": {
+      "id": "reference/tokenomicstemplate/key-metrics-to-track",
+      "title": "Key Metrics to Track",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 172,
+      "end_line": 173,
+      "byte_offset": 5539,
+      "byte_length": 24,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/health-indicators": {
+      "id": "reference/tokenomicstemplate/health-indicators",
+      "title": "Health Indicators",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 174,
+      "end_line": 182,
+      "byte_offset": 5564,
+      "byte_length": 250,
+      "summary": "| Metric | Healthy Range | Warning | |--------|---------------|---------| | Holder count | Growing | Declining | | Unique daily wallets | >100 | <50 | | LP/MCap ratio | >10% | <5% | | Treasury runway ",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/growth-indicators": {
+      "id": "reference/tokenomicstemplate/growth-indicators",
+      "title": "Growth Indicators",
+      "level": 3,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 183,
+      "end_line": 191,
+      "byte_offset": 5815,
+      "byte_length": 201,
+      "summary": "| Metric | Target | |--------|--------| | 30-day volume | >$1M | | Social mentions | >1000/week | | Developer activity | Weekly commits | | Partnership announcements | Monthly |",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/comparable-analysis": {
+      "id": "reference/tokenomicstemplate/comparable-analysis",
+      "title": "Comparable Analysis",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 192,
+      "end_line": 200,
+      "byte_offset": 6017,
+      "byte_length": 255,
+      "summary": "| Project | Supply | LP % | Team % | Burns | |---------|--------|------|--------|-------| | BONK | 100T | Variable | 5% | Yes | | WIF | 1B | ~60% | 0% | No | | PEPE | 420T | Variable | 0% | Yes | | **",
+      "category": "reference"
+    },
+    "reference/tokenomicstemplate/summary": {
+      "id": "reference/tokenomicstemplate/summary",
+      "title": "Summary",
+      "level": 2,
+      "source_file": "references/tokenomics_template.md",
+      "start_line": 201,
+      "end_line": 224,
+      "byte_offset": 6273,
+      "byte_length": 1703,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/module-10-vigilante-security-suite": {
+      "id": "reference/vigilantesecurity/module-10-vigilante-security-suite",
+      "title": "Module 10: \"Vigilante\" Security Suite",
+      "level": 1,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 0,
+      "end_line": 1,
+      "byte_offset": 0,
+      "byte_length": 40,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/purpose": {
+      "id": "reference/vigilantesecurity/purpose",
+      "title": "Purpose",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 2,
+      "end_line": 5,
+      "byte_offset": 41,
+      "byte_length": 284,
+      "summary": "Provide next-generation on-chain protection for fair token launches on Solana. This module addresses the MEV / sniper / bot attack surface that exists during the critical first minutes of liquidity ad",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/threat-model": {
+      "id": "reference/vigilantesecurity/threat-model",
+      "title": "Threat Model",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 6,
+      "end_line": 31,
+      "byte_offset": 326,
+      "byte_length": 2459,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/protection-modules": {
+      "id": "reference/vigilantesecurity/protection-modules",
+      "title": "Protection Modules",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 32,
+      "end_line": 33,
+      "byte_offset": 2786,
+      "byte_length": 22,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/1-jito-aware-liquidity-addition": {
+      "id": "reference/vigilantesecurity/1-jito-aware-liquidity-addition",
+      "title": "1. JITO-Aware Liquidity Addition",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 34,
+      "end_line": 67,
+      "byte_offset": 2809,
+      "byte_length": 1392,
+      "summary": "Use Jito bundles to add liquidity atomically and privately, preventing sniper bots from detecting the LP addition in the public mempool.",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/2-anti-bot-time-weighted-swap-caps": {
+      "id": "reference/vigilantesecurity/2-anti-bot-time-weighted-swap-caps",
+      "title": "2. Anti-Bot: Time-Weighted Swap Caps",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 68,
+      "end_line": 122,
+      "byte_offset": 4202,
+      "byte_length": 2826,
+      "summary": "Enforce maximum swap sizes during the first N minutes after LP addition. This prevents bots from buying massive positions in early blocks.",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/3-metadata-immutability": {
+      "id": "reference/vigilantesecurity/3-metadata-immutability",
+      "title": "3. Metadata Immutability",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 123,
+      "end_line": 161,
+      "byte_offset": 7029,
+      "byte_length": 2258,
+      "summary": "One-click scripts to permanently lock token metadata and revoke update authority.",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/4-authority-verification-script": {
+      "id": "reference/vigilantesecurity/4-authority-verification-script",
+      "title": "4. Authority Verification Script",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 162,
+      "end_line": 185,
+      "byte_offset": 9288,
+      "byte_length": 1187,
+      "summary": "Comprehensive post-deploy check that all dangerous authorities are revoked.",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/5-sandwich-attack-mitigation": {
+      "id": "reference/vigilantesecurity/5-sandwich-attack-mitigation",
+      "title": "5. Sandwich Attack Mitigation",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 186,
+      "end_line": 215,
+      "byte_offset": 10476,
+      "byte_length": 1897,
+      "summary": "Configuration guidance for protecting users from MEV sandwich attacks.",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/repo-tree-security-additions": {
+      "id": "reference/vigilantesecurity/repo-tree-security-additions",
+      "title": "Repo Tree (Security Additions)",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 216,
+      "end_line": 232,
+      "byte_offset": 12374,
+      "byte_length": 475,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/configuration": {
+      "id": "reference/vigilantesecurity/configuration",
+      "title": "Configuration",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 233,
+      "end_line": 234,
+      "byte_offset": 12850,
+      "byte_length": 17,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/anti-sniper-defaults": {
+      "id": "reference/vigilantesecurity/anti-sniper-defaults",
+      "title": "Anti-Sniper Defaults",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 235,
+      "end_line": 251,
+      "byte_offset": 12868,
+      "byte_length": 477,
+      "summary": "",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/metadata-lock-checklist": {
+      "id": "reference/vigilantesecurity/metadata-lock-checklist",
+      "title": "Metadata Lock Checklist",
+      "level": 3,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 252,
+      "end_line": 260,
+      "byte_offset": 13346,
+      "byte_length": 233,
+      "summary": "| Step | Action | Reversible? | |------|--------|-------------| | 1 | Verify metadata content | Yes | | 2 | Set isMutable = false | NO | | 3 | Revoke update authority | NO | | 4 | Verify on-chain | N/",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/cicd-integration": {
+      "id": "reference/vigilantesecurity/cicd-integration",
+      "title": "CI/CD Integration",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 261,
+      "end_line": 265,
+      "byte_offset": 13580,
+      "byte_length": 66,
+      "summary": "Add to `/.github/workflows/ci.yml`:",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/security-verification-step-post-deploy": {
+      "id": "reference/vigilantesecurity/security-verification-step-post-deploy",
+      "title": "Security verification step (post-deploy)",
+      "level": 1,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 266,
+      "end_line": 281,
+      "byte_offset": 13647,
+      "byte_length": 399,
+      "summary": "verify-authorities: runs-on: ubuntu-latest needs: deploy steps: - uses: actions/checkout@v4 - uses: actions/setup-node@v4 with: node-version: '20' - run: npm ci - run: npx ts-node scripts/security/ver",
+      "category": "reference"
+    },
+    "reference/vigilantesecurity/security-rules": {
+      "id": "reference/vigilantesecurity/security-rules",
+      "title": "Security Rules",
+      "level": 2,
+      "source_file": "references/vigilante_security.md",
+      "start_line": 282,
+      "end_line": 290,
+      "byte_offset": 14047,
+      "byte_length": 680,
+      "summary": "1. **Protection window is configurable but defaults to 30 minutes** — enough to deter snipers without frustrating real users 2. **Caps are per-address** — prevents Sybil circumvention (one wallet, man",
+      "category": "reference"
+    },
+    "skill/skill/memecoin-architect": {
+      "id": "skill/skill/memecoin-architect",
+      "title": "Memecoin Architect",
+      "level": 1,
+      "source_file": "SKILL.md",
+      "start_line": 5,
+      "end_line": 10,
+      "byte_offset": 806,
+      "byte_length": 184,
+      "summary": "Production-grade memecoin system design for Solana (primary), Base, and Ethereum.",
+      "category": "skill"
+    },
+    "skill/skill/workflow": {
+      "id": "skill/skill/workflow",
+      "title": "Workflow",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 11,
+      "end_line": 25,
+      "byte_offset": 991,
+      "byte_length": 348,
+      "summary": "",
+      "category": "skill"
+    },
+    "skill/skill/phase-0-research-brainstorm": {
+      "id": "skill/skill/phase-0-research-brainstorm",
+      "title": "Phase 0: Research & Brainstorm",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 26,
+      "end_line": 46,
+      "byte_offset": 1340,
+      "byte_length": 1045,
+      "summary": "**THE FIRST STEP.** Before designing tokenomics or writing contracts, research the market.",
+      "category": "skill"
+    },
+    "skill/skill/core-principles": {
+      "id": "skill/skill/core-principles",
+      "title": "Core Principles",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 47,
+      "end_line": 54,
+      "byte_offset": 2386,
+      "byte_length": 184,
+      "summary": "- No infinite mint - Burns tied to activity (deterministic) - Treasury governed, not rug-able - Emergency controls (limited + auditable) - On-chain metrics visible",
+      "category": "skill"
+    },
+    "skill/skill/chain-selection-2026-reality": {
+      "id": "skill/skill/chain-selection-2026-reality",
+      "title": "Chain Selection (2026 Reality)",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 55,
+      "end_line": 79,
+      "byte_offset": 2571,
+      "byte_length": 2072,
+      "summary": "> **Note:** When a `MEMECOIN_BRIEF.md` exists from Phase 0, the chain selection > from R3 (weighted scoring) overrides this default matrix.",
+      "category": "skill"
+    },
+    "skill/skill/system-architecture": {
+      "id": "skill/skill/system-architecture",
+      "title": "System Architecture",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 80,
+      "end_line": 99,
+      "byte_offset": 4644,
+      "byte_length": 1053,
+      "summary": "",
+      "category": "skill"
+    },
+    "skill/skill/module-1-token-layer": {
+      "id": "skill/skill/module-1-token-layer",
+      "title": "Module 1: Token Layer",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 100,
+      "end_line": 116,
+      "byte_offset": 5698,
+      "byte_length": 493,
+      "summary": "**Fixed Supply Architecture:** - Total Supply: FIXED (e.g., 1,000,000,000) - Mint: ONE-TIME ONLY (constructor) - Decimals: 6-9 (Solana standard) - No owner mint privileges post-deploy",
+      "category": "skill"
+    },
+    "skill/skill/module-2-burn-mechanics": {
+      "id": "skill/skill/module-2-burn-mechanics",
+      "title": "Module 2: Burn Mechanics",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 117,
+      "end_line": 130,
+      "byte_offset": 6192,
+      "byte_length": 309,
+      "summary": "Burns must be **mechanical, not emotional**.",
+      "category": "skill"
+    },
+    "skill/skill/module-3-treasury-system": {
+      "id": "skill/skill/module-3-treasury-system",
+      "title": "Module 3: Treasury System",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 131,
+      "end_line": 138,
+      "byte_offset": 6502,
+      "byte_length": 253,
+      "summary": "**Revenue Sources:** NFT mints, Merch, Partner fees, Game fees",
+      "category": "skill"
+    },
+    "skill/skill/treasury-policy-must-implement": {
+      "id": "skill/skill/treasury-policy-must-implement",
+      "title": "Treasury Policy (MUST IMPLEMENT)",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 139,
+      "end_line": 187,
+      "byte_offset": 6756,
+      "byte_length": 2239,
+      "summary": "",
+      "category": "skill"
+    },
+    "skill/skill/module-4-liquidity-engine": {
+      "id": "skill/skill/module-4-liquidity-engine",
+      "title": "Module 4: Liquidity Engine",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 188,
+      "end_line": 196,
+      "byte_offset": 8996,
+      "byte_length": 168,
+      "summary": "**DEX Stack:** Raydium + Jupiter",
+      "category": "skill"
+    },
+    "skill/skill/module-5-governance-roadmap": {
+      "id": "skill/skill/module-5-governance-roadmap",
+      "title": "Module 5: Governance Roadmap",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 197,
+      "end_line": 204,
+      "byte_offset": 9165,
+      "byte_length": 177,
+      "summary": "| Phase | Control Model | |-------|---------------| | Phase 1 | Core team + multisig | | Phase 2 | Snapshot voting | | Phase 3 | On-chain DAO |",
+      "category": "skill"
+    },
+    "skill/skill/module-6-emergency-controls": {
+      "id": "skill/skill/module-6-emergency-controls",
+      "title": "Module 6: Emergency Controls",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 205,
+      "end_line": 212,
+      "byte_offset": 9343,
+      "byte_length": 249,
+      "summary": "**Available:** Trading pause, LP freeze, Treasury lock, Oracle-based anomaly detection",
+      "category": "skill"
+    },
+    "skill/skill/module-7-stablecoin-adjacent-mechanics-optional": {
+      "id": "skill/skill/module-7-stablecoin-adjacent-mechanics-optional",
+      "title": "Module 7: Stablecoin-Adjacent Mechanics (Optional)",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 213,
+      "end_line": 226,
+      "byte_offset": 9593,
+      "byte_length": 361,
+      "summary": "Meme token with stabilization mechanics WITHOUT becoming a regulated stablecoin.",
+      "category": "skill"
+    },
+    "skill/skill/module-8-aura-dashboard-engine": {
+      "id": "skill/skill/module-8-aura-dashboard-engine",
+      "title": "Module 8: \"Aura\" Dashboard Engine",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 227,
+      "end_line": 257,
+      "byte_offset": 9955,
+      "byte_length": 1775,
+      "summary": "Multi-view Next.js 15 App Router application with three views: Landing Page, Holder Dashboard, and Admin Dashboard. All views use the glassmorphic Aura design system and read live on-chain data from t",
+      "category": "skill"
+    },
+    "skill/skill/module-9-narrative-forge-content-engine": {
+      "id": "skill/skill/module-9-narrative-forge-content-engine",
+      "title": "Module 9: \"Narrative Forge\" Content Engine",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 258,
+      "end_line": 272,
+      "byte_offset": 11731,
+      "byte_length": 441,
+      "summary": "AI-powered marketing asset generator.",
+      "category": "skill"
+    },
+    "skill/skill/module-10-vigilante-security-suite": {
+      "id": "skill/skill/module-10-vigilante-security-suite",
+      "title": "Module 10: \"Vigilante\" Security Suite",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 273,
+      "end_line": 287,
+      "byte_offset": 12173,
+      "byte_length": 483,
+      "summary": "MEV and sniper protection for fair launches.",
+      "category": "skill"
+    },
+    "skill/skill/module-11-propulsion-post-launch-growth": {
+      "id": "skill/skill/module-11-propulsion-post-launch-growth",
+      "title": "Module 11: \"Propulsion\" Post-Launch Growth",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 288,
+      "end_line": 302,
+      "byte_offset": 12657,
+      "byte_length": 485,
+      "summary": "Automated growth pipeline for token visibility and community scaling.",
+      "category": "skill"
+    },
+    "skill/skill/resources": {
+      "id": "skill/skill/resources",
+      "title": "Resources",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 303,
+      "end_line": 304,
+      "byte_offset": 13143,
+      "byte_length": 13,
+      "summary": "",
+      "category": "skill"
+    },
+    "skill/skill/anchor-contracts": {
+      "id": "skill/skill/anchor-contracts",
+      "title": "Anchor Contracts",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 305,
+      "end_line": 313,
+      "byte_offset": 13157,
+      "byte_length": 338,
+      "summary": "Reference `scripts/anchor_contracts/` for production-ready Solana programs: - `token_mint.rs` - Fixed supply, one-time mint - `burn_controller.rs` - Deterministic burn logic - `treasury_vault.rs` - PD",
+      "category": "skill"
+    },
+    "skill/skill/dex-scripts": {
+      "id": "skill/skill/dex-scripts",
+      "title": "DEX Scripts",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 314,
+      "end_line": 319,
+      "byte_offset": 13496,
+      "byte_length": 168,
+      "summary": "Reference `scripts/dex/` for liquidity operations: - `raydium_lp.sh` - Initial pool creation - `jupiter_integration.md` - Aggregator integration guide",
+      "category": "skill"
+    },
+    "skill/skill/security-scripts": {
+      "id": "skill/skill/security-scripts",
+      "title": "Security Scripts",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 320,
+      "end_line": 326,
+      "byte_offset": 13665,
+      "byte_length": 297,
+      "summary": "Reference `scripts/security/` for post-deploy hardening: - `jito_lp_add.ts` - JITO-bundled LP addition (private mempool) - `lock_metadata.ts` - Metaplex + Token-2022 metadata immutability - `verify_au",
+      "category": "skill"
+    },
+    "skill/skill/templates": {
+      "id": "skill/skill/templates",
+      "title": "Templates",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 327,
+      "end_line": 341,
+      "byte_offset": 13963,
+      "byte_length": 625,
+      "summary": "Reference `templates/aura/` for Next.js dashboard skeleton: - `app/layout.tsx` - Root layout + wallet providers - `app/page.tsx` - Bento grid dashboard - `app/globals.css` - Aura design tokens - `comp",
+      "category": "skill"
+    },
+    "skill/skill/deployment": {
+      "id": "skill/skill/deployment",
+      "title": "Deployment",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 342,
+      "end_line": 348,
+      "byte_offset": 14589,
+      "byte_length": 194,
+      "summary": "Reference `scripts/deploy/` for CI/CD: - `github_actions.yml` - Full pipeline - `pre_deploy_checklist.md` - Security validation - `post_deploy_checklist.md` - Verification steps",
+      "category": "skill"
+    },
+    "skill/skill/references": {
+      "id": "skill/skill/references",
+      "title": "References",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 349,
+      "end_line": 361,
+      "byte_offset": 14784,
+      "byte_length": 769,
+      "summary": "- `references/phase0_research_brainstorm.md` - Phase 0 research engine (market, chain scoring, naming, utility) - `references/cross_chain_mirror.md` - ETH/Base bridging strategy - `references/tokenomi",
+      "category": "skill"
+    },
+    "skill/skill/python-engine-local-execution-90-99-token-reduction": {
+      "id": "skill/skill/python-engine-local-execution-90-99-token-reduction",
+      "title": "Python Engine (Local Execution — 90-99% Token Reduction)",
+      "level": 3,
+      "source_file": "SKILL.md",
+      "start_line": 362,
+      "end_line": 389,
+      "byte_offset": 15554,
+      "byte_length": 1541,
+      "summary": "The `engine/` directory contains a Python CLI + MCP server that indexes all 80+ skill files and serves content via byte-offset extraction. No external dependencies (stdlib only).",
+      "category": "skill"
+    },
+    "skill/skill/execution-mode": {
+      "id": "skill/skill/execution-mode",
+      "title": "Execution Mode",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 390,
+      "end_line": 405,
+      "byte_offset": 17096,
+      "byte_length": 643,
+      "summary": "For full repo generation with all files (Anchor programs, TypeScript scripts, CI/CD, EVM contracts), reference `references/execution_master_prompt.md`.",
+      "category": "skill"
+    },
+    "skill/skill/deliverables-checklist": {
+      "id": "skill/skill/deliverables-checklist",
+      "title": "Deliverables Checklist",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 406,
+      "end_line": 424,
+      "byte_offset": 17740,
+      "byte_length": 550,
+      "summary": "When designing a memecoin system, produce:",
+      "category": "skill"
+    },
+    "skill/skill/global-constraints-enforce-always": {
+      "id": "skill/skill/global-constraints-enforce-always",
+      "title": "Global Constraints (Enforce Always)",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 425,
+      "end_line": 435,
+      "byte_offset": 18291,
+      "byte_length": 277,
+      "summary": "- No infinite mint - No hidden admin keys - All burns deterministic - Treasury actions logged - Emergency powers limited + auditable - LP protection mandatory - Solana is source of truth for cross-cha",
+      "category": "skill"
+    },
+    "skill/skill/output-format": {
+      "id": "skill/skill/output-format",
+      "title": "Output Format",
+      "level": 2,
+      "source_file": "SKILL.md",
+      "start_line": 436,
+      "end_line": 439,
+      "byte_offset": 18569,
+      "byte_length": 130,
+      "summary": "All deliverables: Markdown (.md), ASCII diagrams, Tables, Copy-paste ready, Production-grade (no hype language)",
+      "category": "skill"
+    }
+  },
+  "templates": {
+    "templates/app/(dashboard)/admin/burns/page.tsx": {
+      "name": "burns/page",
+      "source_file": "templates/aura/app/(dashboard)/admin/burns/page.tsx",
+      "component_type": "page",
+      "route_group": "(dashboard)/admin",
+      "byte_offset": 0,
+      "byte_length": 618,
+      "exports": [
+        "AdminBurnsPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/admin/AdminCard",
+        "@/components/admin/BuybackBurnForm"
+      ]
+    },
+    "templates/app/(dashboard)/admin/emergency/page.tsx": {
+      "name": "emergency/page",
+      "source_file": "templates/aura/app/(dashboard)/admin/emergency/page.tsx",
+      "component_type": "page",
+      "route_group": "(dashboard)/admin",
+      "byte_offset": 0,
+      "byte_length": 618,
+      "exports": [
+        "AdminEmergencyPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/admin/AdminCard",
+        "@/components/admin/EmergencyControls"
+      ]
+    },
+    "templates/app/(dashboard)/admin/governance/page.tsx": {
+      "name": "governance/page",
+      "source_file": "templates/aura/app/(dashboard)/admin/governance/page.tsx",
+      "component_type": "page",
+      "route_group": "(dashboard)/admin",
+      "byte_offset": 0,
+      "byte_length": 644,
+      "exports": [
+        "AdminGovernancePage"
+      ],
+      "imports": [
+        "react",
+        "@/components/admin/AdminCard",
+        "@/components/admin/GovernanceConfigPanel"
+      ]
+    },
+    "templates/app/(dashboard)/admin/layout.tsx": {
+      "name": "admin/layout",
+      "source_file": "templates/aura/app/(dashboard)/admin/layout.tsx",
+      "component_type": "layout",
+      "route_group": "(dashboard)/admin",
+      "byte_offset": 0,
+      "byte_length": 1924,
+      "exports": [
+        "AdminLayout"
+      ],
+      "imports": [
+        "react",
+        "next/link",
+        "next/navigation",
+        "@/components/admin/RoleGuard"
+      ]
+    },
+    "templates/app/(dashboard)/admin/page.tsx": {
+      "name": "admin/page",
+      "source_file": "templates/aura/app/(dashboard)/admin/page.tsx",
+      "component_type": "page",
+      "route_group": "(dashboard)/admin",
+      "byte_offset": 0,
+      "byte_length": 4516,
+      "exports": [
+        "AdminOverviewPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/admin/AdminCard",
+        "@/hooks/useTokenMetrics",
+        "@/hooks/useTreasuryData",
+        "@/hooks/useGovernanceData",
+        "@/hooks/useEmergencyStatus",
+        "@/hooks/useRoleGuard",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/app/(dashboard)/admin/treasury/page.tsx": {
+      "name": "treasury/page",
+      "source_file": "templates/aura/app/(dashboard)/admin/treasury/page.tsx",
+      "component_type": "page",
+      "route_group": "(dashboard)/admin",
+      "byte_offset": 0,
+      "byte_length": 1962,
+      "exports": [
+        "AdminTreasuryPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/admin/AdminCard",
+        "@/components/admin/ProposalList",
+        "@/components/admin/CreateProposalForm",
+        "@/hooks/useTreasuryData",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/app/(dashboard)/layout.tsx": {
+      "name": "(dashboard)/layout",
+      "source_file": "templates/aura/app/(dashboard)/layout.tsx",
+      "component_type": "layout",
+      "route_group": "(dashboard)",
+      "byte_offset": 0,
+      "byte_length": 3219,
+      "exports": [
+        "DashboardLayout"
+      ],
+      "imports": [
+        "react",
+        "next/link",
+        "next/navigation",
+        "@/components/wallet/ConnectButton",
+        "@/lib/constants",
+        "@/hooks/useRoleGuard"
+      ]
+    },
+    "templates/app/(dashboard)/page.tsx": {
+      "name": "(dashboard)/page",
+      "source_file": "templates/aura/app/(dashboard)/page.tsx",
+      "component_type": "page",
+      "route_group": "(dashboard)",
+      "byte_offset": 0,
+      "byte_length": 3767,
+      "exports": [
+        "DashboardPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/GlassCard",
+        "@/components/BurnMeter",
+        "@/components/PriceCard",
+        "@/components/dashboard/TreasuryCard",
+        "@/components/dashboard/PriceChart",
+        "@/components/dashboard/HolderMap",
+        "@/components/dashboard/LPStatus",
+        "@/components/dashboard/SupplyTicker",
+        "@/hooks/useTokenMetrics",
+        "@/hooks/usePriceData",
+        "@/hooks/useEmergencyStatus",
+        "@/lib/constants"
+      ]
+    },
+    "templates/app/(landing)/layout.tsx": {
+      "name": "(landing)/layout",
+      "source_file": "templates/aura/app/(landing)/layout.tsx",
+      "component_type": "layout",
+      "route_group": "(landing)",
+      "byte_offset": 0,
+      "byte_length": 672,
+      "exports": [
+        "LandingLayout"
+      ],
+      "imports": [
+        "react"
+      ]
+    },
+    "templates/app/(landing)/page.tsx": {
+      "name": "(landing)/page",
+      "source_file": "templates/aura/app/(landing)/page.tsx",
+      "component_type": "page",
+      "route_group": "(landing)",
+      "byte_offset": 0,
+      "byte_length": 1519,
+      "exports": [
+        "LandingPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/landing/HeroSection",
+        "@/components/landing/FeatureGrid",
+        "@/components/landing/TokenomicsSection",
+        "@/components/landing/SecurityBadges",
+        "@/components/landing/CTASection",
+        "@/components/landing/Footer"
+      ]
+    },
+    "templates/app/layout.tsx": {
+      "name": "layout",
+      "source_file": "templates/aura/app/layout.tsx",
+      "component_type": "layout",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1471,
+      "exports": [
+        "RootLayout",
+        "metadata"
+      ],
+      "imports": [
+        "next",
+        "next/font/google",
+        "@/components/wallet/WalletProvider",
+        "@/components/QueryProvider",
+        "@/lib/constants"
+      ]
+    },
+    "templates/app/page.tsx": {
+      "name": "page",
+      "source_file": "templates/aura/app/page.tsx",
+      "component_type": "page",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 6456,
+      "exports": [
+        "DashboardPage"
+      ],
+      "imports": [
+        "react",
+        "@/components/GlassCard",
+        "@/components/BurnMeter",
+        "@/components/PriceCard",
+        "@/lib/constants"
+      ]
+    },
+    "templates/components/BurnMeter.tsx": {
+      "name": "BurnMeter",
+      "source_file": "templates/aura/components/BurnMeter.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 3734,
+      "exports": [
+        "BurnMeter"
+      ],
+      "imports": [
+        "react",
+        "framer-motion"
+      ]
+    },
+    "templates/components/GlassCard.tsx": {
+      "name": "GlassCard",
+      "source_file": "templates/aura/components/GlassCard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1231,
+      "exports": [
+        "GlassCard"
+      ],
+      "imports": [
+        "react",
+        "framer-motion"
+      ]
+    },
+    "templates/components/PriceCard.tsx": {
+      "name": "PriceCard",
+      "source_file": "templates/aura/components/PriceCard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1286,
+      "exports": [
+        "PriceCard"
+      ],
+      "imports": [
+        "react"
+      ]
+    },
+    "templates/components/QueryProvider.tsx": {
+      "name": "QueryProvider",
+      "source_file": "templates/aura/components/QueryProvider.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 633,
+      "exports": [
+        "QueryProvider"
+      ],
+      "imports": [
+        "react",
+        "@tanstack/react-query"
+      ]
+    },
+    "templates/components/admin/AdminCard.tsx": {
+      "name": "AdminCard",
+      "source_file": "templates/aura/components/admin/AdminCard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 814,
+      "exports": [
+        "AdminCard"
+      ],
+      "imports": [
+        "react",
+        "framer-motion"
+      ]
+    },
+    "templates/components/admin/BuybackBurnForm.tsx": {
+      "name": "BuybackBurnForm",
+      "source_file": "templates/aura/components/admin/BuybackBurnForm.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 3727,
+      "exports": [
+        "BuybackBurnForm"
+      ],
+      "imports": [
+        "react",
+        "@solana/web3.js",
+        "@/hooks/useTokenMetrics",
+        "@/lib/formatters",
+        "@/lib/constants",
+        "./TransactionButton"
+      ]
+    },
+    "templates/components/admin/CreateProposalForm.tsx": {
+      "name": "CreateProposalForm",
+      "source_file": "templates/aura/components/admin/CreateProposalForm.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 3337,
+      "exports": [
+        "CreateProposalForm"
+      ],
+      "imports": [
+        "react",
+        "@solana/web3.js",
+        "./TransactionButton"
+      ]
+    },
+    "templates/components/admin/EmergencyControls.tsx": {
+      "name": "EmergencyControls",
+      "source_file": "templates/aura/components/admin/EmergencyControls.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 6317,
+      "exports": [
+        "EmergencyControls"
+      ],
+      "imports": [
+        "react",
+        "@solana/web3.js",
+        "@/hooks/useEmergencyStatus",
+        "@/hooks/useRoleGuard",
+        "@/lib/formatters",
+        "./TransactionButton"
+      ]
+    },
+    "templates/components/admin/GovernanceConfigPanel.tsx": {
+      "name": "GovernanceConfigPanel",
+      "source_file": "templates/aura/components/admin/GovernanceConfigPanel.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 3988,
+      "exports": [
+        "GovernanceConfigPanel"
+      ],
+      "imports": [
+        "react",
+        "@/hooks/useGovernanceData",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/components/admin/ProposalCard.tsx": {
+      "name": "ProposalCard",
+      "source_file": "templates/aura/components/admin/ProposalCard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1757,
+      "exports": [
+        "ProposalCard"
+      ],
+      "imports": [
+        "react",
+        "@/hooks/useTreasuryData",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/components/admin/ProposalList.tsx": {
+      "name": "ProposalList",
+      "source_file": "templates/aura/components/admin/ProposalList.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1052,
+      "exports": [
+        "ProposalList"
+      ],
+      "imports": [
+        "react",
+        "@/hooks/useTreasuryData",
+        "./ProposalCard"
+      ]
+    },
+    "templates/components/admin/RoleGuard.tsx": {
+      "name": "RoleGuard",
+      "source_file": "templates/aura/components/admin/RoleGuard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1347,
+      "exports": [
+        "RoleGuard"
+      ],
+      "imports": [
+        "react",
+        "@/hooks/useRoleGuard",
+        "@/components/GlassCard"
+      ]
+    },
+    "templates/components/admin/TransactionButton.tsx": {
+      "name": "TransactionButton",
+      "source_file": "templates/aura/components/admin/TransactionButton.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2855,
+      "exports": [
+        "TransactionButton"
+      ],
+      "imports": [
+        "react",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js"
+      ]
+    },
+    "templates/components/dashboard/HolderMap.tsx": {
+      "name": "HolderMap",
+      "source_file": "templates/aura/components/dashboard/HolderMap.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1745,
+      "exports": [
+        "HolderMap"
+      ],
+      "imports": [
+        "react",
+        "@tanstack/react-query",
+        "@solana/wallet-adapter-react",
+        "@/components/GlassCard",
+        "@/lib/constants",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/components/dashboard/LPStatus.tsx": {
+      "name": "LPStatus",
+      "source_file": "templates/aura/components/dashboard/LPStatus.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1538,
+      "exports": [
+        "LPStatus"
+      ],
+      "imports": [
+        "react",
+        "@/components/GlassCard"
+      ]
+    },
+    "templates/components/dashboard/PriceChart.tsx": {
+      "name": "PriceChart",
+      "source_file": "templates/aura/components/dashboard/PriceChart.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2858,
+      "exports": [
+        "PriceChart"
+      ],
+      "imports": [
+        "react",
+        "recharts",
+        "@/components/GlassCard",
+        "@/lib/constants"
+      ]
+    },
+    "templates/components/dashboard/SupplyTicker.tsx": {
+      "name": "SupplyTicker",
+      "source_file": "templates/aura/components/dashboard/SupplyTicker.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1635,
+      "exports": [
+        "SupplyTicker"
+      ],
+      "imports": [
+        "react",
+        "@/components/GlassCard",
+        "@/hooks/useTokenMetrics",
+        "@/lib/formatters",
+        "@/lib/constants"
+      ]
+    },
+    "templates/components/dashboard/TreasuryCard.tsx": {
+      "name": "TreasuryCard",
+      "source_file": "templates/aura/components/dashboard/TreasuryCard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1290,
+      "exports": [
+        "TreasuryCard"
+      ],
+      "imports": [
+        "react",
+        "@/components/GlassCard",
+        "@/hooks/useTreasuryData",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/components/landing/CTASection.tsx": {
+      "name": "CTASection",
+      "source_file": "templates/aura/components/landing/CTASection.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2096,
+      "exports": [
+        "CTASection"
+      ],
+      "imports": [
+        "react",
+        "framer-motion",
+        "@/lib/constants"
+      ]
+    },
+    "templates/components/landing/DistributionChart.tsx": {
+      "name": "DistributionChart",
+      "source_file": "templates/aura/components/landing/DistributionChart.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2462,
+      "exports": [
+        "DistributionChart"
+      ],
+      "imports": [
+        "react",
+        "recharts"
+      ]
+    },
+    "templates/components/landing/FeatureCard.tsx": {
+      "name": "FeatureCard",
+      "source_file": "templates/aura/components/landing/FeatureCard.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1117,
+      "exports": [
+        "FeatureCard"
+      ],
+      "imports": [
+        "react",
+        "framer-motion"
+      ]
+    },
+    "templates/components/landing/FeatureGrid.tsx": {
+      "name": "FeatureGrid",
+      "source_file": "templates/aura/components/landing/FeatureGrid.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1454,
+      "exports": [
+        "FeatureGrid"
+      ],
+      "imports": [
+        "react",
+        "./FeatureCard"
+      ]
+    },
+    "templates/components/landing/Footer.tsx": {
+      "name": "Footer",
+      "source_file": "templates/aura/components/landing/Footer.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 818,
+      "exports": [
+        "Footer"
+      ],
+      "imports": [
+        "react",
+        "@/lib/constants",
+        "./SocialLinks"
+      ]
+    },
+    "templates/components/landing/HeroSection.tsx": {
+      "name": "HeroSection",
+      "source_file": "templates/aura/components/landing/HeroSection.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 3395,
+      "exports": [
+        "HeroSection"
+      ],
+      "imports": [
+        "react",
+        "framer-motion",
+        "@/lib/constants",
+        "@/hooks/usePriceData",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/components/landing/SecurityBadge.tsx": {
+      "name": "SecurityBadge",
+      "source_file": "templates/aura/components/landing/SecurityBadge.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 835,
+      "exports": [
+        "SecurityBadge"
+      ],
+      "imports": [
+        "react"
+      ]
+    },
+    "templates/components/landing/SecurityBadges.tsx": {
+      "name": "SecurityBadges",
+      "source_file": "templates/aura/components/landing/SecurityBadges.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1013,
+      "exports": [
+        "SecurityBadges"
+      ],
+      "imports": [
+        "react",
+        "./SecurityBadge"
+      ]
+    },
+    "templates/components/landing/SocialLinks.tsx": {
+      "name": "SocialLinks",
+      "source_file": "templates/aura/components/landing/SocialLinks.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 912,
+      "exports": [
+        "SocialLinks"
+      ],
+      "imports": [
+        "react"
+      ]
+    },
+    "templates/components/landing/TokenomicsSection.tsx": {
+      "name": "TokenomicsSection",
+      "source_file": "templates/aura/components/landing/TokenomicsSection.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 833,
+      "exports": [
+        "TokenomicsSection"
+      ],
+      "imports": [
+        "react",
+        "./DistributionChart",
+        "@/lib/constants",
+        "@/lib/formatters"
+      ]
+    },
+    "templates/components/shared/AnimatedNumber.tsx": {
+      "name": "AnimatedNumber",
+      "source_file": "templates/aura/components/shared/AnimatedNumber.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 889,
+      "exports": [
+        "AnimatedNumber"
+      ],
+      "imports": [
+        "react",
+        "framer-motion"
+      ]
+    },
+    "templates/components/shared/Sparkline.tsx": {
+      "name": "Sparkline",
+      "source_file": "templates/aura/components/shared/Sparkline.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1302,
+      "exports": [
+        "Sparkline"
+      ],
+      "imports": [
+        "react",
+        "recharts"
+      ]
+    },
+    "templates/components/shared/StatusBadge.tsx": {
+      "name": "StatusBadge",
+      "source_file": "templates/aura/components/shared/StatusBadge.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 711,
+      "exports": [
+        "StatusBadge"
+      ],
+      "imports": [
+        "react"
+      ]
+    },
+    "templates/components/wallet/ConnectButton.tsx": {
+      "name": "ConnectButton",
+      "source_file": "templates/aura/components/wallet/ConnectButton.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1764,
+      "exports": [
+        "ConnectButton"
+      ],
+      "imports": [
+        "react",
+        "@solana/wallet-adapter-react-ui",
+        "@solana/wallet-adapter-react"
+      ]
+    },
+    "templates/components/wallet/WalletProvider.tsx": {
+      "name": "WalletProvider",
+      "source_file": "templates/aura/components/wallet/WalletProvider.tsx",
+      "component_type": "component",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1642,
+      "exports": [
+        "WalletProvider"
+      ],
+      "imports": [
+        "react",
+        "@solana/wallet-adapter-react-ui",
+        "@solana/wallet-adapter-phantom",
+        "@solana/wallet-adapter-solflare",
+        "@/lib/constants"
+      ]
+    },
+    "templates/hooks/useEmergencyStatus.ts": {
+      "name": "useEmergencyStatus",
+      "source_file": "templates/aura/hooks/useEmergencyStatus.ts",
+      "component_type": "hook",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2275,
+      "exports": [
+        "useEmergencyStatus"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js",
+        "@/lib/anchor-client",
+        "@/lib/constants"
+      ]
+    },
+    "templates/hooks/useGovernanceData.ts": {
+      "name": "useGovernanceData",
+      "source_file": "templates/aura/hooks/useGovernanceData.ts",
+      "component_type": "hook",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2570,
+      "exports": [
+        "useGovernanceData"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js",
+        "@/lib/anchor-client",
+        "@/lib/constants"
+      ]
+    },
+    "templates/hooks/usePriceData.ts": {
+      "name": "usePriceData",
+      "source_file": "templates/aura/hooks/usePriceData.ts",
+      "component_type": "hook",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1444,
+      "exports": [
+        "usePriceData"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "@/lib/constants"
+      ]
+    },
+    "templates/hooks/useRoleGuard.ts": {
+      "name": "useRoleGuard",
+      "source_file": "templates/aura/hooks/useRoleGuard.ts",
+      "component_type": "hook",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1514,
+      "exports": [
+        "useRoleGuard"
+      ],
+      "imports": [
+        "react",
+        "@solana/wallet-adapter-react",
+        "./useTreasuryData",
+        "./useEmergencyStatus"
+      ]
+    },
+    "templates/hooks/useTokenMetrics.ts": {
+      "name": "useTokenMetrics",
+      "source_file": "templates/aura/hooks/useTokenMetrics.ts",
+      "component_type": "hook",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2824,
+      "exports": [
+        "useTokenMetrics"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js",
+        "@/lib/anchor-client",
+        "@/lib/constants"
+      ]
+    },
+    "templates/hooks/useTreasuryData.ts": {
+      "name": "useTreasuryData",
+      "source_file": "templates/aura/hooks/useTreasuryData.ts",
+      "component_type": "hook",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2719,
+      "exports": [
+        "useTreasuryData"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js",
+        "@/lib/anchor-client",
+        "@/lib/constants"
+      ]
+    },
+    "templates/lib/anchor-client.ts": {
+      "name": "anchor-client",
+      "source_file": "templates/aura/lib/anchor-client.ts",
+      "component_type": "lib",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 3968,
+      "exports": [
+        "getReadOnlyProvider",
+        "getProvider",
+        "getProgram"
+      ],
+      "imports": [
+        "@/lib/anchor-client",
+        "@coral-xyz/anchor",
+        "@solana/web3.js",
+        "@solana/wallet-adapter-react",
+        "./constants",
+        "./idl/memecoin_protocol.json"
+      ]
+    },
+    "templates/lib/constants.ts": {
+      "name": "constants",
+      "source_file": "templates/aura/lib/constants.ts",
+      "component_type": "lib",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 2484,
+      "exports": [
+        "RPC_ENDPOINT",
+        "NETWORK",
+        "TOKEN_MINT",
+        "PROGRAM_ID",
+        "TREASURY_PDA",
+        "JUPITER_PRICE_API",
+        "TOTAL_SUPPLY",
+        "DECIMALS",
+        "TICKER",
+        "REFETCH_INTERVAL",
+        "PDA_SEEDS"
+      ],
+      "imports": [
+        "@solana/web3.js"
+      ]
+    },
+    "templates/lib/formatters.ts": {
+      "name": "formatters",
+      "source_file": "templates/aura/lib/formatters.ts",
+      "component_type": "lib",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 1859,
+      "exports": [
+        "formatNumber",
+        "formatSOL",
+        "shortenAddress",
+        "formatPercent",
+        "timeAgo"
+      ],
+      "imports": []
+    },
+    "templates/app/globals.css": {
+      "name": "globals",
+      "source_file": "templates/aura/app/globals.css",
+      "component_type": "style",
+      "route_group": null,
+      "byte_offset": 0,
+      "byte_length": 5108,
+      "exports": [],
+      "imports": []
+    }
+  },
+  "contracts": {
+    "contracts/burn_controller": {
+      "name": "burn_controller",
+      "source_file": "scripts/anchor_contracts/burn_controller.rs",
+      "program_name": "burn_controller",
+      "byte_offset": 0,
+      "byte_length": 16948,
+      "instructions": [
+        "initialize",
+        "execute_trade_burn",
+        "check_milestone_burn",
+        "treasury_buyback_burn",
+        "pause_burns",
+        "resume_burns"
+      ],
+      "accounts": [
+        "Initialize",
+        "ExecuteTradeBurn",
+        "CheckMilestoneBurn",
+        "TreasuryBuybackBurn",
+        "PauseBurns",
+        "ResumeBurns"
+      ],
+      "events": [
+        "BurnControllerInitialized",
+        "TradeBurnExecuted",
+        "MilestoneBurnExecuted",
+        "TreasuryBuybackBurnExecuted",
+        "BurnsPaused",
+        "BurnsResumed"
+      ],
+      "errors": [
+        "BurnError"
+      ]
+    },
+    "contracts/emergency_pause": {
+      "name": "emergency_pause",
+      "source_file": "scripts/anchor_contracts/emergency_pause.rs",
+      "program_name": "emergency_pause",
+      "byte_offset": 0,
+      "byte_length": 17549,
+      "instructions": [
+        "initialize",
+        "vote_pause",
+        "cancel_vote",
+        "vote_resume",
+        "check_pause_expiry",
+        "get_status",
+        "update_guardians"
+      ],
+      "accounts": [
+        "Initialize",
+        "VotePause",
+        "CancelVote",
+        "VoteResume",
+        "CheckPauseExpiry",
+        "GetStatus",
+        "UpdateGuardians"
+      ],
+      "events": [
+        "EmergencyInitialized",
+        "PauseEvent",
+        "ResumeEvent",
+        "GuardiansUpdated"
+      ],
+      "errors": [
+        "EmergencyError"
+      ]
+    },
+    "contracts/governance_multisig": {
+      "name": "governance_multisig",
+      "source_file": "scripts/anchor_contracts/governance_multisig.rs",
+      "program_name": "governance_multisig",
+      "byte_offset": 0,
+      "byte_length": 21951,
+      "instructions": [
+        "initialize",
+        "propose_spend",
+        "approve",
+        "execute",
+        "cancel",
+        "update_config",
+        "get_proposal_status"
+      ],
+      "accounts": [
+        "Initialize",
+        "ProposeSpend",
+        "Approve",
+        "Execute",
+        "Cancel",
+        "UpdateConfig",
+        "GetProposalStatus"
+      ],
+      "events": [
+        "GovernanceInitialized",
+        "ProposalCreated",
+        "ProposalApproved",
+        "ProposalExecuted",
+        "ProposalCancelled",
+        "ConfigUpdated"
+      ],
+      "errors": [
+        "GovernanceError"
+      ]
+    },
+    "contracts/token_mint": {
+      "name": "token_mint",
+      "source_file": "scripts/anchor_contracts/token_mint.rs",
+      "program_name": "token_mint",
+      "byte_offset": 0,
+      "byte_length": 9452,
+      "instructions": [
+        "initialize",
+        "mint_and_revoke"
+      ],
+      "accounts": [
+        "Initialize",
+        "MintAndRevoke"
+      ],
+      "events": [
+        "TokenInitialized",
+        "SupplyMintedAndLocked"
+      ],
+      "errors": [
+        "MemeError"
+      ]
+    },
+    "contracts/treasury_vault": {
+      "name": "treasury_vault",
+      "source_file": "scripts/anchor_contracts/treasury_vault.rs",
+      "program_name": "treasury_vault",
+      "byte_offset": 0,
+      "byte_length": 21762,
+      "instructions": [
+        "initialize",
+        "create_proposal",
+        "approve_proposal",
+        "execute_proposal",
+        "update_signers",
+        "emergency_pause",
+        "resume"
+      ],
+      "accounts": [
+        "Initialize",
+        "CreateProposal",
+        "ApproveProposal",
+        "ExecuteProposal",
+        "UpdateSigners",
+        "EmergencyPause",
+        "Resume"
+      ],
+      "events": [
+        "TreasuryInitialized",
+        "ProposalCreated",
+        "ProposalApproved",
+        "ProposalExecuted",
+        "SignersUpdated",
+        "TreasuryPaused",
+        "TreasuryResumed"
+      ],
+      "errors": [
+        "TreasuryError"
+      ]
+    }
+  },
+  "scripts": {
+    "scripts/deploy/github_actions.yml": {
+      "name": "github_actions.yml",
+      "source_file": "scripts/deploy/github_actions.yml",
+      "script_type": "deploy",
+      "byte_offset": 0,
+      "byte_length": 13935,
+      "description": "============================================================================="
+    },
+    "scripts/deploy/post_deploy_checklist.md": {
+      "name": "post_deploy_checklist.md",
+      "source_file": "scripts/deploy/post_deploy_checklist.md",
+      "script_type": "deploy",
+      "byte_offset": 0,
+      "byte_length": 3434,
+      "description": "Post-Deploy Verification Checklist"
+    },
+    "scripts/deploy/pre_deploy_checklist.md": {
+      "name": "pre_deploy_checklist.md",
+      "source_file": "scripts/deploy/pre_deploy_checklist.md",
+      "script_type": "deploy",
+      "byte_offset": 0,
+      "byte_length": 4335,
+      "description": "Pre-Deploy Security Checklist"
+    },
+    "scripts/security/jito_lp_add.ts": {
+      "name": "jito_lp_add.ts",
+      "source_file": "scripts/security/jito_lp_add.ts",
+      "script_type": "security",
+      "byte_offset": 0,
+      "byte_length": 14359,
+      "description": "============================================================================="
+    },
+    "scripts/security/lock_metadata.ts": {
+      "name": "lock_metadata.ts",
+      "source_file": "scripts/security/lock_metadata.ts",
+      "script_type": "security",
+      "byte_offset": 0,
+      "byte_length": 13198,
+      "description": "============================================================================="
+    },
+    "scripts/security/verify_authorities.ts": {
+      "name": "verify_authorities.ts",
+      "source_file": "scripts/security/verify_authorities.ts",
+      "script_type": "security",
+      "byte_offset": 0,
+      "byte_length": 13361,
+      "description": "============================================================================="
+    },
+    "scripts/dex/jupiter_integration.md": {
+      "name": "jupiter_integration.md",
+      "source_file": "scripts/dex/jupiter_integration.md",
+      "script_type": "dex",
+      "byte_offset": 0,
+      "byte_length": 3394,
+      "description": "Jupiter Integration Guide"
+    },
+    "scripts/dex/raydium_lp.sh": {
+      "name": "raydium_lp.sh",
+      "source_file": "scripts/dex/raydium_lp.sh",
+      "script_type": "dex",
+      "byte_offset": 0,
+      "byte_length": 10418,
+      "description": "bin/bash"
+    },
+    "scripts/marketing/content_generator.py": {
+      "name": "content_generator.py",
+      "source_file": "scripts/marketing/content_generator.py",
+      "script_type": "marketing",
+      "byte_offset": 0,
+      "byte_length": 7272,
+      "description": "usr/bin/env python3"
+    }
+  },
+  "stats": {
+    "total_files": 80,
+    "total_sections": 279,
+    "total_templates": 55,
+    "total_contracts": 5,
+    "total_scripts": 9,
+    "total_source_bytes": 428361,
+    "total_index_entries": 348
+  }
+}

@@ -225,15 +225,34 @@ Meme token with stabilization mechanics WITHOUT becoming a regulated stablecoin.
 - ❌ No yield promises
 - ✅ Disclosures baked into metadata
 
-## Module 8: "Aura" Luxury UI Engine
+## Module 8: "Aura" Dashboard Engine
 
-Next.js glassmorphic dashboard for real-time on-chain visualization.
+Multi-view Next.js 15 App Router application with three views: Landing Page, Holder Dashboard, and Admin Dashboard. All views use the glassmorphic Aura design system and read live on-chain data from the 5 Anchor programs.
 
-Reference `references/aura_ui_engine.md` for full specs.
+Reference `references/aura_ui_engine.md` for design specs.
 
-**Components:** BurnMeter, TreasuryCard, PriceChart, HolderMap, LPStatus, GovernancePanel, PauseIndicator, SupplyTicker
+**Architecture:**
+- Route group `(landing)` — Crypto-native dark marketing page (public, no wallet required)
+- Route group `(dashboard)` — Holder dashboard with bento grid (wallet optional for read-only)
+- Route group `(dashboard)/admin` — Wallet-gated admin area (treasury signers + emergency guardians only)
 
-**Stack:** Next.js 15 + Tailwind CSS 4 + Recharts + Framer Motion + @solana/wallet-adapter
+**Data Layer (6 hooks):**
+- `useTokenMetrics` — MintState + BurnState PDAs (supply, burned, burn rate)
+- `useTreasuryData` — TreasuryState PDA (balance, signers, proposals)
+- `useGovernanceData` — GovernanceState PDA (owners, threshold, config proposals)
+- `useEmergencyStatus` — EmergencyState PDA (pause state, guardian votes)
+- `usePriceData` — Jupiter Price API v2 (price, 24h change, volume)
+- `useRoleGuard` — Client-side wallet check against signers[] and guardians[]
+
+**Admin Features:**
+- Treasury: View balance, proposals, create new transfer proposals
+- Governance: View owners, threshold, config proposals
+- Emergency: Vote pause/resume with confirmation workflow
+- Burns: View burn metrics, execute treasury buyback + burn
+
+**Components:** BurnMeter, TreasuryCard, PriceChart, HolderMap, LPStatus, SupplyTicker, ProposalList, EmergencyControls, BuybackBurnForm, RoleGuard, TransactionButton, AnimatedNumber, Sparkline, StatusBadge
+
+**Stack:** Next.js 15 + Tailwind CSS 4 + TanStack Query + Recharts + Framer Motion + @solana/wallet-adapter
 
 **Trigger:** Included automatically in execution mode repo generation.
 
@@ -299,6 +318,28 @@ Reference `scripts/dex/` for liquidity operations:
 - `raydium_lp.sh` - Initial pool creation
 - `jupiter_integration.md` - Aggregator integration guide
 
+### Security Scripts
+
+Reference `scripts/security/` for post-deploy hardening:
+- `jito_lp_add.ts` - JITO-bundled LP addition (private mempool)
+- `lock_metadata.ts` - Metaplex + Token-2022 metadata immutability
+- `verify_authorities.ts` - 6-check post-deploy authority verification (CI exit codes)
+
+### Templates
+
+Reference `templates/aura/` for Next.js dashboard skeleton:
+- `app/layout.tsx` - Root layout + wallet providers
+- `app/page.tsx` - Bento grid dashboard
+- `app/globals.css` - Aura design tokens
+- `components/wallet/WalletProvider.tsx` - Solana wallet adapter
+- `lib/anchor-client.ts` - Anchor IDL + program connection
+- `lib/constants.ts` - Program IDs, RPC endpoints
+
+Reference `templates/narrative_forge/` for marketing templates:
+- `threads/launch_thread.md` - 5-part AIDA launch thread
+- `visuals/brand_guide.md` - Colors, fonts, logo, AI prompts
+- `media_kit/one_pager.md` - Project summary for KOLs/press
+
 ### Deployment
 
 Reference `scripts/deploy/` for CI/CD:
@@ -318,6 +359,34 @@ Reference `scripts/deploy/` for CI/CD:
 - `references/narrative_forge.md` - Content strategy engine (Module 9)
 - `references/vigilante_security.md` - MEV/sniper protection suite (Module 10)
 - `references/propulsion_post_launch.md` - Post-launch growth engine (Module 11)
+
+### Python Engine (Local Execution — 90-99% Token Reduction)
+
+The `engine/` directory contains a Python CLI + MCP server that indexes all 80+ skill files and serves content via byte-offset extraction. No external dependencies (stdlib only).
+
+**CLI Commands** (`python3 -m engine <command>`):
+
+| Command | Description |
+|---------|-------------|
+| `build-index` | Parse all files → `data/index.json` (~347 entries) |
+| `check-index` | Validate index integrity + staleness check |
+| `search <query>` | Fuzzy search across all entries |
+| `list <category>` | List entries (templates, contracts, references, scripts) |
+| `extract <entry-id>` | Extract content by ID with byte offsets |
+| `generate-dashboard <dir>` | Write all 55 Aura template files |
+| `generate-contracts <dir>` | Write Anchor programs with brief overrides |
+| `generate-marketing <dir>` | Write narrative forge content |
+| `generate-manifest <dir>` | Write complete repo structure |
+| `apply-brief <path>` | Load + validate MEMECOIN_BRIEF.md |
+| `token-report` | Show cumulative token savings |
+| `serve` | Start MCP stdio server (9 tools) |
+
+**MCP Tools** (auto-registered via `.mcp.json`):
+- `memecoin_search` - Fuzzy search across all indexed content
+- `memecoin_list_templates` / `memecoin_list_contracts` / `memecoin_list_references` - Category listings
+- `memecoin_extract` / `memecoin_extract_template` - Targeted extraction
+- `memecoin_generate_dashboard` / `memecoin_generate_contracts` - Bulk file generation
+- `memecoin_index_status` - Index stats + freshness
 
 ## Execution Mode
 

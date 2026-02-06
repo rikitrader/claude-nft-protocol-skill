@@ -3,10 +3,11 @@
 // =============================================================================
 // PRINCIPLE: Transparent governance with auditable decision trail
 // CONSTRAINT: All treasury spends require threshold approval
+// COMPAT: Uses token_interface — works with both SPL Token and Token-2022
 // =============================================================================
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token_interface::{self, TokenAccount, TokenInterface, Transfer};
 
 declare_id!("REPLACE_WITH_YOUR_PROGRAM_ID");
 
@@ -181,7 +182,7 @@ pub mod governance_multisig {
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
 
-        token::transfer(cpi_ctx, proposal.amount)?;
+        token_interface::transfer(cpi_ctx, proposal.amount)?;
 
         emit!(ProposalExecuted {
             proposal_id,
@@ -383,19 +384,20 @@ pub struct Execute<'info> {
 
     // Treasury accounts for CPI transfer
     #[account(mut)]
-    pub treasury_token_account: Account<'info, TokenAccount>,
+    pub treasury_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
         constraint = recipient_token_account.key() == proposal.to @ GovernanceError::RecipientMismatch,
     )]
-    pub recipient_token_account: Account<'info, TokenAccount>,
+    pub recipient_token_account: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: PDA authority for governance transfers
     #[account(seeds = [b"governance"], bump = governance_state.bump)]
     pub governance_authority: UncheckedAccount<'info>,
 
-    pub token_program: Program<'info, Token>,
+    /// Accepts both SPL Token and Token-2022
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 #[derive(Accounts)]

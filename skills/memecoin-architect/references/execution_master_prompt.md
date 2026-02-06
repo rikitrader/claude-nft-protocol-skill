@@ -112,7 +112,7 @@ is included in the generated README.md:
     /test/Bridge.t.sol
     /README.md
 
-  /frontend                          # Module 8: Aura UI Engine
+  /frontend                          # Module 8: Aura Dashboard Engine
     /package.json
     /tsconfig.json
     /next.config.ts
@@ -120,28 +120,71 @@ is included in the generated README.md:
     /.env.example
     /src
       /app
-        /layout.tsx                  # Root layout + wallet providers
-        /page.tsx                    # Dashboard home (Bento grid)
+        /layout.tsx                  # Root layout + fonts + providers
         /globals.css                 # Design tokens + glassmorphic utils
+        /(landing)                   # Route group: marketing page
+          /layout.tsx                # Minimal landing layout
+          /page.tsx                  # Landing page (hero, features, tokenomics)
+        /(dashboard)                 # Route group: holder + admin views
+          /layout.tsx                # Sidebar nav + wallet header
+          /page.tsx                  # Holder dashboard (bento grid, live data)
+          /admin
+            /layout.tsx              # Admin tabs + RoleGuard wrapper
+            /page.tsx                # Admin overview (system status)
+            /treasury/page.tsx       # Treasury proposals + create form
+            /governance/page.tsx     # Multi-sig config + proposals
+            /emergency/page.tsx      # Pause/resume voting
+            /burns/page.tsx          # Burn metrics + buyback form
       /components
+        /QueryProvider.tsx           # TanStack Query client wrapper
+        /GlassCard.tsx               # Reusable glassmorphic card
+        /BurnMeter.tsx               # Animated burn ring
+        /PriceCard.tsx               # Price display + 24h change
+        /landing
+          /HeroSection.tsx           # Animated hero with live price
+          /FeatureGrid.tsx           # 6 feature cards
+          /FeatureCard.tsx           # Single feature card
+          /TokenomicsSection.tsx     # Distribution overview
+          /DistributionChart.tsx     # Recharts PieChart
+          /SecurityBadges.tsx        # Verified-on-chain badges
+          /SecurityBadge.tsx         # Single badge
+          /CTASection.tsx            # Call-to-action block
+          /Footer.tsx                # Footer + disclaimers
+          /SocialLinks.tsx           # Social media icons
         /dashboard
-          /BurnMeter.tsx             # Animated burn ring
-          /TreasuryCard.tsx          # Balance + sparkline
+          /TreasuryCard.tsx          # Balance + threshold
           /PriceChart.tsx            # Candlestick via Recharts
-          /HolderMap.tsx             # Top holders donut
+          /HolderMap.tsx             # Top 10 holders
           /LPStatus.tsx              # LP lock countdown
-          /GovernancePanel.tsx       # Proposals + votes
-          /PauseIndicator.tsx        # Emergency beacon
-          /SupplyTicker.tsx          # Live supply counter
+          /SupplyTicker.tsx          # Circulating + burned supply
+        /admin
+          /RoleGuard.tsx             # Wallet-gated access control
+          /AdminCard.tsx             # Card variant with action header
+          /ProposalList.tsx          # Treasury proposal list
+          /ProposalCard.tsx          # Single proposal display
+          /TransactionButton.tsx     # Send + confirm button
+          /CreateProposalForm.tsx    # New transfer proposal form
+          /GovernanceConfigPanel.tsx # Owners, threshold, config
+          /EmergencyControls.tsx     # Vote pause/resume UI
+          /BuybackBurnForm.tsx       # Treasury buyback + burn
+        /shared
+          /AnimatedNumber.tsx        # Framer Motion counter
+          /Sparkline.tsx             # Tiny inline area chart
+          /StatusBadge.tsx           # Active/Paused/Locked pill
         /wallet
           /WalletProvider.tsx        # Solana wallet adapter wrapper
           /ConnectButton.tsx         # Styled connect button
       /hooks
-        /useTokenMetrics.ts          # Burn/supply/treasury data
+        /useTokenMetrics.ts          # MintState + BurnState PDAs
+        /useTreasuryData.ts          # TreasuryState PDA
+        /useGovernanceData.ts        # GovernanceState PDA
+        /useEmergencyStatus.ts       # EmergencyState PDA
         /usePriceData.ts             # Jupiter price feed
+        /useRoleGuard.ts             # Wallet role detection
       /lib
         /anchor-client.ts            # IDL + program connection
-        /constants.ts                # Program IDs, RPC endpoints
+        /constants.ts                # Program IDs, RPC endpoints, PDA seeds
+        /formatters.ts               # Number, address, time formatters
 
   /scripts
     /security                        # Module 10: Vigilante Suite
