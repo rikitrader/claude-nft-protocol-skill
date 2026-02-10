@@ -2,288 +2,525 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title EmergencyPause
- * @author SecureMintEngine
- * @notice 4-level graduated circuit breaker for the SecureMintEngine protocol.
+ * @notice 4-level circuit breaker system for protocol emergencies
+ * @dev Implements the EmergencyShutdownArchitecture from SecureMintEngine
  *
- * @dev Pause Levels:
+ * PAUSE LEVELS:
+ * - Level 0: NORMAL       - All operations active
+ * - Level 1: ELEVATED     - Enhanced monitoring, rate limits reduced
+ * - Level 2: RESTRICTED   - Minting paused, burns/redemptions allowed
+ * - Level 3: EMERGENCY    - All operations paused except emergency withdrawals
+ * - Level 4: SHUTDOWN     - Full protocol shutdown, recovery mode only
  *
- *      | Level | Name             | Effect                                  |
- *      |-------|------------------|-----------------------------------------|
- *      | L0    | NORMAL           | All operations permitted                |
- *      | L1    | MINT_PAUSED      | Minting halted; transfers allowed       |
- *      | L2    | RESTRICTED       | Minting + transfers halted              |
- *      | L3    | FULL_FREEZE      | All operations frozen; timelocked exit  |
+ * AUTO-TRIGGERS:
+ * - Oracle unhealthy → Level 2
+ * - Reserve mismatch → Level 3
+ * - Invariant breach → Level 4
  *
- *      Guardians can escalate the pause level. Only admins can de-escalate.
- *      Level 3 (full freeze) requires a timelock before it can be lifted.
- *      A DAO override can force de-escalation via DAO_ROLE.
+ * RECOVERY:
+ * - Level 1-2: Guardian can unpause after conditions resolved
+ * - Level 3-4: Requires governance vote + timelock
  */
-contract EmergencyPause is AccessControl {
-    // -------------------------------------------------------------------
-    //  Roles
-    // -------------------------------------------------------------------
+contract EmergencyPause is AccessControl, ReentrancyGuard {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ROLES
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @notice Guardians can escalate the pause level.
     bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
+    bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
+    bytes32 public constant MONITOR_ROLE = keccak256("MONITOR_ROLE");
 
-    /// @notice Admins can de-escalate the pause level.
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    /// @notice DAO can force-override any pause level.
-    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
-
-    // -------------------------------------------------------------------
-    //  Enums
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ENUMS
+    // ═══════════════════════════════════════════════════════════════════════════
 
     enum PauseLevel {
-        LEVEL_0_NORMAL,        // All operations permitted
-        LEVEL_1_MINT_PAUSED,   // Minting halted
-        LEVEL_2_RESTRICTED,    // Minting + transfers halted
-        LEVEL_3_FULL_FREEZE    // Everything frozen
+        NORMAL,      // 0 - All operations active
+        ELEVATED,    // 1 - Enhanced monitoring
+        RESTRICTED,  // 2 - Minting paused
+        EMERGENCY,   // 3 - All ops paused except emergency
+        SHUTDOWN     // 4 - Full shutdown
     }
 
-    // -------------------------------------------------------------------
-    //  Custom Errors
-    // -------------------------------------------------------------------
+    enum TriggerReason {
+        MANUAL,              // 0 - Manual guardian action
+        ORACLE_UNHEALTHY,    // 1 - Oracle data unhealthy
+        ORACLE_STALE,        // 2 - Oracle data stale
+        RESERVE_MISMATCH,    // 3 - Reserves below supply
+        INVARIANT_BREACH,    // 4 - Formal invariant violated
+        EXPLOIT_DETECTED,    // 5 - Potential exploit detected
+        GOVERNANCE_VOTE,     // 6 - Governance decision
+        RATE_LIMIT_HIT,      // 7 - Rate limits exhausted
+        PRICE_DEVIATION,     // 8 - Abnormal price movement
+        BRIDGE_FAILURE       // 9 - Cross-chain bridge issue
+    }
 
-    error CannotDeEscalateBelowNormal();
-    error CannotDeEscalateToSameOrHigher(PauseLevel current, PauseLevel requested);
-    error CannotEscalateToSameOrLower(PauseLevel current, PauseLevel requested);
-    error FullFreezeTimelockActive(uint256 availableAt);
-    error CooldownActive(uint256 cooldownEndsAt);
-    error ZeroAddress();
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    // -------------------------------------------------------------------
-    //  Events
-    // -------------------------------------------------------------------
-
-    event PauseLevelChanged(
-        PauseLevel indexed previousLevel,
-        PauseLevel indexed newLevel,
-        address indexed changedBy,
-        string reason,
-        uint256 timestamp
-    );
-
-    event FullFreezeTimelockStarted(uint256 availableAt);
-    event DAOOverride(PauseLevel indexed newLevel, address indexed daoAddress);
-
-    // -------------------------------------------------------------------
-    //  State Variables
-    // -------------------------------------------------------------------
-
-    /// @notice The current pause level.
+    /// @notice Current pause level
     PauseLevel public currentLevel;
 
-    /// @notice Timelock delay for lifting a full freeze (seconds).
-    uint256 public immutable fullFreezeTimelockDelay;
+    /// @notice Timestamp when current level was set
+    uint256 public levelSetAt;
 
-    /// @notice Timestamp when the full freeze timelock expires.
-    uint256 public fullFreezeAvailableAt;
+    /// @notice Reason for current pause level
+    TriggerReason public currentReason;
 
-    /// @notice Cooldown period after any de-escalation (seconds).
-    uint256 public immutable cooldownPeriod;
+    /// @notice Additional details about the trigger
+    string public triggerDetails;
 
-    /// @notice Timestamp when the cooldown expires.
-    uint256 public cooldownEndsAt;
+    /// @notice Timelock for recovery from Level 3+
+    uint256 public constant RECOVERY_TIMELOCK = 24 hours;
 
-    /// @notice Address of the BackedToken contract (for integration hooks).
-    address public immutable backedToken;
+    /// @notice Pending recovery request
+    struct RecoveryRequest {
+        PauseLevel targetLevel;
+        uint256 executeAfter;
+        bool pending;
+        address requestedBy;
+    }
+    RecoveryRequest public pendingRecovery;
 
-    /// @notice Address of the SecureMintPolicy contract (for integration hooks).
-    address public immutable secureMintPolicy;
+    /// @notice Registered contract addresses that receive pause signals
+    mapping(address => bool) public registeredContracts;
+    address[] public contractList;
 
-    // -------------------------------------------------------------------
-    //  Constructor
-    // -------------------------------------------------------------------
+    /// @notice Auto-trigger thresholds
+    uint256 public oracleStalenessThreshold = 1 hours;
+    uint256 public priceDeviationThreshold = 500; // 5% in basis points
+    uint256 public reserveDeficitThreshold = 0; // Any deficit triggers
 
-    /**
-     * @param admin                    Initial admin address.
-     * @param fullFreezeTimelockDelay_ Timelock delay for lifting full freeze (seconds).
-     * @param cooldownPeriod_          Cooldown after de-escalation (seconds).
-     * @param backedToken_             BackedToken contract address.
-     * @param secureMintPolicy_        SecureMintPolicy contract address.
-     */
-    constructor(
-        address admin,
-        uint256 fullFreezeTimelockDelay_,
-        uint256 cooldownPeriod_,
-        address backedToken_,
-        address secureMintPolicy_
-    ) {
-        require(admin != address(0), "EmergencyPause: zero admin");
-        if (backedToken_ == address(0)) revert ZeroAddress();
-        if (secureMintPolicy_ == address(0)) revert ZeroAddress();
+    /// @notice Level escalation history
+    struct LevelChange {
+        PauseLevel fromLevel;
+        PauseLevel toLevel;
+        TriggerReason reason;
+        address triggeredBy;
+        uint256 timestamp;
+        string details;
+    }
+    LevelChange[] public levelHistory;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ADMIN_ROLE, admin);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EVENTS
+    // ═══════════════════════════════════════════════════════════════════════════
 
-        fullFreezeTimelockDelay = fullFreezeTimelockDelay_;
-        cooldownPeriod = cooldownPeriod_;
-        backedToken = backedToken_;
-        secureMintPolicy = secureMintPolicy_;
-        currentLevel = PauseLevel.LEVEL_0_NORMAL;
+    event LevelChanged(
+        PauseLevel indexed fromLevel,
+        PauseLevel indexed toLevel,
+        TriggerReason indexed reason,
+        address triggeredBy,
+        string details
+    );
+
+    event RecoveryRequested(
+        PauseLevel targetLevel,
+        uint256 executeAfter,
+        address requestedBy
+    );
+
+    event RecoveryExecuted(PauseLevel newLevel, address executedBy);
+    event RecoveryCancelled(address cancelledBy);
+
+    event ContractRegistered(address indexed contractAddress);
+    event ContractUnregistered(address indexed contractAddress);
+
+    event ThresholdUpdated(string thresholdType, uint256 oldValue, uint256 newValue);
+
+    event AutoTriggerFired(
+        TriggerReason reason,
+        PauseLevel newLevel,
+        string details
+    );
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ERRORS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    error InvalidLevelTransition();
+    error RecoveryTimelockNotReady();
+    error NoPendingRecovery();
+    error RecoveryAlreadyPending();
+    error ContractAlreadyRegistered();
+    error ContractNotRegistered();
+    error CannotEscalateToLowerLevel();
+    error ZeroAddress();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    constructor(address _admin) {
+        if (_admin == address(0)) revert ZeroAddress();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(GUARDIAN_ROLE, _admin);
+        _grantRole(GOVERNOR_ROLE, _admin);
+        _grantRole(MONITOR_ROLE, _admin);
+
+        currentLevel = PauseLevel.NORMAL;
+        levelSetAt = block.timestamp;
     }
 
-    // -------------------------------------------------------------------
-    //  External — Escalation (GUARDIAN_ROLE)
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LEVEL MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Escalates the pause level. Can only go UP (higher severity).
-     * @param newLevel The new, higher pause level.
-     * @param reason   A human-readable reason for the escalation.
+     * @notice Escalate pause level (guardian can escalate, never de-escalate without process)
+     * @param newLevel Target level (must be higher than current)
+     * @param reason Reason for escalation
+     * @param details Additional details
      */
-    function escalate(
+    function escalateLevel(
         PauseLevel newLevel,
-        string calldata reason
+        TriggerReason reason,
+        string calldata details
     ) external onlyRole(GUARDIAN_ROLE) {
-        if (newLevel <= currentLevel) {
-            revert CannotEscalateToSameOrLower(currentLevel, newLevel);
-        }
+        if (newLevel <= currentLevel) revert CannotEscalateToLowerLevel();
 
-        PauseLevel previous = currentLevel;
-        currentLevel = newLevel;
-
-        if (newLevel == PauseLevel.LEVEL_3_FULL_FREEZE) {
-            // slither-disable-next-line timestamp
-            fullFreezeAvailableAt = block.timestamp + fullFreezeTimelockDelay;
-            emit FullFreezeTimelockStarted(fullFreezeAvailableAt);
-        }
-
-        _notifyIntegrations();
-        // slither-disable-next-line reentrancy-events
-        emit PauseLevelChanged(previous, newLevel, msg.sender, reason, block.timestamp);
+        _setLevel(newLevel, reason, details);
     }
 
-    // -------------------------------------------------------------------
-    //  External — De-escalation (ADMIN_ROLE)
-    // -------------------------------------------------------------------
+    /**
+     * @notice Direct set to Level 1 (ELEVATED) - Guardian can do this freely
+     */
+    function setElevated(string calldata details) external onlyRole(GUARDIAN_ROLE) {
+        if (currentLevel >= PauseLevel.ELEVATED) revert InvalidLevelTransition();
+        _setLevel(PauseLevel.ELEVATED, TriggerReason.MANUAL, details);
+    }
 
     /**
-     * @notice De-escalates the pause level. Can only go DOWN (lower severity).
-     * @dev If de-escalating from LEVEL_3, the timelock must have expired.
-     *      After any de-escalation, a cooldown period is enforced.
-     * @param newLevel The new, lower pause level.
-     * @param reason   A human-readable reason for the de-escalation.
+     * @notice Direct set to Level 2 (RESTRICTED) - Minting paused
      */
-    function deescalate(
+    function setRestricted(string calldata details) external onlyRole(GUARDIAN_ROLE) {
+        if (currentLevel >= PauseLevel.RESTRICTED) revert InvalidLevelTransition();
+        _setLevel(PauseLevel.RESTRICTED, TriggerReason.MANUAL, details);
+    }
+
+    /**
+     * @notice Direct set to Level 3 (EMERGENCY) - All ops paused
+     */
+    function setEmergency(string calldata details) external onlyRole(GUARDIAN_ROLE) {
+        if (currentLevel >= PauseLevel.EMERGENCY) revert InvalidLevelTransition();
+        _setLevel(PauseLevel.EMERGENCY, TriggerReason.MANUAL, details);
+    }
+
+    /**
+     * @notice Direct set to Level 4 (SHUTDOWN) - Full shutdown
+     */
+    function setShutdown(string calldata details) external onlyRole(GUARDIAN_ROLE) {
+        if (currentLevel >= PauseLevel.SHUTDOWN) revert InvalidLevelTransition();
+        _setLevel(PauseLevel.SHUTDOWN, TriggerReason.MANUAL, details);
+    }
+
+    /**
+     * @notice Return to NORMAL from ELEVATED only - no timelock needed
+     */
+    function returnToNormalFromElevated() external onlyRole(GUARDIAN_ROLE) {
+        if (currentLevel != PauseLevel.ELEVATED) revert InvalidLevelTransition();
+        _setLevel(PauseLevel.NORMAL, TriggerReason.MANUAL, "Returned to normal from elevated");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTO-TRIGGER FUNCTIONS (Called by monitors/keepers)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Auto-trigger on oracle unhealthy
+     * @param details Oracle status details
+     */
+    function triggerOracleUnhealthy(string calldata details) external onlyRole(MONITOR_ROLE) {
+        if (currentLevel < PauseLevel.RESTRICTED) {
+            _setLevel(PauseLevel.RESTRICTED, TriggerReason.ORACLE_UNHEALTHY, details);
+            emit AutoTriggerFired(TriggerReason.ORACLE_UNHEALTHY, PauseLevel.RESTRICTED, details);
+        }
+    }
+
+    /**
+     * @notice Auto-trigger on oracle stale
+     * @param staleness Current staleness in seconds
+     */
+    function triggerOracleStale(uint256 staleness) external onlyRole(MONITOR_ROLE) {
+        if (staleness >= oracleStalenessThreshold && currentLevel < PauseLevel.RESTRICTED) {
+            string memory details = string(abi.encodePacked("Oracle stale: ", _uint2str(staleness), "s"));
+            _setLevel(PauseLevel.RESTRICTED, TriggerReason.ORACLE_STALE, details);
+            emit AutoTriggerFired(TriggerReason.ORACLE_STALE, PauseLevel.RESTRICTED, details);
+        }
+    }
+
+    /**
+     * @notice Auto-trigger on reserve mismatch
+     * @param reserves Current reserves
+     * @param supply Current supply
+     */
+    function triggerReserveMismatch(uint256 reserves, uint256 supply) external onlyRole(MONITOR_ROLE) {
+        if (reserves < supply && currentLevel < PauseLevel.EMERGENCY) {
+            string memory details = string(abi.encodePacked(
+                "Reserves: ", _uint2str(reserves), " < Supply: ", _uint2str(supply)
+            ));
+            _setLevel(PauseLevel.EMERGENCY, TriggerReason.RESERVE_MISMATCH, details);
+            emit AutoTriggerFired(TriggerReason.RESERVE_MISMATCH, PauseLevel.EMERGENCY, details);
+        }
+    }
+
+    /**
+     * @notice Auto-trigger on invariant breach
+     * @param invariantId ID of breached invariant
+     * @param details Breach details
+     */
+    function triggerInvariantBreach(
+        string calldata invariantId,
+        string calldata details
+    ) external onlyRole(MONITOR_ROLE) {
+        if (currentLevel < PauseLevel.SHUTDOWN) {
+            string memory fullDetails = string(abi.encodePacked("Invariant ", invariantId, ": ", details));
+            _setLevel(PauseLevel.SHUTDOWN, TriggerReason.INVARIANT_BREACH, fullDetails);
+            emit AutoTriggerFired(TriggerReason.INVARIANT_BREACH, PauseLevel.SHUTDOWN, fullDetails);
+        }
+    }
+
+    /**
+     * @notice Auto-trigger on price deviation
+     * @param deviation Current deviation in basis points
+     */
+    function triggerPriceDeviation(uint256 deviation) external onlyRole(MONITOR_ROLE) {
+        if (deviation >= priceDeviationThreshold && currentLevel < PauseLevel.ELEVATED) {
+            string memory details = string(abi.encodePacked("Price deviation: ", _uint2str(deviation), " bps"));
+            _setLevel(PauseLevel.ELEVATED, TriggerReason.PRICE_DEVIATION, details);
+            emit AutoTriggerFired(TriggerReason.PRICE_DEVIATION, PauseLevel.ELEVATED, details);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RECOVERY (TIMELOCKED FOR LEVEL 2+)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Request recovery to a lower level (timelocked for Level 2+)
+     * @param targetLevel Target level to recover to
+     */
+    function requestRecovery(PauseLevel targetLevel) external onlyRole(GOVERNOR_ROLE) {
+        if (pendingRecovery.pending) revert RecoveryAlreadyPending();
+        if (targetLevel >= currentLevel) revert InvalidLevelTransition();
+
+        // Level 2+ recovery requires timelock
+        uint256 timelock = currentLevel >= PauseLevel.RESTRICTED ? RECOVERY_TIMELOCK : 0;
+
+        pendingRecovery = RecoveryRequest({
+            targetLevel: targetLevel,
+            executeAfter: block.timestamp + timelock,
+            pending: true,
+            requestedBy: msg.sender
+        });
+
+        emit RecoveryRequested(targetLevel, pendingRecovery.executeAfter, msg.sender);
+    }
+
+    /**
+     * @notice Execute pending recovery after timelock
+     */
+    function executeRecovery() external onlyRole(GOVERNOR_ROLE) {
+        if (!pendingRecovery.pending) revert NoPendingRecovery();
+        if (block.timestamp < pendingRecovery.executeAfter) revert RecoveryTimelockNotReady();
+
+        PauseLevel targetLevel = pendingRecovery.targetLevel;
+        delete pendingRecovery;
+
+        _setLevel(targetLevel, TriggerReason.GOVERNANCE_VOTE, "Recovery executed via governance");
+
+        emit RecoveryExecuted(targetLevel, msg.sender);
+    }
+
+    /**
+     * @notice Cancel pending recovery
+     */
+    function cancelRecovery() external onlyRole(GOVERNOR_ROLE) {
+        if (!pendingRecovery.pending) revert NoPendingRecovery();
+        delete pendingRecovery;
+        emit RecoveryCancelled(msg.sender);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONTRACT REGISTRATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Register a contract to receive pause signals
+     * @param contractAddress Address to register
+     */
+    function registerContract(address contractAddress) external onlyRole(GOVERNOR_ROLE) {
+        if (contractAddress == address(0)) revert ZeroAddress();
+        if (registeredContracts[contractAddress]) revert ContractAlreadyRegistered();
+
+        registeredContracts[contractAddress] = true;
+        contractList.push(contractAddress);
+
+        emit ContractRegistered(contractAddress);
+    }
+
+    /**
+     * @notice Unregister a contract
+     * @param contractAddress Address to unregister
+     */
+    function unregisterContract(address contractAddress) external onlyRole(GOVERNOR_ROLE) {
+        if (!registeredContracts[contractAddress]) revert ContractNotRegistered();
+
+        registeredContracts[contractAddress] = false;
+
+        // Remove from array (swap and pop)
+        for (uint256 i = 0; i < contractList.length; i++) {
+            if (contractList[i] == contractAddress) {
+                contractList[i] = contractList[contractList.length - 1];
+                contractList.pop();
+                break;
+            }
+        }
+
+        emit ContractUnregistered(contractAddress);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // THRESHOLD CONFIGURATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function setOracleStalenessThreshold(uint256 _threshold) external onlyRole(GOVERNOR_ROLE) {
+        emit ThresholdUpdated("oracleStaleness", oracleStalenessThreshold, _threshold);
+        oracleStalenessThreshold = _threshold;
+    }
+
+    function setPriceDeviationThreshold(uint256 _threshold) external onlyRole(GOVERNOR_ROLE) {
+        emit ThresholdUpdated("priceDeviation", priceDeviationThreshold, _threshold);
+        priceDeviationThreshold = _threshold;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INTERNAL
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function _setLevel(
         PauseLevel newLevel,
-        string calldata reason
-    ) external onlyRole(ADMIN_ROLE) {
-        if (newLevel >= currentLevel) {
-            revert CannotDeEscalateToSameOrHigher(currentLevel, newLevel);
-        }
+        TriggerReason reason,
+        string memory details
+    ) internal {
+        PauseLevel oldLevel = currentLevel;
 
-        // Enforce cooldown from previous de-escalation
-        // slither-disable-next-line timestamp
-        if (block.timestamp < cooldownEndsAt) {
-            revert CooldownActive(cooldownEndsAt);
-        }
+        levelHistory.push(LevelChange({
+            fromLevel: oldLevel,
+            toLevel: newLevel,
+            reason: reason,
+            triggeredBy: msg.sender,
+            timestamp: block.timestamp,
+            details: details
+        }));
 
-        // Enforce full-freeze timelock
-        if (currentLevel == PauseLevel.LEVEL_3_FULL_FREEZE) {
-            // slither-disable-next-line timestamp
-            if (block.timestamp < fullFreezeAvailableAt) {
-                revert FullFreezeTimelockActive(fullFreezeAvailableAt);
-            }
-        }
-
-        PauseLevel previous = currentLevel;
         currentLevel = newLevel;
-        // slither-disable-next-line timestamp
-        cooldownEndsAt = block.timestamp + cooldownPeriod;
+        levelSetAt = block.timestamp;
+        currentReason = reason;
+        triggerDetails = details;
 
-        _notifyIntegrations();
-        // slither-disable-next-line reentrancy-events
-        emit PauseLevelChanged(previous, newLevel, msg.sender, reason, block.timestamp);
+        emit LevelChanged(oldLevel, newLevel, reason, msg.sender, details);
     }
 
-    // -------------------------------------------------------------------
-    //  External — DAO Override (DAO_ROLE)
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice DAO can force-set any pause level, bypassing timelock and cooldown.
-     * @param newLevel The target pause level.
-     */
-    function daoOverride(PauseLevel newLevel) external onlyRole(DAO_ROLE) {
-        PauseLevel previous = currentLevel;
-        currentLevel = newLevel;
-        cooldownEndsAt = 0;
-        fullFreezeAvailableAt = 0;
-
-        _notifyIntegrations();
-        // slither-disable-next-line reentrancy-events
-        emit DAOOverride(newLevel, msg.sender);
-        // slither-disable-next-line reentrancy-events
-        emit PauseLevelChanged(previous, newLevel, msg.sender, "DAO override", block.timestamp);
-    }
-
-    // -------------------------------------------------------------------
-    //  External — View Helpers
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Returns true if minting is currently paused (level >= 1).
-     */
-    function isMintPaused() external view returns (bool) {
-        return currentLevel >= PauseLevel.LEVEL_1_MINT_PAUSED;
-    }
-
-    /**
-     * @notice Returns true if transfers are currently paused (level >= 2).
-     */
-    function isTransferPaused() external view returns (bool) {
-        return currentLevel >= PauseLevel.LEVEL_2_RESTRICTED;
-    }
-
-    /**
-     * @notice Returns true if all operations are frozen (level == 3).
-     */
-    function isFullFreeze() external view returns (bool) {
-        return currentLevel == PauseLevel.LEVEL_3_FULL_FREEZE;
-    }
-
-    // -------------------------------------------------------------------
-    //  Internal — Integration Hooks
-    // -------------------------------------------------------------------
-
-    /**
-     * @dev Notifies integrated contracts of the current pause level.
-     *      Uses low-level calls to avoid reverting if the target does
-     *      not implement the hook.
-     */
-    function _notifyIntegrations() internal {
-        if (backedToken != address(0)) {
-            // solhint-disable-next-line avoid-low-level-calls
-            // slither-disable-next-line low-level-calls
-            (bool success, ) = backedToken.call(
-                abi.encodeWithSignature("onPauseLevelChanged(uint8)", uint8(currentLevel))
-            );
-            if (!success) {
-                // slither-disable-next-line reentrancy-events
-                emit IntegrationHookFailed(backedToken, "BackedToken.onPauseLevelChanged");
-            }
+    function _uint2str(uint256 _i) internal pure returns (string memory) {
+        if (_i == 0) return "0";
+        uint256 j = _i;
+        uint256 len;
+        while (j != 0) {
+            len++;
+            j /= 10;
         }
-
-        if (secureMintPolicy != address(0)) {
-            // solhint-disable-next-line avoid-low-level-calls
-            // slither-disable-next-line low-level-calls
-            (bool success, ) = secureMintPolicy.call(
-                abi.encodeWithSignature("onPauseLevelChanged(uint8)", uint8(currentLevel))
-            );
-            if (!success) {
-                // slither-disable-next-line reentrancy-events
-                emit IntegrationHookFailed(secureMintPolicy, "SecureMintPolicy.onPauseLevelChanged");
-            }
+        bytes memory bstr = new bytes(len);
+        uint256 k = len;
+        while (_i != 0) {
+            k = k - 1;
+            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
+            bytes1 b1 = bytes1(temp);
+            bstr[k] = b1;
+            _i /= 10;
         }
+        return string(bstr);
     }
 
-    /// @dev Emitted when an integration hook call fails (graceful degradation).
-    event IntegrationHookFailed(address indexed target, string hookName);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VIEW FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Check if minting is allowed at current level
+     */
+    function isMintingAllowed() external view returns (bool) {
+        return currentLevel < PauseLevel.RESTRICTED;
+    }
+
+    /**
+     * @notice Check if burning is allowed at current level
+     */
+    function isBurningAllowed() external view returns (bool) {
+        return currentLevel < PauseLevel.EMERGENCY;
+    }
+
+    /**
+     * @notice Check if transfers are allowed at current level
+     */
+    function isTransferAllowed() external view returns (bool) {
+        return currentLevel < PauseLevel.EMERGENCY;
+    }
+
+    /**
+     * @notice Check if all operations are paused
+     */
+    function isFullyPaused() external view returns (bool) {
+        return currentLevel >= PauseLevel.EMERGENCY;
+    }
+
+    /**
+     * @notice Get current status
+     */
+    function getStatus() external view returns (
+        PauseLevel level,
+        TriggerReason reason,
+        string memory details,
+        uint256 setAt,
+        bool mintingAllowed,
+        bool burningAllowed,
+        bool transfersAllowed
+    ) {
+        return (
+            currentLevel,
+            currentReason,
+            triggerDetails,
+            levelSetAt,
+            this.isMintingAllowed(),
+            this.isBurningAllowed(),
+            this.isTransferAllowed()
+        );
+    }
+
+    /**
+     * @notice Get level history length
+     */
+    function getLevelHistoryLength() external view returns (uint256) {
+        return levelHistory.length;
+    }
+
+    /**
+     * @notice Get level change at index
+     */
+    function getLevelChange(uint256 index) external view returns (LevelChange memory) {
+        return levelHistory[index];
+    }
+
+    /**
+     * @notice Get all registered contracts
+     */
+    function getRegisteredContracts() external view returns (address[] memory) {
+        return contractList;
+    }
 }

@@ -3,154 +3,121 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 /**
  * @title BackedToken
- * @author SecureMintEngine
- * @notice Minimal ERC-20 "dumb ledger" for a backed token. This contract
- *         holds NO minting logic — all minting is delegated to the
- *         SecureMintPolicy contract via the MINTER_ROLE.
+ * @notice Minimal ERC-20 token with restricted mint capability
+ * @dev This token is a "dumb ledger" - all business logic lives in SecureMintPolicy
  *
- * @dev Design principles:
- *      - The token itself is a thin ledger: balances and transfers only.
- *      - Minting is gated by MINTER_ROLE (assigned to SecureMintPolicy).
- *      - Burning is permissionless (any holder can burn their own tokens).
- *      - Transfers can be paused by PAUSER_ROLE (assigned to EmergencyPause).
- *      - Name, symbol, and decimals are immutable after deployment.
+ * SECURITY REQUIREMENTS:
+ * - No embedded business logic
+ * - No discretionary mint
+ * - Mint function callable ONLY by SecureMintPolicy contract
+ * - Burn allowed (user or protocol-initiated)
+ *
+ * WARNING: Once deployed, the secureMintPolicy address is IMMUTABLE.
+ * This is intentional to prevent mint authority changes.
  */
-contract BackedToken is ERC20, ERC20Burnable, AccessControl, Pausable {
-    // -------------------------------------------------------------------
-    //  Roles
-    // -------------------------------------------------------------------
+contract BackedToken is ERC20, ERC20Burnable, Pausable {
+    /// @notice The only address authorized to mint tokens
+    address public immutable secureMintPolicy;
 
-    /// @notice Only addresses with MINTER_ROLE can mint new tokens.
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    /// @notice The guardian address that can pause/unpause in emergencies
+    address public guardian;
 
-    /// @notice Only addresses with PAUSER_ROLE can pause/unpause transfers.
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    /// @notice Emitted when guardian is changed
+    event GuardianChanged(address indexed previousGuardian, address indexed newGuardian);
 
-    // -------------------------------------------------------------------
-    //  Custom Errors
-    // -------------------------------------------------------------------
+    /// @notice Emitted when tokens are minted via SecureMintPolicy
+    event SecureMint(address indexed to, uint256 amount, uint256 newTotalSupply);
 
-    /// @notice A zero address was supplied where it is not allowed.
+    error OnlySecureMint();
+    error OnlyGuardian();
     error ZeroAddress();
 
-    // -------------------------------------------------------------------
-    //  State
-    // -------------------------------------------------------------------
-
-    /// @notice Token decimals (immutable after deployment).
-    uint8 private immutable _decimals;
-
-    // -------------------------------------------------------------------
-    //  Constructor
-    // -------------------------------------------------------------------
-
     /**
-     * @notice Deploys the BackedToken with a fixed name, symbol, and decimals.
-     * @param name_     The full token name (e.g., "USD Backed Token").
-     * @param symbol_   The token symbol (e.g., "USDX").
-     * @param decimals_ The number of decimal places (typically 6 or 18).
-     * @param admin     The initial DEFAULT_ADMIN_ROLE holder. This address
-     *                  can later grant MINTER_ROLE and PAUSER_ROLE.
+     * @notice Constructor sets the SecureMintPolicy address immutably
+     * @param _name Token name
+     * @param _symbol Token symbol
+     * @param _secureMintPolicy Address of the SecureMintPolicy contract
+     * @param _guardian Initial guardian address for emergency pause
      */
     constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin
-    ) ERC20(name_, symbol_) {
-        if (admin == address(0)) revert ZeroAddress();
+        string memory _name,
+        string memory _symbol,
+        address _secureMintPolicy,
+        address _guardian
+    ) ERC20(_name, _symbol) {
+        if (_secureMintPolicy == address(0)) revert ZeroAddress();
+        if (_guardian == address(0)) revert ZeroAddress();
 
-        _decimals = decimals_;
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        secureMintPolicy = _secureMintPolicy;
+        guardian = _guardian;
     }
 
-    // -------------------------------------------------------------------
-    //  External — Minting (MINTER_ROLE only)
-    // -------------------------------------------------------------------
+    /**
+     * @notice Modifier restricting function to SecureMintPolicy only
+     */
+    modifier onlySecureMint() {
+        if (msg.sender != secureMintPolicy) revert OnlySecureMint();
+        _;
+    }
 
     /**
-     * @notice Mints `amount` tokens to `to`.
-     * @dev Callable only by MINTER_ROLE (the SecureMintPolicy contract).
-     *      The policy enforces all 6 mint conditions before calling this.
-     * @param to     Recipient of the minted tokens.
-     * @param amount Number of tokens to mint (in base units).
+     * @notice Modifier restricting function to guardian only
      */
-    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
-        if (to == address(0)) revert ZeroAddress();
+    modifier onlyGuardian() {
+        if (msg.sender != guardian) revert OnlyGuardian();
+        _;
+    }
+
+    /**
+     * @notice Mint tokens - ONLY callable by SecureMintPolicy
+     * @dev All backing verification happens in SecureMintPolicy before this is called
+     * @param to Recipient address
+     * @param amount Amount to mint
+     */
+    function mint(address to, uint256 amount) external onlySecureMint whenNotPaused {
         _mint(to, amount);
+        emit SecureMint(to, amount, totalSupply());
     }
 
-    // -------------------------------------------------------------------
-    //  External — Pause Management (PAUSER_ROLE only)
-    // -------------------------------------------------------------------
-
     /**
-     * @notice Pauses all token transfers (including mint and burn).
-     * @dev Callable only by PAUSER_ROLE (typically the EmergencyPause contract).
+     * @notice Pause all transfers and minting
+     * @dev Can only be called by guardian
      */
-    function pause() external onlyRole(PAUSER_ROLE) {
+    function pause() external onlyGuardian {
         _pause();
     }
 
     /**
-     * @notice Unpauses token transfers.
-     * @dev Callable only by PAUSER_ROLE.
+     * @notice Unpause transfers and minting
+     * @dev Can only be called by guardian
      */
-    function unpause() external onlyRole(PAUSER_ROLE) {
+    function unpause() external onlyGuardian {
         _unpause();
     }
 
-    // -------------------------------------------------------------------
-    //  External — EmergencyPause Integration Hook
-    // -------------------------------------------------------------------
-
     /**
-     * @notice Called by EmergencyPause when pause level changes.
-     * @dev Level 0-1: unpause transfers. Level 2-3: pause transfers.
-     *      Only callable by PAUSER_ROLE (EmergencyPause contract).
-     * @param level The new pause level (0=Normal, 1=MintPaused, 2=Restricted, 3=FullFreeze).
+     * @notice Change the guardian address
+     * @dev Can only be called by current guardian
+     * @param newGuardian New guardian address
      */
-    function onPauseLevelChanged(uint8 level) external onlyRole(PAUSER_ROLE) {
-        if (level >= 2) {
-            if (!paused()) _pause();
-        } else {
-            if (paused()) _unpause();
-        }
+    function setGuardian(address newGuardian) external onlyGuardian {
+        if (newGuardian == address(0)) revert ZeroAddress();
+        emit GuardianChanged(guardian, newGuardian);
+        guardian = newGuardian;
     }
 
-    // -------------------------------------------------------------------
-    //  Public — Overrides
-    // -------------------------------------------------------------------
-
     /**
-     * @notice Returns the number of decimals for this token.
-     * @return The decimal count set at deployment.
+     * @notice Override to add pause check to transfers
      */
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-
-    // -------------------------------------------------------------------
-    //  Internal — Transfer Hook (pause enforcement)
-    // -------------------------------------------------------------------
-
-    /**
-     * @dev Overrides the ERC-20 `_update` hook to enforce pause state.
-     *      When paused, ALL transfers (including mint and burn) revert.
-     * @param from   Source address (address(0) for mints).
-     * @param to     Destination address (address(0) for burns).
-     * @param value  Amount being transferred.
-     */
-    function _update(
+    function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 value
+        uint256 amount
     ) internal override whenNotPaused {
-        super._update(from, to, value);
+        super._beforeTokenTransfer(from, to, amount);
     }
 }

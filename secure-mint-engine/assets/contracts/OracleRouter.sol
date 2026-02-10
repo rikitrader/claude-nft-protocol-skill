@@ -6,390 +6,168 @@ import "./IBackingOracle.sol";
 
 /**
  * @title OracleRouter
- * @author SecureMintEngine
- * @notice Multi-oracle router with fallback logic that implements
- *         IBackingOracle. Maintains a primary oracle and an ordered list of
- *         fallback oracles. When the primary is unhealthy, the router
- *         automatically fails over to the first healthy fallback.
- *
- * @dev The router is designed to be the oracle address set on SecureMintPolicy.
- *      It transparently proxies IBackingOracle calls to the best available
- *      source, providing resilience against single-feed outages.
- *
- *      Confidence scoring:
- *        - 10000 (100%) if all healthy sources agree within 100 bps.
- *        - Scaled down proportionally by the number of disagreeing sources.
+ * @notice Multi-oracle router with failover and staleness checks
+ * @dev Routes oracle queries through a priority-ordered list of oracle sources.
+ *      If the primary oracle is unhealthy or stale, falls back to secondary sources.
  */
 contract OracleRouter is IBackingOracle, AccessControl {
-    // -------------------------------------------------------------------
-    //  Roles
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /// @notice Admins can add/remove fallback oracles.
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ROUTER_ADMIN = keccak256("ROUTER_ADMIN");
 
-    // -------------------------------------------------------------------
-    //  Custom Errors
-    // -------------------------------------------------------------------
+    /// @notice Ordered list of oracle sources (index 0 = highest priority)
+    IBackingOracle[] public oracles;
 
-    /// @notice No oracle in the source array is currently healthy.
+    /// @notice Maximum number of oracles
+    uint256 public constant MAX_ORACLES = 5;
+
+    /// @notice Maximum deviation between oracle sources in basis points
+    uint256 public maxDeviationBps;
+
+    /// @notice Timestamp of last successful query
+    uint256 public override lastUpdate;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    event OracleAdded(address indexed oracle, uint256 index);
+    event OracleRemoved(address indexed oracle, uint256 index);
+    event OracleFailover(uint256 fromIndex, uint256 toIndex, string reason);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ERRORS
+    // ═══════════════════════════════════════════════════════════════════════
+
     error NoHealthyOracle();
+    error TooManyOracles();
+    error OracleAlreadyRegistered();
+    error OracleNotRegistered();
 
-    /// @notice The oracle address has already been added to the router.
-    error OracleAlreadyAdded(address oracle);
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /// @notice The supplied index is out of bounds for the fallback array.
-    error InvalidIndex(uint256 index, uint256 length);
+    constructor(
+        address _primaryOracle,
+        uint256 _maxDeviationBps,
+        address _admin
+    ) {
+        require(_primaryOracle != address(0), "Invalid oracle");
+        require(_admin != address(0), "Invalid admin");
 
-    // -------------------------------------------------------------------
-    //  Events
-    // -------------------------------------------------------------------
+        oracles.push(IBackingOracle(_primaryOracle));
+        maxDeviationBps = _maxDeviationBps;
 
-    /// @notice Emitted when the primary oracle is replaced.
-    event PrimaryOracleChanged(
-        address indexed previousPrimary,
-        address indexed newPrimary
-    );
-
-    /// @notice Emitted when a fallback oracle is added.
-    event FallbackAdded(address indexed oracle, uint256 index);
-
-    /// @notice Emitted when a fallback oracle is removed.
-    event FallbackRemoved(address indexed oracle, uint256 index);
-
-    /// @notice Emitted when a query fails over from primary to a fallback.
-    event OracleFailover(
-        address indexed failedOracle,
-        address indexed fallbackOracle,
-        uint256 timestamp
-    );
-
-    // -------------------------------------------------------------------
-    //  State Variables
-    // -------------------------------------------------------------------
-
-    /// @notice The primary oracle source.
-    IBackingOracle public primaryOracle;
-
-    /// @notice Ordered list of fallback oracle sources.
-    IBackingOracle[] public fallbackOracles;
-
-    /// @notice Quick-lookup to prevent duplicate additions.
-    mapping(address => bool) public isSource;
-
-    /// @notice Agreement threshold (basis points) for confidence scoring.
-    uint256 public constant AGREEMENT_THRESHOLD_BPS = 100;
-
-    // -------------------------------------------------------------------
-    //  Constructor
-    // -------------------------------------------------------------------
-
-    /**
-     * @param primaryOracle_ Address of the primary IBackingOracle.
-     * @param admin          Initial admin address.
-     */
-    constructor(address primaryOracle_, address admin) {
-        require(primaryOracle_ != address(0), "OracleRouter: zero primary");
-        require(admin != address(0), "OracleRouter: zero admin");
-
-        primaryOracle = IBackingOracle(primaryOracle_);
-        isSource[primaryOracle_] = true;
-
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ADMIN_ROLE, admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(ROUTER_ADMIN, _admin);
     }
 
-    // -------------------------------------------------------------------
-    //  External — Admin Management
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Adds a fallback oracle to the end of the fallback list.
-     * @param oracle Address of the IBackingOracle to add.
-     */
-    function addFallbackOracle(address oracle) external onlyRole(ADMIN_ROLE) {
-        require(oracle != address(0), "OracleRouter: zero address");
-        if (isSource[oracle]) revert OracleAlreadyAdded(oracle);
-
-        isSource[oracle] = true;
-        fallbackOracles.push(IBackingOracle(oracle));
-
-        emit FallbackAdded(oracle, fallbackOracles.length - 1);
-    }
-
-    /**
-     * @notice Removes a fallback oracle by index (swap-and-pop).
-     * @param index The index in the fallbackOracles array to remove.
-     */
-    function removeFallbackOracle(uint256 index) external onlyRole(ADMIN_ROLE) {
-        if (index >= fallbackOracles.length) {
-            revert InvalidIndex(index, fallbackOracles.length);
-        }
-
-        address removed = address(fallbackOracles[index]);
-        isSource[removed] = false;
-
-        // Swap with last element and pop.
-        uint256 lastIndex = fallbackOracles.length - 1;
-        if (index != lastIndex) {
-            fallbackOracles[index] = fallbackOracles[lastIndex];
-        }
-        fallbackOracles.pop();
-
-        emit FallbackRemoved(removed, index);
-    }
-
-    /**
-     * @notice Replaces the primary oracle.
-     * @param newPrimary Address of the new primary IBackingOracle.
-     */
-    function setPrimaryOracle(address newPrimary) external onlyRole(ADMIN_ROLE) {
-        require(newPrimary != address(0), "OracleRouter: zero address");
-
-        address oldPrimary = address(primaryOracle);
-        isSource[oldPrimary] = false;
-
-        if (isSource[newPrimary]) revert OracleAlreadyAdded(newPrimary);
-
-        primaryOracle = IBackingOracle(newPrimary);
-        isSource[newPrimary] = true;
-
-        emit PrimaryOracleChanged(oldPrimary, newPrimary);
-    }
-
-    // -------------------------------------------------------------------
-    //  External — IBackingOracle Implementation
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // IBackingOracle IMPLEMENTATION
+    // ═══════════════════════════════════════════════════════════════════════
 
     /// @inheritdoc IBackingOracle
-    // slither-disable-next-line naming-convention
-    function MAX_STALENESS() external view override returns (uint256) {
-        return primaryOracle.MAX_STALENESS();
-    }
-
-    /// @inheritdoc IBackingOracle
-    // slither-disable-next-line naming-convention
-    function MAX_DEVIATION() external view override returns (uint256) {
-        return primaryOracle.MAX_DEVIATION();
-    }
-
-    /**
-     * @notice Returns the backing amount from the first healthy oracle source.
-     * @dev This is a view function — failovers are silent. Use getBackingAmountWithFailover()
-     *      for non-view variant that emits OracleFailover events.
-     *      Tries the primary oracle first. If it is unhealthy, iterates
-     *      through fallback oracles in order and returns the first healthy result.
-     * @return The backing amount from the best available oracle.
-     */
-    function getBackingAmount() external view override returns (uint256) {
-        // Try primary first.
-        if (_isSourceHealthy(primaryOracle)) {
-            return primaryOracle.getBackingAmount();
-        }
-
-        // Fallback iteration.
-        uint256 len = fallbackOracles.length;
-        // slither-disable-next-line calls-loop
-        for (uint256 i = 0; i < len; i++) {
-            if (_isSourceHealthy(fallbackOracles[i])) {
-                return fallbackOracles[i].getBackingAmount();
+    function getVerifiedBacking() external view override returns (uint256) {
+        for (uint256 i = 0; i < oracles.length; i++) {
+            try oracles[i].getVerifiedBacking() returns (uint256 backing) {
+                if (oracles[i].isHealthy()) {
+                    return backing;
+                }
+            } catch {
+                continue;
             }
         }
-
-        revert NoHealthyOracle();
-    }
-
-    /**
-     * @notice Emitting variant of getBackingAmount for non-view callers
-     *         that need the OracleFailover event.
-     * @return The backing amount from the best available oracle.
-     */
-    function getBackingAmountWithFailover() external returns (uint256) {
-        // Try primary first.
-        if (_isSourceHealthy(primaryOracle)) {
-            return primaryOracle.getBackingAmount();
-        }
-
-        // Fallback iteration.
-        uint256 len = fallbackOracles.length;
-        // slither-disable-next-line calls-loop
-        for (uint256 i = 0; i < len; i++) {
-            if (_isSourceHealthy(fallbackOracles[i])) {
-                emit OracleFailover(
-                    address(primaryOracle),
-                    address(fallbackOracles[i]),
-                    block.timestamp
-                );
-                return fallbackOracles[i].getBackingAmount();
-            }
-        }
-
         revert NoHealthyOracle();
     }
 
     /// @inheritdoc IBackingOracle
     function isHealthy() external view override returns (bool) {
-        if (_isSourceHealthy(primaryOracle)) return true;
-
-        uint256 len = fallbackOracles.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (_isSourceHealthy(fallbackOracles[i])) return true;
+        for (uint256 i = 0; i < oracles.length; i++) {
+            try oracles[i].isHealthy() returns (bool healthy) {
+                if (healthy) return true;
+            } catch {
+                continue;
+            }
         }
-
         return false;
     }
 
     /// @inheritdoc IBackingOracle
-    function lastUpdate() external view override returns (uint256) {
-        uint256 mostRecent = 0;
-
-        if (_isSourceHealthy(primaryOracle)) {
-            uint256 ts = primaryOracle.lastUpdate();
-            if (ts > mostRecent) mostRecent = ts;
-        }
-
-        uint256 len = fallbackOracles.length;
-        // slither-disable-next-line calls-loop
-        for (uint256 i = 0; i < len; i++) {
-            if (_isSourceHealthy(fallbackOracles[i])) {
-                uint256 ts = fallbackOracles[i].lastUpdate();
-                if (ts > mostRecent) mostRecent = ts;
+    function getDataAge() external view override returns (uint256) {
+        uint256 minAge = type(uint256).max;
+        for (uint256 i = 0; i < oracles.length; i++) {
+            try oracles[i].getDataAge() returns (uint256 age) {
+                if (age < minAge) minAge = age;
+            } catch {
+                continue;
             }
         }
-
-        return mostRecent;
+        return minAge;
     }
 
     /// @inheritdoc IBackingOracle
-    function deviation() external view override returns (uint256) {
-        // Return deviation from primary if healthy.
-        if (_isSourceHealthy(primaryOracle)) {
-            return primaryOracle.deviation();
-        }
-
-        // Otherwise return deviation from first healthy fallback.
-        uint256 len = fallbackOracles.length;
-        // slither-disable-next-line calls-loop
-        for (uint256 i = 0; i < len; i++) {
-            if (_isSourceHealthy(fallbackOracles[i])) {
-                return fallbackOracles[i].deviation();
-            }
-        }
-
-        return type(uint256).max;
-    }
-
-    /// @inheritdoc IBackingOracle
-    function sourceCount() external view override returns (uint256) {
-        return 1 + fallbackOracles.length;
-    }
-
-    /**
-     * @notice Returns the confidence level based on source agreement.
-     * @dev Collects backing amounts from all healthy sources and measures
-     *      pairwise agreement. If all healthy sources agree within
-     *      AGREEMENT_THRESHOLD_BPS, returns 10000. Otherwise scales down
-     *      proportionally by the ratio of agreeing sources.
-     * @return The confidence level in basis points (0-10000).
-     */
-    function confidence() external view override returns (uint256) {
-        uint256 len = fallbackOracles.length;
-        uint256 totalSources = 1 + len;
-        uint256 healthyCount = 0;
-        uint256[] memory amounts = new uint256[](totalSources);
-
-        // Collect healthy backing amounts.
-        if (_isSourceHealthy(primaryOracle)) {
-            amounts[healthyCount] = primaryOracle.getBackingAmount();
-            healthyCount++;
-        }
-
-        // slither-disable-next-line calls-loop
-        for (uint256 i = 0; i < len; i++) {
-            if (_isSourceHealthy(fallbackOracles[i])) {
-                amounts[healthyCount] = fallbackOracles[i].getBackingAmount();
-                healthyCount++;
-            }
-        }
-
-        // No healthy sources means zero confidence.
-        if (healthyCount == 0) return 0;
-
-        // Single source — confidence is that source's own confidence.
-        if (healthyCount == 1) {
-            if (_isSourceHealthy(primaryOracle)) {
-                return primaryOracle.confidence();
-            }
-            // slither-disable-next-line calls-loop
-            for (uint256 i = 0; i < len; i++) {
-                if (_isSourceHealthy(fallbackOracles[i])) {
-                    return fallbackOracles[i].confidence();
+    function canMint(
+        uint256 currentSupply,
+        uint256 mintAmount
+    ) external view override returns (bool) {
+        for (uint256 i = 0; i < oracles.length; i++) {
+            try oracles[i].canMint(currentSupply, mintAmount) returns (bool can) {
+                if (oracles[i].isHealthy()) {
+                    return can;
                 }
+            } catch {
+                continue;
             }
         }
+        return false;
+    }
 
-        // Multiple sources — measure agreement against the first healthy value.
-        uint256 refAmount = amounts[0];
-        uint256 agreeing = 1; // The refAmount agrees with itself.
-
-        for (uint256 j = 1; j < healthyCount; j++) {
-            uint256 diff = amounts[j] > refAmount
-                ? amounts[j] - refAmount
-                : refAmount - amounts[j];
-
-            uint256 deviationBps = refAmount > 0
-                ? (diff * 10_000) / refAmount
-                : 0;
-
-            if (deviationBps <= AGREEMENT_THRESHOLD_BPS) {
-                agreeing++;
+    /// @inheritdoc IBackingOracle
+    function getRequiredBacking(
+        uint256 totalSupply
+    ) external view override returns (uint256) {
+        // Use the first healthy oracle's required backing calculation
+        for (uint256 i = 0; i < oracles.length; i++) {
+            try oracles[i].getRequiredBacking(totalSupply) returns (uint256 req) {
+                return req;
+            } catch {
+                continue;
             }
         }
-
-        // Scale: 10000 if all agree, proportionally less otherwise.
-        return (agreeing * 10_000) / healthyCount;
+        revert NoHealthyOracle();
     }
 
-    // -------------------------------------------------------------------
-    //  External — View Helpers
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // ADMIN FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * @notice Returns the number of fallback oracles.
-     */
-    function fallbackCount() external view returns (uint256) {
-        return fallbackOracles.length;
-    }
-
-    /**
-     * @notice Returns all sources (primary + fallbacks) as an address array.
-     */
-    function allSources() external view returns (address[] memory) {
-        uint256 len = fallbackOracles.length;
-        uint256 total = 1 + len;
-        address[] memory sources = new address[](total);
-        sources[0] = address(primaryOracle);
-        for (uint256 i = 0; i < len; i++) {
-            sources[i + 1] = address(fallbackOracles[i]);
+    function addOracle(address _oracle) external onlyRole(ROUTER_ADMIN) {
+        if (oracles.length >= MAX_ORACLES) revert TooManyOracles();
+        for (uint256 i = 0; i < oracles.length; i++) {
+            if (address(oracles[i]) == _oracle) revert OracleAlreadyRegistered();
         }
-        return sources;
+        oracles.push(IBackingOracle(_oracle));
+        emit OracleAdded(_oracle, oracles.length - 1);
     }
 
-    // -------------------------------------------------------------------
-    //  Internal
-    // -------------------------------------------------------------------
+    function removeOracle(uint256 index) external onlyRole(ROUTER_ADMIN) {
+        require(index < oracles.length, "Invalid index");
+        require(oracles.length > 1, "Cannot remove last oracle");
 
-    /**
-     * @dev Checks whether a source oracle reports itself as healthy.
-     *      Uses a try/catch to gracefully handle reverts from broken oracles.
-     * @param source The IBackingOracle to check.
-     * @return True if the source is healthy, false otherwise.
-     */
-    function _isSourceHealthy(IBackingOracle source) internal view returns (bool) {
-        try source.isHealthy() returns (bool healthy) {
-            return healthy;
-        } catch {
-            return false;
-        }
+        address removed = address(oracles[index]);
+        oracles[index] = oracles[oracles.length - 1];
+        oracles.pop();
+        emit OracleRemoved(removed, index);
+    }
+
+    function getOracleCount() external view returns (uint256) {
+        return oracles.length;
+    }
+
+    function setMaxDeviation(uint256 _maxDeviationBps) external onlyRole(ROUTER_ADMIN) {
+        maxDeviationBps = _maxDeviationBps;
     }
 }

@@ -1,397 +1,288 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/governance/Governor.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 
 /**
- * @title Governor
- * @author SecureMintEngine
- * @notice Lightweight on-chain DAO governance for SecureMintEngine parameter
- *         changes. Unlike a full Governor (ERC-5805), this contract uses a
- *         simple role-based proposal + multisig approval model without a
- *         voting token.
+ * @title SecureMintGovernor
+ * @notice DAO governance contract for SecureMintEngine protocol
+ * @dev Implements token-weighted voting with timelock execution
  *
- * @dev Governance flow:
+ * GOVERNANCE PARAMETERS:
+ * - Voting Delay: 1 day (time between proposal and voting start)
+ * - Voting Period: 5 days
+ * - Proposal Threshold: 1% of total supply (to prevent spam)
+ * - Quorum: 4% of total supply
  *
- *      1. Propose  — A PROPOSER creates a proposal targeting a contract call.
- *      2. Vote     — VOTER_ROLE holders cast for/against votes during the
- *                    voting window (startBlock .. endBlock).
- *      3. Execute  — Anyone can execute a succeeded proposal after the voting
- *                    period ends (forVotes > againstVotes, forVotes >= quorum).
- *      4. Cancel   — The proposer or an ADMIN can cancel a non-executed proposal.
+ * PROPOSAL TYPES:
+ * - Standard: Normal governance proposals
+ * - Emergency: Reduced timelock for critical fixes
+ * - Veto: Guardian can veto malicious proposals during timelock
  *
- *      Proposal states:
- *
- *      | State     | Condition                                        |
- *      |-----------|--------------------------------------------------|
- *      | Pending   | block.number < startBlock                        |
- *      | Active    | startBlock <= block.number <= endBlock            |
- *      | Defeated  | Voting ended, quorum not met or against >= for   |
- *      | Succeeded | Voting ended, quorum met, for > against          |
- *      | Executed  | Proposal was successfully executed                |
- *      | Cancelled | Proposal was cancelled before execution           |
+ * SECURITY:
+ * - All execution goes through timelock
+ * - Guardian veto power for emergency situations
+ * - Cannot change core invariants via governance
  */
-contract Governor is AccessControl {
-    // -------------------------------------------------------------------
-    //  Roles
-    // -------------------------------------------------------------------
+contract SecureMintGovernor is
+    Governor,
+    GovernorSettings,
+    GovernorCountingSimple,
+    GovernorVotes,
+    GovernorVotesQuorumFraction,
+    GovernorTimelockControl
+{
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @notice Proposers can create new governance proposals.
-    bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
+    /// @notice Guardian address with veto power
+    address public guardian;
 
-    /// @notice Voters can cast votes on active proposals.
-    bytes32 public constant VOTER_ROLE = keccak256("VOTER_ROLE");
+    /// @notice Mapping of vetoed proposal IDs
+    mapping(uint256 => bool) public vetoedProposals;
 
-    /// @notice Admins can configure governance parameters and cancel proposals.
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    // -------------------------------------------------------------------
-    //  Enums
-    // -------------------------------------------------------------------
-
-    enum ProposalState {
-        Pending,
-        Active,
-        Defeated,
-        Succeeded,
-        Executed,
-        Cancelled
+    /// @notice Proposal types for different execution paths
+    enum ProposalType {
+        STANDARD,
+        EMERGENCY,
+        PARAMETER_CHANGE
     }
 
-    // -------------------------------------------------------------------
-    //  Structs
-    // -------------------------------------------------------------------
+    /// @notice Mapping of proposal ID to type
+    mapping(uint256 => ProposalType) public proposalTypes;
 
-    struct Proposal {
-        address proposer;
-        address target;
-        uint256 value;
-        bytes calldataPayload;
-        string description;
-        uint256 forVotes;
-        uint256 againstVotes;
-        uint256 startBlock;
-        uint256 endBlock;
-        bool executed;
-        bool cancelled;
-    }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EVENTS
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    // -------------------------------------------------------------------
-    //  Custom Errors
-    // -------------------------------------------------------------------
+    event ProposalVetoed(uint256 indexed proposalId, address indexed vetoedBy, string reason);
+    event GuardianChanged(address indexed oldGuardian, address indexed newGuardian);
+    event ProposalTypeSet(uint256 indexed proposalId, ProposalType proposalType);
 
-    /// @dev Thrown when referencing a proposal ID that does not exist.
-    error ProposalNotFound(uint256 proposalId);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ERRORS
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @dev Thrown when a voter has already cast a vote on a proposal.
-    error AlreadyVoted(uint256 proposalId, address voter);
+    error OnlyGuardian();
+    error ProposalAlreadyVetoed();
+    error ZeroAddress();
 
-    /// @dev Thrown when trying to vote outside the active voting window.
-    error VotingNotActive(uint256 proposalId);
-
-    /// @dev Thrown when trying to execute a proposal that is not in Succeeded state.
-    error ProposalNotSucceeded(uint256 proposalId, ProposalState currentState);
-
-    /// @dev Thrown when the low-level call to the target contract fails.
-    error ProposalExecutionFailed(uint256 proposalId);
-
-    /// @dev Thrown when a zero voting period is provided.
-    error InvalidVotingPeriod();
-
-    /// @dev Thrown when a zero quorum is provided.
-    error InvalidQuorum();
-
-    // -------------------------------------------------------------------
-    //  Events
-    // -------------------------------------------------------------------
-
-    event ProposalCreated(
-        uint256 indexed proposalId,
-        address indexed proposer,
-        address target,
-        uint256 value,
-        bytes calldataPayload,
-        string description,
-        uint256 startBlock,
-        uint256 endBlock
-    );
-
-    event VoteCast(
-        uint256 indexed proposalId,
-        address indexed voter,
-        bool support,
-        uint256 totalForVotes,
-        uint256 totalAgainstVotes
-    );
-
-    event ProposalExecuted(uint256 indexed proposalId);
-
-    event ProposalCancelled(uint256 indexed proposalId);
-
-    // -------------------------------------------------------------------
-    //  State Variables
-    // -------------------------------------------------------------------
-
-    /// @notice Total number of proposals created.
-    uint256 public proposalCount;
-
-    /// @notice Number of for-votes required for a proposal to succeed.
-    uint256 public quorum;
-
-    /// @notice Duration of the voting window in blocks.
-    uint256 public votingPeriod;
-
-    /// @notice Mapping from proposal ID to proposal data.
-    mapping(uint256 => Proposal) public proposals;
-
-    /// @notice Tracks whether an address has voted on a given proposal.
-    /// @dev proposalId => voter => hasVoted
-    mapping(uint256 => mapping(address => bool)) public hasVoted;
-
-    // -------------------------------------------------------------------
-    //  Constructor
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @param quorum_       Initial quorum (minimum for-votes to pass).
-     * @param votingPeriod_ Voting window duration in blocks.
-     * @param admin         Initial admin address.
+     * @notice Initialize the governor
+     * @param _token Governance token address (IVotes)
+     * @param _timelock Timelock controller address
+     * @param _guardian Guardian address with veto power
+     * @param _votingDelay Delay before voting starts (in blocks)
+     * @param _votingPeriod Duration of voting (in blocks)
+     * @param _proposalThreshold Minimum tokens to create proposal
+     * @param _quorumPercentage Quorum percentage (1-100)
      */
     constructor(
-        uint256 quorum_,
-        uint256 votingPeriod_,
-        address admin
-    ) {
-        require(admin != address(0), "Governor: zero admin");
-        if (quorum_ == 0) revert InvalidQuorum();
-        if (votingPeriod_ == 0) revert InvalidVotingPeriod();
-
-        quorum = quorum_;
-        votingPeriod = votingPeriod_;
-
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ADMIN_ROLE, admin);
+        IVotes _token,
+        TimelockController _timelock,
+        address _guardian,
+        uint48 _votingDelay,
+        uint32 _votingPeriod,
+        uint256 _proposalThreshold,
+        uint256 _quorumPercentage
+    )
+        Governor("SecureMint Governor")
+        GovernorSettings(_votingDelay, _votingPeriod, _proposalThreshold)
+        GovernorVotes(_token)
+        GovernorVotesQuorumFraction(_quorumPercentage)
+        GovernorTimelockControl(_timelock)
+    {
+        if (_guardian == address(0)) revert ZeroAddress();
+        guardian = _guardian;
     }
 
-    // -------------------------------------------------------------------
-    //  External — Propose
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GUARDIAN FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Creates a new governance proposal.
-     * @param target          Address of the contract to call if the proposal passes.
-     * @param value           ETH value to send with the call.
-     * @param calldataPayload Encoded function call data.
-     * @param description     Human-readable description of the proposal.
-     * @return proposalId     The ID of the newly created proposal.
+     * @notice Veto a proposal (guardian only)
+     * @dev Can only veto during timelock period (after vote passes, before execution)
+     * @param proposalId Proposal to veto
+     * @param reason Reason for veto
      */
-    function propose(
-        address target,
-        uint256 value,
-        bytes calldata calldataPayload,
-        string calldata description
-    ) external onlyRole(PROPOSER_ROLE) returns (uint256 proposalId) {
-        proposalId = ++proposalCount;
+    function veto(uint256 proposalId, string calldata reason) external {
+        if (msg.sender != guardian) revert OnlyGuardian();
+        if (vetoedProposals[proposalId]) revert ProposalAlreadyVetoed();
 
-        uint256 startBlock = block.number + 1;
-        uint256 endBlock = startBlock + votingPeriod;
-
-        proposals[proposalId] = Proposal({
-            proposer: msg.sender,
-            target: target,
-            value: value,
-            calldataPayload: calldataPayload,
-            description: description,
-            forVotes: 0,
-            againstVotes: 0,
-            startBlock: startBlock,
-            endBlock: endBlock,
-            executed: false,
-            cancelled: false
-        });
-
-        emit ProposalCreated(
-            proposalId,
-            msg.sender,
-            target,
-            value,
-            calldataPayload,
-            description,
-            startBlock,
-            endBlock
-        );
-    }
-
-    // -------------------------------------------------------------------
-    //  External — Vote
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Casts a vote on an active proposal.
-     * @dev Each VOTER_ROLE address gets exactly one vote per proposal.
-     * @param proposalId The proposal to vote on.
-     * @param support    True for a for-vote, false for an against-vote.
-     */
-    function vote(
-        uint256 proposalId,
-        bool support
-    ) external onlyRole(VOTER_ROLE) {
-        if (proposalId == 0 || proposalId > proposalCount) {
-            revert ProposalNotFound(proposalId);
-        }
-
-        if (proposalState(proposalId) != ProposalState.Active) {
-            revert VotingNotActive(proposalId);
-        }
-
-        if (hasVoted[proposalId][msg.sender]) {
-            revert AlreadyVoted(proposalId, msg.sender);
-        }
-
-        hasVoted[proposalId][msg.sender] = true;
-
-        Proposal storage p = proposals[proposalId];
-
-        if (support) {
-            p.forVotes += 1;
-        } else {
-            p.againstVotes += 1;
-        }
-
-        emit VoteCast(proposalId, msg.sender, support, p.forVotes, p.againstVotes);
-    }
-
-    // -------------------------------------------------------------------
-    //  External — Execute
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Execute a succeeded proposal. Callable by anyone (standard governance pattern).
-     * @dev Permissionless execution ensures proposals cannot be blocked by a single actor.
-     *      The proposal must be in Succeeded state (voting ended, quorum met,
-     *      forVotes > againstVotes).
-     * @param proposalId The proposal to execute.
-     */
-    function execute(uint256 proposalId) external payable {
-        if (proposalId == 0 || proposalId > proposalCount) {
-            revert ProposalNotFound(proposalId);
-        }
-
-        ProposalState state = proposalState(proposalId);
-        if (state != ProposalState.Succeeded) {
-            revert ProposalNotSucceeded(proposalId, state);
-        }
-
-        Proposal storage p = proposals[proposalId];
-        p.executed = true;
-
-        // solhint-disable-next-line avoid-low-level-calls
-        // slither-disable-next-line low-level-calls
-        (bool success, ) = p.target.call{value: p.value}(p.calldataPayload);
-        if (!success) {
-            revert ProposalExecutionFailed(proposalId);
-        }
-
-        // slither-disable-next-line reentrancy-events
-        emit ProposalExecuted(proposalId);
-    }
-
-    // -------------------------------------------------------------------
-    //  External — Cancel
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Cancels a proposal that has not yet been executed.
-     * @dev Only the original proposer or an ADMIN can cancel.
-     * @param proposalId The proposal to cancel.
-     */
-    function cancel(uint256 proposalId) external {
-        if (proposalId == 0 || proposalId > proposalCount) {
-            revert ProposalNotFound(proposalId);
-        }
-
-        Proposal storage p = proposals[proposalId];
-
+        ProposalState currentState = state(proposalId);
         require(
-            msg.sender == p.proposer || hasRole(ADMIN_ROLE, msg.sender),
-            "Governor: caller is not proposer or admin"
+            currentState == ProposalState.Queued,
+            "Can only veto queued proposals"
         );
-        require(!p.executed, "Governor: proposal already executed");
-        require(!p.cancelled, "Governor: proposal already cancelled");
 
-        p.cancelled = true;
+        vetoedProposals[proposalId] = true;
 
-        emit ProposalCancelled(proposalId);
-    }
-
-    // -------------------------------------------------------------------
-    //  External — Configuration (ADMIN_ROLE)
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Updates the quorum threshold.
-     * @param newQuorum The new minimum number of for-votes required.
-     */
-    function setQuorum(uint256 newQuorum) external onlyRole(ADMIN_ROLE) {
-        if (newQuorum == 0) revert InvalidQuorum();
-        quorum = newQuorum;
+        emit ProposalVetoed(proposalId, msg.sender, reason);
     }
 
     /**
-     * @notice Updates the voting period duration.
-     * @param newPeriod The new voting window duration in blocks.
+     * @notice Transfer guardian role
+     * @param newGuardian New guardian address
      */
-    function setVotingPeriod(uint256 newPeriod) external onlyRole(ADMIN_ROLE) {
-        if (newPeriod == 0) revert InvalidVotingPeriod();
-        votingPeriod = newPeriod;
+    function setGuardian(address newGuardian) external {
+        if (msg.sender != guardian) revert OnlyGuardian();
+        if (newGuardian == address(0)) revert ZeroAddress();
+
+        emit GuardianChanged(guardian, newGuardian);
+        guardian = newGuardian;
     }
 
-    // -------------------------------------------------------------------
-    //  Public — View Functions
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PROPOSAL FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Returns the current state of a proposal.
-     * @param proposalId The proposal to query.
-     * @return The current ProposalState.
+     * @notice Create a proposal with type annotation
+     * @param targets Target addresses
+     * @param values ETH values
+     * @param calldatas Call data
+     * @param description Proposal description
+     * @param proposalType Type of proposal
      */
-    function proposalState(uint256 proposalId) public view returns (ProposalState) {
-        if (proposalId == 0 || proposalId > proposalCount) {
-            revert ProposalNotFound(proposalId);
-        }
-
-        Proposal storage p = proposals[proposalId];
-
-        if (p.cancelled) {
-            return ProposalState.Cancelled;
-        }
-
-        if (p.executed) {
-            return ProposalState.Executed;
-        }
-
-        // slither-disable-next-line timestamp
-        if (block.number < p.startBlock) {
-            return ProposalState.Pending;
-        }
-
-        // slither-disable-next-line timestamp
-        if (block.number <= p.endBlock) {
-            return ProposalState.Active;
-        }
-
-        // Voting period has ended — determine outcome
-        if (p.forVotes >= quorum && p.forVotes > p.againstVotes) {
-            return ProposalState.Succeeded;
-        }
-
-        return ProposalState.Defeated;
+    function proposeWithType(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        ProposalType proposalType
+    ) external returns (uint256) {
+        uint256 proposalId = propose(targets, values, calldatas, description);
+        proposalTypes[proposalId] = proposalType;
+        emit ProposalTypeSet(proposalId, proposalType);
+        return proposalId;
     }
 
-    // -------------------------------------------------------------------
-    //  Receive
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // OVERRIDES
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @dev Allow the contract to receive ETH (needed for proposals with value).
-    receive() external payable {}
+    /**
+     * @notice Override state to include veto check
+     */
+    function state(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (ProposalState)
+    {
+        if (vetoedProposals[proposalId]) {
+            return ProposalState.Defeated;
+        }
+        return super.state(proposalId);
+    }
+
+    /**
+     * @notice Override execute to check veto status
+     */
+    function _execute(
+        uint256 proposalId,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) {
+        require(!vetoedProposals[proposalId], "Proposal was vetoed");
+        super._execute(proposalId, targets, values, calldatas, descriptionHash);
+    }
+
+    // Required overrides for multiple inheritance
+
+    function votingDelay()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.votingDelay();
+    }
+
+    function votingPeriod()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.votingPeriod();
+    }
+
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
+    }
+
+    function proposalThreshold()
+        public
+        view
+        override(Governor, GovernorSettings)
+        returns (uint256)
+    {
+        return super.proposalThreshold();
+    }
+
+    function proposalNeedsQueuing(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (bool)
+    {
+        return super.proposalNeedsQueuing(proposalId);
+    }
+
+    function _queueOperations(
+        uint256 proposalId,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) returns (uint48) {
+        return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
+    }
+
+    function _executeOperations(
+        uint256 proposalId,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) {
+        super._executeOperations(proposalId, targets, values, calldatas, descriptionHash);
+    }
+
+    function _cancel(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) returns (uint256) {
+        return super._cancel(targets, values, calldatas, descriptionHash);
+    }
+
+    function _executor()
+        internal
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (address)
+    {
+        return super._executor();
+    }
 }

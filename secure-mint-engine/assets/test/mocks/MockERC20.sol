@@ -5,24 +5,29 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @title MockERC20
- * @notice A simple ERC20 token with a public mint for testing purposes.
+ * @notice Mock ERC20 token for testing purposes
+ * @dev Allows minting and burning by anyone for testing flexibility
  */
 contract MockERC20 is ERC20 {
-    uint8 private _dec;
+    uint8 private _decimals;
 
     constructor(
-        string memory name_,
-        string memory symbol_,
+        string memory name,
+        string memory symbol,
         uint8 decimals_
-    ) ERC20(name_, symbol_) {
-        _dec = decimals_;
+    ) ERC20(name, symbol) {
+        _decimals = decimals_;
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _decimals;
     }
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
 
-    function decimals() public view override returns (uint8) {
-        return _dec;
+    function burn(address from, uint256 amount) external {
+        _burn(from, amount);
     }
 }

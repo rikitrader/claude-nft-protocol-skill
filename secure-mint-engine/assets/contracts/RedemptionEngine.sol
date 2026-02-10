@@ -2,338 +2,540 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title RedemptionEngine
- * @author SecureMintEngine
- * @notice Dedicated burn-to-redeem mechanism that coordinates between
- *         BackedToken and TreasuryVault. Separates redemption logic from
- *         the vault for cleaner separation of concerns.
+ * @notice Burn-to-redeem mechanism for backed tokens
+ * @dev Implements the redemption flow as specified in SecureMintEngine
  *
- * @dev Redemption flow:
+ * REDEMPTION PROCESS:
+ * 1. User calls redeem(amount)
+ * 2. Engine verifies reserves are available
+ * 3. Backed tokens are burned
+ * 4. Reserve asset is transferred to user (minus fees)
  *
- *      1. User approves this contract to spend their BackedTokens.
- *      2. User calls `redeem(tokenAmount, minCollateralOut)`.
- *      3. Engine validates amount bounds, cooldown, and slippage.
- *      4. Engine burns the user's BackedTokens via `burnFrom`.
- *      5. Engine transfers collateral from TreasuryVault to the user.
- *      6. Fee (if any) is routed to the configured fee recipient.
+ * FEES:
+ * - Base redemption fee: configurable (default 0.1%)
+ * - Depeg surcharge: additional fee when price < $1 (incentivizes arbitrage)
  *
- *      Fees are expressed in basis points (bps) and capped at 500 (5%).
+ * RATE LIMITS:
+ * - Per-epoch redemption cap (prevents bank run)
+ * - Per-user limits (optional)
+ *
+ * QUEUE SYSTEM:
+ * - For large redemptions, implements queue to ensure orderly processing
+ * - Queue processed FIFO
  */
-contract RedemptionEngine is AccessControl, Pausable, ReentrancyGuard {
+contract RedemptionEngine is AccessControl, ReentrancyGuard, Pausable {
+    using SafeERC20 for IERC20;
 
-    // -------------------------------------------------------------------
-    //  Roles
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ROLES
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @notice Admins can configure fees, limits, cooldowns, and pause state.
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
+    bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
+    bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
 
-    // -------------------------------------------------------------------
-    //  Constants
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONSTANTS
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @notice Basis-point denominator (10 000 = 100%).
-    uint256 public constant BPS_DENOMINATOR = 10_000;
+    uint256 public constant BASIS_POINTS = 10000;
+    uint256 public constant EPOCH_DURATION = 1 hours;
 
-    /// @notice Maximum allowed redemption fee in basis points (500 = 5%).
-    uint256 public constant MAX_FEE_BPS = 500;
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    // -------------------------------------------------------------------
-    //  Custom Errors
-    // -------------------------------------------------------------------
-
-    /// @notice Redemption amount is below the configured minimum.
-    error BelowMinRedemption(uint256 amount, uint256 minRedemption);
-
-    /// @notice Redemption amount exceeds the configured maximum.
-    error AboveMaxRedemption(uint256 amount, uint256 maxRedemption);
-
-    /// @notice The caller's cooldown period has not yet elapsed.
-    error CooldownActive(address user, uint256 cooldownEndsAt);
-
-    /// @notice The proposed fee exceeds the hard cap of 500 bps (5%).
-    error FeeTooHigh(uint256 proposedFee, uint256 maxFee);
-
-    /// @notice Collateral received after fees is below the caller's minimum.
-    error SlippageExceeded(uint256 collateralOut, uint256 minCollateralOut);
-
-    /// @notice A zero address was supplied where it is not allowed.
-    error ZeroAddress();
-
-    /// @notice A zero amount was supplied where it is not allowed.
-    error ZeroAmount();
-
-    // -------------------------------------------------------------------
-    //  Events
-    // -------------------------------------------------------------------
-
-    /// @notice Emitted when a redemption is successfully processed.
-    event RedemptionProcessed(
-        address indexed redeemer,
-        uint256 tokensBurned,
-        uint256 collateralOut,
-        uint256 feeAmount
-    );
-
-    /// @notice Emitted when the redemption fee is updated.
-    event FeeUpdated(uint256 previousFee, uint256 newFee);
-
-    /// @notice Emitted when the per-user cooldown period is updated.
-    event CooldownUpdated(uint256 previousCooldown, uint256 newCooldown);
-
-    /// @notice Emitted when the minimum redemption amount is updated.
-    event MinRedemptionUpdated(uint256 previousMin, uint256 newMin);
-
-    /// @notice Emitted when the maximum redemption amount is updated.
-    event MaxRedemptionUpdated(uint256 previousMax, uint256 newMax);
-
-    /// @notice Emitted when the fee recipient is updated.
-    event FeeRecipientUpdated(address indexed previousRecipient, address indexed newRecipient);
-
-    // -------------------------------------------------------------------
-    //  State Variables
-    // -------------------------------------------------------------------
-
-    /// @notice The BackedToken that users burn to redeem collateral.
+    /// @notice The backed token that can be redeemed
     IERC20 public immutable backedToken;
 
-    /// @notice The TreasuryVault that holds the collateral reserves.
-    address public immutable treasuryVault;
+    /// @notice The reserve asset given upon redemption
+    IERC20 public immutable reserveAsset;
 
-    /// @notice The collateral ERC-20 token held by the TreasuryVault.
-    IERC20 public immutable collateralToken;
+    /// @notice Treasury vault holding reserves
+    address public treasuryVault;
 
-    /// @notice Redemption fee in basis points (default 0).
-    uint256 public redemptionFee;
+    /// @notice Base redemption fee in basis points (e.g., 10 = 0.1%)
+    uint256 public baseFee;
 
-    /// @notice Address that receives collected redemption fees.
+    /// @notice Depeg surcharge multiplier when price < target
+    uint256 public depegSurchargeRate;
+
+    /// @notice Fee recipient address
     address public feeRecipient;
 
-    /// @notice Minimum number of BackedTokens required per redemption.
+    /// @notice Per-epoch redemption cap
+    uint256 public epochRedemptionCap;
+
+    /// @notice Current epoch start timestamp
+    uint256 public epochStartTime;
+
+    /// @notice Amount redeemed in current epoch
+    uint256 public currentEpochRedeemed;
+
+    /// @notice Minimum redemption amount
     uint256 public minRedemption;
 
-    /// @notice Maximum number of BackedTokens allowed per redemption.
-    uint256 public maxRedemption;
+    /// @notice Maximum single redemption (larger goes to queue)
+    uint256 public maxInstantRedemption;
 
-    /// @notice Cooldown period in seconds between redemptions per user.
-    uint256 public cooldownPeriod;
+    /// @notice Oracle for price data (for depeg surcharge)
+    address public priceOracle;
 
-    /// @notice Tracks the timestamp of each user's last redemption.
-    mapping(address => uint256) public lastRedemption;
+    /// @notice Target price in reserve asset units (e.g., 1e6 for $1 USDC)
+    uint256 public targetPrice;
 
-    // -------------------------------------------------------------------
-    //  Constructor
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // QUEUE SYSTEM
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    struct RedemptionRequest {
+        address redeemer;
+        uint256 amount;
+        uint256 requestedAt;
+        uint256 fee;
+        bool processed;
+        bool cancelled;
+    }
+
+    /// @notice Queue of pending redemption requests
+    RedemptionRequest[] public redemptionQueue;
+
+    /// @notice Next request to process in queue
+    uint256 public queueHead;
+
+    /// @notice User's pending redemption amounts
+    mapping(address => uint256) public pendingRedemptions;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EVENTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    event InstantRedemption(
+        address indexed redeemer,
+        uint256 amountBurned,
+        uint256 amountReceived,
+        uint256 fee
+    );
+
+    event RedemptionQueued(
+        uint256 indexed requestId,
+        address indexed redeemer,
+        uint256 amount,
+        uint256 estimatedFee
+    );
+
+    event RedemptionProcessed(
+        uint256 indexed requestId,
+        address indexed redeemer,
+        uint256 amountReceived,
+        uint256 fee
+    );
+
+    event RedemptionCancelled(
+        uint256 indexed requestId,
+        address indexed redeemer,
+        uint256 amount
+    );
+
+    event FeeUpdated(string feeType, uint256 oldValue, uint256 newValue);
+    event LimitUpdated(string limitType, uint256 oldValue, uint256 newValue);
+    event TreasuryUpdated(address oldTreasury, address newTreasury);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ERRORS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    error ZeroAddress();
+    error ZeroAmount();
+    error BelowMinimum();
+    error EpochCapExceeded();
+    error InsufficientReserves();
+    error RequestNotFound();
+    error RequestAlreadyProcessed();
+    error NotRequestOwner();
+    error QueueEmpty();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Deploys the RedemptionEngine.
-     * @param backedToken_     The BackedToken contract (ERC-20 + burnFrom).
-     * @param treasuryVault_   The TreasuryVault that custodies collateral.
-     * @param collateralToken_ The collateral ERC-20 token.
-     * @param feeRecipient_    Initial fee recipient address.
-     * @param admin            Initial admin address.
+     * @notice Initialize the RedemptionEngine
+     * @param _backedToken Address of the backed token
+     * @param _reserveAsset Address of the reserve asset
+     * @param _treasuryVault Address of the treasury vault
+     * @param _admin Admin address
      */
     constructor(
-        address backedToken_,
-        address treasuryVault_,
-        address collateralToken_,
-        address feeRecipient_,
-        address admin
+        address _backedToken,
+        address _reserveAsset,
+        address _treasuryVault,
+        address _admin
     ) {
-        if (backedToken_ == address(0)) revert ZeroAddress();
-        if (treasuryVault_ == address(0)) revert ZeroAddress();
-        if (collateralToken_ == address(0)) revert ZeroAddress();
-        if (feeRecipient_ == address(0)) revert ZeroAddress();
-        if (admin == address(0)) revert ZeroAddress();
+        if (_backedToken == address(0)) revert ZeroAddress();
+        if (_reserveAsset == address(0)) revert ZeroAddress();
+        if (_treasuryVault == address(0)) revert ZeroAddress();
+        if (_admin == address(0)) revert ZeroAddress();
 
-        backedToken = IERC20(backedToken_);
-        treasuryVault = treasuryVault_;
-        collateralToken = IERC20(collateralToken_);
-        feeRecipient = feeRecipient_;
+        backedToken = IERC20(_backedToken);
+        reserveAsset = IERC20(_reserveAsset);
+        treasuryVault = _treasuryVault;
 
-        // Sensible defaults: no minimum, unlimited maximum, no fee, no cooldown
-        minRedemption = 0;
-        maxRedemption = type(uint256).max;
-        redemptionFee = 0;
-        cooldownPeriod = 0;
+        // Default values
+        baseFee = 10; // 0.1%
+        depegSurchargeRate = 0; // No surcharge by default
+        feeRecipient = _treasuryVault;
+        epochRedemptionCap = type(uint256).max; // No cap by default
+        minRedemption = 1e6; // $1 minimum
+        maxInstantRedemption = 100000e6; // $100k instant max
+        targetPrice = 1e6; // $1.00 in 6 decimals
 
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ADMIN_ROLE, admin);
+        epochStartTime = block.timestamp;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(GUARDIAN_ROLE, _admin);
+        _grantRole(GOVERNOR_ROLE, _admin);
+        _grantRole(TREASURY_ROLE, _treasuryVault);
     }
 
-    // -------------------------------------------------------------------
-    //  External — Redemption
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INSTANT REDEMPTION
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /// @notice User-facing redemption with fee, cooldown, slippage protection, and min/max bounds.
-    /// @dev This is the user-facing redemption path. TreasuryVault.redeem() is the operator-only direct path.
-    ///
-    ///      Caller MUST first approve this contract to spend their BackedTokens:
-    ///      `backedToken.approve(address(redemptionEngine), tokenAmount)`
-    ///
-    ///      Collateral calculation:
-    ///        collateral = tokenAmount * collateralRatio / 1e18
-    ///        netCollateral = collateral * (BPS - fee) / BPS
-    ///
-    /// @param tokenAmount      Number of BackedTokens to burn.
-    /// @param minCollateralOut  Minimum collateral the caller expects to receive
-    ///                          (slippage protection). Use 0 to skip.
-    function redeem(
-        uint256 tokenAmount,
-        uint256 minCollateralOut
-    ) external whenNotPaused nonReentrant {
-        if (tokenAmount == 0) revert ZeroAmount();
-        if (tokenAmount < minRedemption) revert BelowMinRedemption(tokenAmount, minRedemption);
-        if (tokenAmount > maxRedemption) revert AboveMaxRedemption(tokenAmount, maxRedemption);
+    /**
+     * @notice Instantly redeem backed tokens for reserve asset
+     * @param amount Amount of backed tokens to redeem
+     */
+    function redeem(uint256 amount) external nonReentrant whenNotPaused {
+        if (amount == 0) revert ZeroAmount();
+        if (amount < minRedemption) revert BelowMinimum();
 
-        // Enforce per-user cooldown
-        uint256 cooldownEndsAt = lastRedemption[msg.sender] + cooldownPeriod;
-        // slither-disable-next-line timestamp
-        if (block.timestamp < cooldownEndsAt) {
-            revert CooldownActive(msg.sender, cooldownEndsAt);
+        // For large redemptions, queue instead
+        if (amount > maxInstantRedemption) {
+            _queueRedemption(msg.sender, amount);
+            return;
         }
 
-        // Query current collateral ratio from TreasuryVault
-        // collateralRatio returns (totalCollateral * 1e18) / totalSupply
-        // solhint-disable-next-line avoid-low-level-calls
-        // slither-disable-next-line low-level-calls
-        (bool success, bytes memory data) = treasuryVault.staticcall(
-            abi.encodeWithSignature("collateralRatio()")
-        );
-        require(success, "RedemptionEngine: collateralRatio query failed");
-        uint256 ratio = abi.decode(data, (uint256));
+        _processInstantRedemption(msg.sender, amount);
+    }
 
-        // Calculate gross collateral owed
-        uint256 grossCollateral = (tokenAmount * ratio) / 1e18;
+    /**
+     * @notice Process instant redemption
+     */
+    function _processInstantRedemption(address redeemer, uint256 amount) internal {
+        // Check epoch cap
+        _checkAndUpdateEpoch();
+        if (currentEpochRedeemed + amount > epochRedemptionCap) revert EpochCapExceeded();
 
-        // Calculate fee from original values to avoid divide-before-multiply precision loss.
-        // Overflow-safe: tokenAmount <= ~1e30, ratio <= ~1e18, redemptionFee <= 10000
-        // => product <= ~1e52, well within uint256 max (~1.15e77).
-        uint256 feeAmount = (tokenAmount * ratio * redemptionFee) / (1e18 * BPS_DENOMINATOR);
-        uint256 netCollateral = grossCollateral - feeAmount;
+        // Calculate fee
+        uint256 fee = _calculateFee(amount);
+        uint256 amountAfterFee = amount - fee;
 
-        // Slippage check
-        if (netCollateral < minCollateralOut) {
-            revert SlippageExceeded(netCollateral, minCollateralOut);
+        // Check reserves
+        uint256 reserveBalance = reserveAsset.balanceOf(treasuryVault);
+        if (reserveBalance < amountAfterFee) revert InsufficientReserves();
+
+        // Update state
+        currentEpochRedeemed += amount;
+
+        // Burn backed tokens from user
+        // Note: User must have approved this contract
+        backedToken.safeTransferFrom(redeemer, address(this), amount);
+        // Burn the tokens (assuming BackedToken is burnable)
+        IBurnable(address(backedToken)).burn(amount);
+
+        // Transfer reserves from treasury to user
+        reserveAsset.safeTransferFrom(treasuryVault, redeemer, amountAfterFee);
+
+        // Transfer fee to fee recipient
+        if (fee > 0) {
+            reserveAsset.safeTransferFrom(treasuryVault, feeRecipient, fee);
         }
 
-        // Record cooldown timestamp
-        lastRedemption[msg.sender] = block.timestamp;
+        emit InstantRedemption(redeemer, amount, amountAfterFee, fee);
+    }
 
-        // Burn backed tokens from the caller (requires prior approval)
-        // solhint-disable-next-line avoid-low-level-calls
-        // slither-disable-next-line low-level-calls
-        (bool burnSuccess,) = address(backedToken).call(
-            abi.encodeWithSignature("burnFrom(address,uint256)", msg.sender, tokenAmount)
-        );
-        require(burnSuccess, "RedemptionEngine: burn failed (ensure approve() was called)");
+    // ═══════════════════════════════════════════════════════════════════════════
+    // QUEUE SYSTEM
+    // ═══════════════════════════════════════════════════════════════════════════
 
-        // Call TreasuryVault.withdraw to transfer collateral to redeemer
-        // slither-disable-next-line low-level-calls
-        (bool wSuccess,) = address(treasuryVault).call(
-            abi.encodeWithSignature("withdraw(uint8,uint256,address)", uint8(0), netCollateral, msg.sender)
-        );
-        require(wSuccess, "RedemptionEngine: vault withdrawal failed");
+    /**
+     * @notice Queue a redemption request
+     */
+    function _queueRedemption(address redeemer, uint256 amount) internal {
+        uint256 estimatedFee = _calculateFee(amount);
 
-        // Transfer fee to fee recipient (if any)
-        if (feeAmount > 0) {
-            // slither-disable-next-line low-level-calls
-            (bool fSuccess,) = address(treasuryVault).call(
-                abi.encodeWithSignature("withdraw(uint8,uint256,address)", uint8(0), feeAmount, feeRecipient)
-            );
-            require(fSuccess, "RedemptionEngine: fee withdrawal failed");
+        // Transfer tokens to this contract (held until processed)
+        backedToken.safeTransferFrom(redeemer, address(this), amount);
+
+        redemptionQueue.push(RedemptionRequest({
+            redeemer: redeemer,
+            amount: amount,
+            requestedAt: block.timestamp,
+            fee: estimatedFee,
+            processed: false,
+            cancelled: false
+        }));
+
+        pendingRedemptions[redeemer] += amount;
+
+        emit RedemptionQueued(redemptionQueue.length - 1, redeemer, amount, estimatedFee);
+    }
+
+    /**
+     * @notice Process the next request in queue (callable by treasury)
+     */
+    function processNextInQueue() external nonReentrant onlyRole(TREASURY_ROLE) {
+        if (queueHead >= redemptionQueue.length) revert QueueEmpty();
+
+        RedemptionRequest storage request = redemptionQueue[queueHead];
+
+        // Skip cancelled requests
+        while (request.cancelled && queueHead < redemptionQueue.length) {
+            queueHead++;
+            if (queueHead < redemptionQueue.length) {
+                request = redemptionQueue[queueHead];
+            }
         }
 
-        // slither-disable-next-line reentrancy-events
-        emit RedemptionProcessed(msg.sender, tokenAmount, netCollateral, feeAmount);
-    }
+        if (queueHead >= redemptionQueue.length) revert QueueEmpty();
+        if (request.processed) revert RequestAlreadyProcessed();
 
-    // -------------------------------------------------------------------
-    //  External — Configuration (ADMIN_ROLE)
-    // -------------------------------------------------------------------
+        // Calculate final fee (may differ from estimate due to price changes)
+        uint256 fee = _calculateFee(request.amount);
+        uint256 amountAfterFee = request.amount - fee;
 
-    /**
-     * @notice Sets the redemption fee in basis points.
-     * @dev Hard-capped at 500 bps (5%) to protect users.
-     * @param newFee The new fee in basis points.
-     */
-    function setRedemptionFee(uint256 newFee) external onlyRole(ADMIN_ROLE) {
-        if (newFee > MAX_FEE_BPS) revert FeeTooHigh(newFee, MAX_FEE_BPS);
+        // Check reserves
+        uint256 reserveBalance = reserveAsset.balanceOf(treasuryVault);
+        if (reserveBalance < amountAfterFee) revert InsufficientReserves();
 
-        uint256 previousFee = redemptionFee;
-        redemptionFee = newFee;
+        // Mark as processed
+        request.processed = true;
+        request.fee = fee;
+        pendingRedemptions[request.redeemer] -= request.amount;
 
-        emit FeeUpdated(previousFee, newFee);
-    }
+        // Burn the held tokens
+        IBurnable(address(backedToken)).burn(request.amount);
 
-    /**
-     * @notice Sets the minimum number of BackedTokens required per redemption.
-     * @param newMin The new minimum redemption amount.
-     */
-    function setMinRedemption(uint256 newMin) external onlyRole(ADMIN_ROLE) {
-        uint256 previousMin = minRedemption;
-        minRedemption = newMin;
+        // Transfer reserves
+        reserveAsset.safeTransferFrom(treasuryVault, request.redeemer, amountAfterFee);
 
-        emit MinRedemptionUpdated(previousMin, newMin);
-    }
+        if (fee > 0) {
+            reserveAsset.safeTransferFrom(treasuryVault, feeRecipient, fee);
+        }
 
-    /**
-     * @notice Sets the maximum number of BackedTokens allowed per redemption.
-     * @param newMax The new maximum redemption amount.
-     */
-    function setMaxRedemption(uint256 newMax) external onlyRole(ADMIN_ROLE) {
-        uint256 previousMax = maxRedemption;
-        maxRedemption = newMax;
+        emit RedemptionProcessed(queueHead, request.redeemer, amountAfterFee, fee);
 
-        emit MaxRedemptionUpdated(previousMax, newMax);
+        queueHead++;
     }
 
     /**
-     * @notice Sets the fee recipient address.
-     * @param newRecipient The new fee recipient.
+     * @notice Cancel a pending redemption request
+     * @param requestId Request ID to cancel
      */
-    function setFeeRecipient(address newRecipient) external onlyRole(ADMIN_ROLE) {
-        if (newRecipient == address(0)) revert ZeroAddress();
+    function cancelRedemption(uint256 requestId) external nonReentrant {
+        if (requestId >= redemptionQueue.length) revert RequestNotFound();
 
-        address previousRecipient = feeRecipient;
-        feeRecipient = newRecipient;
+        RedemptionRequest storage request = redemptionQueue[requestId];
 
-        emit FeeRecipientUpdated(previousRecipient, newRecipient);
+        if (request.redeemer != msg.sender) revert NotRequestOwner();
+        if (request.processed) revert RequestAlreadyProcessed();
+        if (request.cancelled) revert RequestAlreadyProcessed();
+
+        request.cancelled = true;
+        pendingRedemptions[msg.sender] -= request.amount;
+
+        // Return tokens to user
+        backedToken.safeTransfer(msg.sender, request.amount);
+
+        emit RedemptionCancelled(requestId, msg.sender, request.amount);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FEE CALCULATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Calculate redemption fee
+     * @param amount Amount being redeemed
+     * @return fee Total fee amount
+     */
+    function _calculateFee(uint256 amount) internal view returns (uint256 fee) {
+        // Base fee
+        fee = (amount * baseFee) / BASIS_POINTS;
+
+        // Add depeg surcharge if price is below target
+        if (priceOracle != address(0) && depegSurchargeRate > 0) {
+            uint256 currentPrice = IPriceOracle(priceOracle).getPrice();
+            if (currentPrice < targetPrice) {
+                // Surcharge proportional to depeg
+                uint256 depegBps = ((targetPrice - currentPrice) * BASIS_POINTS) / targetPrice;
+                uint256 surcharge = (amount * depegBps * depegSurchargeRate) / (BASIS_POINTS * BASIS_POINTS);
+                fee += surcharge;
+            }
+        }
     }
 
     /**
-     * @notice Sets the per-user cooldown period between redemptions.
-     * @param newCooldown The new cooldown period in seconds.
+     * @notice Get fee quote for a redemption amount
      */
-    function setCooldown(uint256 newCooldown) external onlyRole(ADMIN_ROLE) {
-        uint256 previousCooldown = cooldownPeriod;
-        cooldownPeriod = newCooldown;
-
-        emit CooldownUpdated(previousCooldown, newCooldown);
+    function getFeeQuote(uint256 amount) external view returns (uint256 fee, uint256 amountAfterFee) {
+        fee = _calculateFee(amount);
+        amountAfterFee = amount - fee;
     }
 
-    // -------------------------------------------------------------------
-    //  External — Pause Management (ADMIN_ROLE)
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EPOCH MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function _checkAndUpdateEpoch() internal {
+        if (block.timestamp >= epochStartTime + EPOCH_DURATION) {
+            epochStartTime = block.timestamp;
+            currentEpochRedeemed = 0;
+        }
+    }
 
     /**
-     * @notice Pauses all redemptions.
-     * @dev Callable only by ADMIN_ROLE.
+     * @notice Get remaining redemption capacity in current epoch
      */
-    function pause() external onlyRole(ADMIN_ROLE) {
+    function getRemainingEpochCapacity() external view returns (uint256) {
+        if (block.timestamp >= epochStartTime + EPOCH_DURATION) {
+            return epochRedemptionCap;
+        }
+        return epochRedemptionCap > currentEpochRedeemed
+            ? epochRedemptionCap - currentEpochRedeemed
+            : 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONFIGURATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function setBaseFee(uint256 _fee) external onlyRole(GOVERNOR_ROLE) {
+        emit FeeUpdated("baseFee", baseFee, _fee);
+        baseFee = _fee;
+    }
+
+    function setDepegSurchargeRate(uint256 _rate) external onlyRole(GOVERNOR_ROLE) {
+        emit FeeUpdated("depegSurchargeRate", depegSurchargeRate, _rate);
+        depegSurchargeRate = _rate;
+    }
+
+    function setFeeRecipient(address _recipient) external onlyRole(GOVERNOR_ROLE) {
+        if (_recipient == address(0)) revert ZeroAddress();
+        feeRecipient = _recipient;
+    }
+
+    function setEpochRedemptionCap(uint256 _cap) external onlyRole(GOVERNOR_ROLE) {
+        emit LimitUpdated("epochRedemptionCap", epochRedemptionCap, _cap);
+        epochRedemptionCap = _cap;
+    }
+
+    function setMinRedemption(uint256 _min) external onlyRole(GOVERNOR_ROLE) {
+        emit LimitUpdated("minRedemption", minRedemption, _min);
+        minRedemption = _min;
+    }
+
+    function setMaxInstantRedemption(uint256 _max) external onlyRole(GOVERNOR_ROLE) {
+        emit LimitUpdated("maxInstantRedemption", maxInstantRedemption, _max);
+        maxInstantRedemption = _max;
+    }
+
+    function setTreasuryVault(address _vault) external onlyRole(GOVERNOR_ROLE) {
+        if (_vault == address(0)) revert ZeroAddress();
+        emit TreasuryUpdated(treasuryVault, _vault);
+        treasuryVault = _vault;
+    }
+
+    function setPriceOracle(address _oracle) external onlyRole(GOVERNOR_ROLE) {
+        priceOracle = _oracle;
+    }
+
+    function setTargetPrice(uint256 _price) external onlyRole(GOVERNOR_ROLE) {
+        targetPrice = _price;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PAUSE CONTROLS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function pause() external onlyRole(GUARDIAN_ROLE) {
         _pause();
     }
 
-    /**
-     * @notice Unpauses redemptions.
-     * @dev Callable only by ADMIN_ROLE.
-     */
-    function unpause() external onlyRole(ADMIN_ROLE) {
+    function unpause() external onlyRole(GUARDIAN_ROLE) {
         _unpause();
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VIEW FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Get queue length
+     */
+    function getQueueLength() external view returns (uint256) {
+        return redemptionQueue.length;
+    }
+
+    /**
+     * @notice Get pending queue length (unprocessed)
+     */
+    function getPendingQueueLength() external view returns (uint256) {
+        uint256 pending = 0;
+        for (uint256 i = queueHead; i < redemptionQueue.length; i++) {
+            if (!redemptionQueue[i].processed && !redemptionQueue[i].cancelled) {
+                pending++;
+            }
+        }
+        return pending;
+    }
+
+    /**
+     * @notice Get redemption request details
+     */
+    function getRequest(uint256 requestId) external view returns (RedemptionRequest memory) {
+        return redemptionQueue[requestId];
+    }
+
+    /**
+     * @notice Get full status
+     */
+    function getStatus() external view returns (
+        uint256 _epochRedemptionCap,
+        uint256 _currentEpochRedeemed,
+        uint256 _remainingCapacity,
+        uint256 _queueLength,
+        uint256 _pendingInQueue,
+        bool _isPaused
+    ) {
+        return (
+            epochRedemptionCap,
+            currentEpochRedeemed,
+            this.getRemainingEpochCapacity(),
+            redemptionQueue.length,
+            this.getPendingQueueLength(),
+            paused()
+        );
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INTERFACES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface IBurnable {
+    function burn(uint256 amount) external;
+}
+
+interface IPriceOracle {
+    function getPrice() external view returns (uint256);
 }

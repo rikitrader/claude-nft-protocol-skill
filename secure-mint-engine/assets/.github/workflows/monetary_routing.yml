@@ -1,21 +1,125 @@
-name: Monetary Routing Check
-on: [push, pull_request]
+name: Monetary Routing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
 jobs:
-  routing-check:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # MONETARY ROUTING CI CHECK
+  # ═══════════════════════════════════════════════════════════════════════════
+  monetary-routing-check:
+    name: Monetary Routing Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - run: |
-          mkdir -p intake
-          if [ ! -f intake/PROJECT_CONTEXT.json ]; then
-            echo '{"money_mechanic_type": "stablecoin_backed", "backing_type": "fiat_reserve"}' > intake/PROJECT_CONTEXT.json
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml jsonschema
+
+      - name: Run monetary routing CI check
+        run: python3 scripts/monetary_routing_ci_check.py
+        env:
+          PROJECT_CONTEXT_PATH: intake/PROJECT_CONTEXT.json
+          ROUTING_DIAGRAM_PATH: diagrams/MonetaryRouting.ascii
+          CI_REPORT_PATH: outputs/MonetaryRoutingCIReport.md
+
+      - name: Verify SECURE_MINT route markers in contracts
+        run: |
+          echo "Verifying SECURE_MINT route enforcement in Solidity contracts..."
+
+          # BackedToken must restrict minting to SecureMintPolicy
+          if ! grep -q "onlySecureMint" contracts/BackedToken.sol; then
+            echo "FAIL: BackedToken.sol missing onlySecureMint modifier"
+            exit 1
           fi
-      - run: python3 scripts/monetary_routing_ci_check.py
-      - uses: actions/upload-artifact@v4
-        if: always()
+
+          # SecureMintPolicy must enforce oracle-gated minting
+          if ! grep -q "MINTER_ROLE" contracts/SecureMintPolicy.sol; then
+            echo "FAIL: SecureMintPolicy.sol missing MINTER_ROLE enforcement"
+            exit 1
+          fi
+
+          # SecureMintPolicy must check backing before mint
+          if ! grep -q "canMint" contracts/SecureMintPolicy.sol; then
+            echo "FAIL: SecureMintPolicy.sol missing canMint backing check"
+            exit 1
+          fi
+
+          # SecureMintPolicy must check oracle health
+          if ! grep -q "isHealthy" contracts/SecureMintPolicy.sol; then
+            echo "FAIL: SecureMintPolicy.sol missing oracle health check"
+            exit 1
+          fi
+
+          # SecureMintPolicy must enforce global cap
+          if ! grep -q "GLOBAL_SUPPLY_CAP" contracts/SecureMintPolicy.sol; then
+            echo "FAIL: SecureMintPolicy.sol missing GLOBAL_SUPPLY_CAP enforcement"
+            exit 1
+          fi
+
+          # SecureMintPolicy must enforce epoch rate limit
+          if ! grep -q "epochMintCap" contracts/SecureMintPolicy.sol; then
+            echo "FAIL: SecureMintPolicy.sol missing epochMintCap enforcement"
+            exit 1
+          fi
+
+          # RedemptionEngine must burn tokens on redeem
+          if ! grep -q "burn" contracts/RedemptionEngine.sol; then
+            echo "FAIL: RedemptionEngine.sol missing burn on redemption"
+            exit 1
+          fi
+
+          # EmergencyPause must implement circuit breaker levels
+          if ! grep -q "PauseLevel" contracts/EmergencyPause.sol; then
+            echo "FAIL: EmergencyPause.sol missing PauseLevel circuit breaker"
+            exit 1
+          fi
+
+          # TreasuryVault must implement tiered reserves
+          if ! grep -q "TIER_HOT" contracts/TreasuryVault.sol; then
+            echo "FAIL: TreasuryVault.sol missing tiered reserve architecture"
+            exit 1
+          fi
+
+          echo "PASS: All SECURE_MINT route markers verified."
+
+      - name: Verify no unguarded mint paths
+        run: |
+          echo "Scanning for unguarded mint() calls..."
+
+          # Check that BackedToken.mint has the onlySecureMint guard
+          if grep -q "function mint" contracts/BackedToken.sol; then
+            if ! grep -A2 "function mint" contracts/BackedToken.sol | grep -q "onlySecureMint"; then
+              echo "FAIL: BackedToken.mint() missing onlySecureMint"
+              exit 1
+            fi
+          fi
+
+          # Check that SecureMintPolicy.mint has MINTER_ROLE guard
+          if grep -q "function mint" contracts/SecureMintPolicy.sol; then
+            if ! grep -A5 "function mint" contracts/SecureMintPolicy.sol | grep -q "onlyRole(MINTER_ROLE)"; then
+              echo "FAIL: SecureMintPolicy.mint() missing MINTER_ROLE"
+              exit 1
+            fi
+          fi
+
+          echo "PASS: No unguarded mint paths found."
+
+      - name: Upload CI report
+        uses: actions/upload-artifact@v4
         with:
-          name: routing-report
+          name: monetary-routing-report
           path: outputs/MonetaryRoutingCIReport.md
+        if: always()

@@ -3,118 +3,107 @@ pragma solidity ^0.8.20;
 
 /**
  * @title IBackingOracle
- * @author SecureMintEngine
- * @notice Interface for oracle contracts that report the backing amount,
- *         health status, freshness, and deviation for a backed token system.
- * @dev Implementations may wrap Chainlink Proof-of-Reserve feeds, custom
- *      attestation oracles, or on-chain treasury balance reporters.
- *
- *      The SecureMintPolicy contract queries this interface before every
- *      mint to verify that backing is provably sufficient.
+ * @notice Interface for backing verification oracles (Proof-of-Reserve or collateral oracles)
+ * @dev Implement this interface for any oracle providing backing data to SecureMintPolicy
  */
 interface IBackingOracle {
-    // -------------------------------------------------------------------
-    //  Events
-    // -------------------------------------------------------------------
+    /**
+     * @notice Returns the current verified backing amount
+     * @return backing The total backing in the token's base unit
+     */
+    function getVerifiedBacking() external view returns (uint256 backing);
 
     /**
-     * @notice Emitted when the backing amount is updated.
-     * @param newBacking   The new reported backing amount (base units).
-     * @param timestamp    The block timestamp of the update.
-     * @param reporter     The address that triggered the update.
+     * @notice Returns whether the oracle data is healthy and usable
+     * @return healthy True if oracle data is fresh and valid
      */
-    event BackingUpdated(
-        uint256 indexed newBacking,
-        uint256 timestamp,
-        address indexed reporter
+    function isHealthy() external view returns (bool healthy);
+
+    /**
+     * @notice Returns the timestamp of the last oracle update
+     * @return timestamp Unix timestamp of last update
+     */
+    function lastUpdate() external view returns (uint256 timestamp);
+
+    /**
+     * @notice Returns the age of the current data in seconds
+     * @return age Seconds since last update
+     */
+    function getDataAge() external view returns (uint256 age);
+
+    /**
+     * @notice Returns the required backing for a given supply
+     * @param supply The total supply to calculate backing for
+     * @return required The minimum backing required
+     */
+    function getRequiredBacking(uint256 supply) external view returns (uint256 required);
+
+    /**
+     * @notice Checks if minting a specific amount would maintain backing requirements
+     * @param currentSupply Current total supply
+     * @param mintAmount Amount to be minted
+     * @return allowed True if mint would maintain backing requirements
+     */
+    function canMint(uint256 currentSupply, uint256 mintAmount) external view returns (bool allowed);
+}
+
+/**
+ * @title IProofOfReserve
+ * @notice Extended interface for Proof-of-Reserve oracles (off-chain reserves)
+ */
+interface IProofOfReserve is IBackingOracle {
+    /**
+     * @notice Returns the attestation details
+     * @return attestor Address/identifier of the attestor
+     * @return attestationTime Time of attestation
+     * @return reserveAmount Attested reserve amount
+     */
+    function getAttestation() external view returns (
+        address attestor,
+        uint256 attestationTime,
+        uint256 reserveAmount
     );
 
     /**
-     * @notice Emitted when the oracle transitions to an unhealthy state.
-     * @param reason       A short description of why the oracle is unhealthy.
-     * @param timestamp    The block timestamp of the event.
+     * @notice Returns the number of required attestors
+     * @return count Minimum attestors required
      */
-    event OracleUnhealthy(string reason, uint256 timestamp);
-
-    // -------------------------------------------------------------------
-    //  Constants (recommended defaults — implementors may override)
-    // -------------------------------------------------------------------
+    function requiredAttestors() external view returns (uint256 count);
 
     /**
-     * @notice Maximum age (in seconds) before a backing report is considered
-     *         stale. Default recommendation: 3600 (1 hour).
-     * @return The staleness threshold in seconds.
+     * @notice Returns the current attestor count
+     * @return count Current number of valid attestations
      */
-    // slither-disable-next-line naming-convention
-    function MAX_STALENESS() external view returns (uint256);
+    function currentAttestorCount() external view returns (uint256 count);
+}
+
+/**
+ * @title ICollateralOracle
+ * @notice Extended interface for on-chain collateral oracles
+ */
+interface ICollateralOracle is IBackingOracle {
+    /**
+     * @notice Returns the current collateral ratio in basis points
+     * @return ratio Collateral ratio (e.g., 15000 = 150%)
+     */
+    function getCollateralRatio() external view returns (uint256 ratio);
 
     /**
-     * @notice Maximum acceptable deviation (in basis points) between
-     *         consecutive reports. Default recommendation: 500 (5%).
-     * @return The deviation threshold in basis points (1 bp = 0.01%).
+     * @notice Returns the price of collateral in base units
+     * @return price Collateral price
      */
-    // slither-disable-next-line naming-convention
-    function MAX_DEVIATION() external view returns (uint256);
-
-    // -------------------------------------------------------------------
-    //  Core View Functions
-    // -------------------------------------------------------------------
+    function getCollateralPrice() external view returns (uint256 price);
 
     /**
-     * @notice Returns the current reported backing amount in base units.
-     * @dev This value represents the total verifiable reserves that back
-     *      the token supply. It MUST be sourced from a trusted on-chain
-     *      feed (e.g., Chainlink PoR) or an auditable attestation.
-     * @return The backing amount in the collateral token's base units.
+     * @notice Returns whether the price is within acceptable deviation
+     * @return valid True if price deviation is acceptable
      */
-    function getBackingAmount() external view returns (uint256);
+    function isPriceValid() external view returns (bool valid);
 
     /**
-     * @notice Returns whether the oracle considers itself in a healthy state.
-     * @dev An oracle is healthy when:
-     *      - The last report is not stale (age < MAX_STALENESS)
-     *      - The last report's deviation is within bounds (< MAX_DEVIATION)
-     *      - No circuit breaker or anomaly flag is active
-     * @return True if the oracle is healthy, false otherwise.
+     * @notice Returns the TWAP price for manipulation resistance
+     * @param period TWAP period in seconds
+     * @return twapPrice Time-weighted average price
      */
-    function isHealthy() external view returns (bool);
-
-    /**
-     * @notice Returns the block timestamp of the last backing update.
-     * @return The Unix timestamp of the most recent backing report.
-     */
-    function lastUpdate() external view returns (uint256);
-
-    /**
-     * @notice Returns the deviation of the last report relative to the
-     *         previous report, expressed in basis points.
-     * @dev A deviation of 0 means no change. 100 = 1%, 500 = 5%, etc.
-     *      The SecureMintPolicy uses this to detect anomalous oracle
-     *      updates that may indicate manipulation or data-feed issues.
-     * @return The deviation in basis points.
-     */
-    function deviation() external view returns (uint256);
-
-    // -------------------------------------------------------------------
-    //  Extended View Functions (optional)
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Returns the number of independent data sources aggregated
-     *         into the current backing report.
-     * @dev Implementations that use a single source may return 1.
-     *      Multi-source implementations should return the count of
-     *      sources that contributed to the latest aggregated value.
-     * @return The number of data sources.
-     */
-    function sourceCount() external view returns (uint256);
-
-    /**
-     * @notice Returns the confidence level of the current report as a
-     *         percentage scaled by 1e4 (i.e., 10000 = 100% confidence).
-     * @dev This is optional. Implementations that do not track confidence
-     *      should return 10000 (100%).
-     * @return The confidence level in basis points (0–10000).
-     */
-    function confidence() external view returns (uint256);
+    function getTWAP(uint256 period) external view returns (uint256 twapPrice);
 }

@@ -1,0 +1,26 @@
+{
+  "description": "OFAC and international sanctions list - Ethereum addresses",
+  "source": "US Treasury OFAC SDN List + EU sanctions",
+  "last_updated": "2025-01-01T00:00:00Z",
+  "update_frequency": "weekly",
+  "addresses": [
+    "0x8589427373d6d84e98730d7795d8f6f8731fda16",
+    "0x722122df12d4e14e13ac3b6895a86e84145b6967",
+    "0xdd4c48c0b24039969fc16d1cdf626eab821d3384",
+    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",
+    "0xd96f2b1cf787cf174da73b8f0ee85b29d7d0c3e0",
+    "0xa7e5d5a720f06526557c513402f2e6b5fa20b008",
+    "0xfd8610d20aa15b7b2e3be39b396a1bc3516c7144",
+    "0xf60dd140cff0706bae9cd734ac3683696190ff3d",
+    "0xf67721a118aa3901caee7b23d0e2cbe07571b573",
+    "0x9ad122c22b14202b4490edaf288fdb3c7cb3ff5e",
+    "0x905b63fff5e57cff36c29e32b4eeb909f42faaf6",
+    "0x07e3a589fec8a59b6f06e7616a11bc34e tried0efc",
+    "0x23773e65ed146a459791799d01336db287f25334"
+  ],
+  "notes": [
+    "Keep this file updated with latest OFAC SDN list exports",
+    "Run: make update-sanctions to pull fresh data",
+    "Addresses are normalized to lowercase for matching"
+  ]
+}

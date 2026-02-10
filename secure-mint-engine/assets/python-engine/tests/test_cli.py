@@ -1,212 +1,477 @@
-"""Tests for securemint_cli.py subcommands."""
-
-from __future__ import annotations
+"""
+SecureMint Engine - CLI Unit Tests
+17+ pytest tests covering all CLI subcommands.
+"""
 
 import json
 import os
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest import mock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Resolve the CLI script path relative to this test file
-CLI_DIR = Path(__file__).resolve().parent.parent
-CLI_SCRIPT = CLI_DIR / "securemint_cli.py"
+# Add parent to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from securemint_cli import SecureMintCLI, main
 
 
-def run_cli(*args: str, env_override: dict[str, str] | None = None) -> subprocess.CompletedProcess:
-    """Helper to invoke the CLI as a subprocess and capture output."""
-    env = os.environ.copy()
-    # Strip vars that might leak from the host environment
-    for key in ("RPC_URL", "TOKEN_ADDRESS", "POLICY_ADDRESS", "CHAIN_ID",
-                "PRIVATE_KEY", "ORACLE_ADDRESS", "TREASURY_ADDRESS", "BRIDGE_ADDRESS"):
-        env.pop(key, None)
-    if env_override:
-        env.update(env_override)
-    return subprocess.run(
-        [sys.executable, str(CLI_SCRIPT), *args],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        env=env,
+# ═══════════════════════════════════════════════════════════════════════════════
+# FIXTURES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@pytest.fixture
+def cli():
+    """Create a CLI instance with mocked config."""
+    with patch.object(SecureMintCLI, "load_config") as mock_load:
+        instance = SecureMintCLI()
+        instance.config = {
+            "rpc_url": "http://localhost:8545",
+            "chain_id": 1,
+            "private_key": "",
+            "contracts": {
+                "token": "0x" + "00" * 20,
+                "policy": "0x" + "00" * 20,
+                "oracle": "0x" + "00" * 20,
+                "treasury": "0x" + "00" * 20,
+                "bridge": "0x" + "00" * 20,
+            },
+        }
+        yield instance
+
+
+@pytest.fixture
+def sample_csv(tmp_path: Path) -> Path:
+    """Create a sample CSV file for batch operations."""
+    csv_file = tmp_path / "mint_requests.csv"
+    csv_file.write_text(
+        "recipient,amount\n"
+        "0x1234567890abcdef1234567890abcdef12345678,1000000\n"
+        "0xabcdef1234567890abcdef1234567890abcdef12,2500000\n"
+        "0x9876543210fedcba9876543210fedcba98765432,500000\n"
     )
+    return csv_file
 
 
-class TestBuildParser:
-    """Verify that the argument parser knows about all expected subcommands."""
-
-    def test_build_parser(self) -> None:
-        # Import the module dynamically so tests work without web3 installed
-        sys.path.insert(0, str(CLI_DIR))
-        try:
-            import securemint_cli
-            parser = securemint_cli.build_parser()
-            # The subparsers action stores choices (subcommand names)
-            subparsers_actions = [
-                action for action in parser._subparsers._actions
-                if isinstance(action, type(parser._subparsers._actions[-1]))
-                and hasattr(action, "choices")
-            ]
-            assert len(subparsers_actions) > 0, "No subparsers found"
-            choices = subparsers_actions[-1].choices
-            expected = [
-                "mint-batch", "burn", "compliance", "report", "oracle-status",
-                "invariants", "simulate", "config-check", "validate-contracts",
-                "health-check", "treasury-status", "bridge-status", "smoke-test",
-                "preflight", "intake",
-            ]
-            for cmd in expected:
-                assert cmd in choices, f"Subcommand '{cmd}' not registered in parser"
-        finally:
-            sys.path.pop(0)
+@pytest.fixture
+def sample_json(tmp_path: Path) -> Path:
+    """Create a sample JSON file for batch operations."""
+    json_file = tmp_path / "mint_requests.json"
+    data = [
+        {"recipient": "0x1234567890abcdef1234567890abcdef12345678", "amount": "1000000"},
+        {"recipient": "0xabcdef1234567890abcdef1234567890abcdef12", "amount": "2500000"},
+    ]
+    json_file.write_text(json.dumps(data))
+    return json_file
 
 
-class TestConfigCheck:
-    """config-check subcommand."""
+@pytest.fixture
+def sample_addresses(tmp_path: Path) -> Path:
+    """Create a sample addresses file for compliance checks."""
+    addr_file = tmp_path / "addresses.txt"
+    addr_file.write_text(
+        "0x1234567890abcdef1234567890abcdef12345678\n"
+        "0xabcdef1234567890abcdef1234567890abcdef12\n"
+    )
+    return addr_file
 
-    def test_config_check_no_env(self) -> None:
-        result = run_cli("--format", "json", "config-check")
-        # Should complete (exit 0 or 1), and output must contain FAIL
-        output = result.stdout + result.stderr
-        assert "FAIL" in output, "Expected FAIL when no env vars are set"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CLI INITIALIZATION TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
-class TestValidateContracts:
-    """validate-contracts subcommand."""
+class TestCLIInit:
+    """Tests for CLI initialization."""
 
-    def test_validate_contracts(self) -> None:
-        result = run_cli("--format", "json", "validate-contracts")
-        data = json.loads(result.stdout)
-        # The contracts directory has all 15 expected files
-        assert data["summary"]["found"] == 15, (
-            f"Expected 15/15 contracts found, got {data['summary']['found']}/{data['summary']['total']}"
-        )
+    def test_cli_creates_instance(self, cli: SecureMintCLI) -> None:
+        assert cli is not None
+        assert cli.api is None
+
+    def test_cli_loads_config(self, cli: SecureMintCLI) -> None:
+        assert cli.config["rpc_url"] == "http://localhost:8545"
+        assert cli.config["chain_id"] == 1
+
+    def test_cli_config_has_contracts(self, cli: SecureMintCLI) -> None:
+        contracts = cli.config["contracts"]
+        assert "token" in contracts
+        assert "policy" in contracts
+        assert "oracle" in contracts
+        assert "treasury" in contracts
+
+    def test_cli_connect_creates_api(self, cli: SecureMintCLI) -> None:
+        with patch("securemint_cli.SecureMintAPI") as mock_api_cls:
+            mock_api_cls.return_value = MagicMock()
+            api = cli.connect()
+            assert api is not None
+            mock_api_cls.assert_called_once()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MAIN ENTRY POINT TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestMainEntry:
+    """Tests for main() entry point."""
+
+    def test_main_no_args_shows_help(self) -> None:
+        with patch("sys.argv", ["securemint_cli.py"]):
+            result = main()
+            assert result == 1
+
+    def test_main_invalid_command_shows_help(self) -> None:
+        with patch("sys.argv", ["securemint_cli.py", "invalid-command"]):
+            result = main()
+            assert result == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BATCH MINT TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestMintBatch:
-    """mint-batch subcommand."""
+    """Tests for mint-batch command."""
 
-    def test_mint_batch_missing_file(self) -> None:
-        result = run_cli("--format", "json", "mint-batch", "--file", "/tmp/nonexistent_file_12345.json")
-        assert result.returncode == 1, "Expected exit code 1 for missing file"
+    @pytest.mark.asyncio
+    async def test_mint_batch_file_not_found(self, cli: SecureMintCLI) -> None:
+        args = MagicMock()
+        args.input = "/nonexistent/file.csv"
+        args.output = None
+        args.batch_size = 50
+        args.gas_price = None
+        args.retries = 3
+        args.dry_run = False
+        args.force = False
+
+        result = await cli.mint_batch(args)
+        assert result == 1
+
+    @pytest.mark.asyncio
+    async def test_mint_batch_loads_csv(
+        self, cli: SecureMintCLI, sample_csv: Path
+    ) -> None:
+        mock_api = MagicMock()
+        mock_bulk = MagicMock()
+        mock_bulk.load_csv.return_value = [
+            {"recipient": "0x1234", "amount": 1000000},
+            {"recipient": "0xabcd", "amount": 2500000},
+        ]
+        mock_bulk.validate_mint_batch = AsyncMock(
+            return_value={"errors": []}
+        )
+        mock_api.check_invariants = AsyncMock(
+            return_value={"all_valid": True, "results": {}}
+        )
+        mock_bulk.execute_mint_batch = AsyncMock(
+            return_value={
+                "success_count": 2,
+                "failure_count": 0,
+                "total_gas_used": 42000,
+            }
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api), \
+             patch("securemint_cli.BulkOperator", return_value=mock_bulk):
+            args = MagicMock()
+            args.input = str(sample_csv)
+            args.output = None
+            args.batch_size = 50
+            args.gas_price = None
+            args.retries = 3
+            args.dry_run = False
+            args.force = False
+
+            result = await cli.mint_batch(args)
+            assert result == 0
+            mock_bulk.load_csv.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_mint_batch_dry_run(
+        self, cli: SecureMintCLI, sample_csv: Path
+    ) -> None:
+        mock_api = MagicMock()
+        mock_bulk = MagicMock()
+        mock_bulk.load_csv.return_value = [{"recipient": "0x1234", "amount": 1000000}]
+        mock_bulk.validate_mint_batch = AsyncMock(return_value={"errors": []})
+        mock_api.check_invariants = AsyncMock(
+            return_value={"all_valid": True, "results": {}}
+        )
+        mock_bulk.simulate_mint_batch = AsyncMock(
+            return_value={
+                "success_count": 1,
+                "failure_count": 0,
+                "total_gas_used": 21000,
+            }
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api), \
+             patch("securemint_cli.BulkOperator", return_value=mock_bulk):
+            args = MagicMock()
+            args.input = str(sample_csv)
+            args.output = None
+            args.batch_size = 50
+            args.gas_price = None
+            args.retries = 3
+            args.dry_run = True
+            args.force = False
+
+            result = await cli.mint_batch(args)
+            assert result == 0
+            mock_bulk.simulate_mint_batch.assert_called_once()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# COMPLIANCE TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestCompliance:
-    """compliance subcommand."""
+    """Tests for compliance command."""
 
-    def test_compliance_no_address(self) -> None:
-        result = run_cli("--format", "json", "compliance")
-        assert result.returncode == 1, "Expected exit code 1 when no address provided"
+    @pytest.mark.asyncio
+    async def test_compliance_requires_address_or_input(
+        self, cli: SecureMintCLI
+    ) -> None:
+        args = MagicMock()
+        args.address = None
+        args.input = None
+        args.output = None
+        args.jurisdiction = "US"
+        args.kyc = True
+        args.aml = True
+        args.sanctions = True
 
+        result = await cli.compliance_check(args)
+        assert result == 1
 
-class TestSimulate:
-    """simulate subcommand."""
-
-    def test_simulate_missing_bundle(self) -> None:
-        result = run_cli("--format", "json", "simulate", "--bundle", "/tmp/nonexistent_bundle_12345.json")
-        assert result.returncode == 1, "Expected exit code 1 for missing bundle"
-
-    def test_simulate_invalid_schema(self) -> None:
-        # Write a temporary JSON file that is missing the required "transactions" key
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"not_transactions": []}, f)
-            tmp_path = f.name
-
-        try:
-            result = run_cli("--format", "json", "simulate", "--bundle", tmp_path)
-            assert result.returncode == 1, "Expected exit code 1 for invalid bundle schema"
-        finally:
-            os.unlink(tmp_path)
-
-
-class TestBurn:
-    """burn subcommand."""
-
-    def test_burn_missing_file(self) -> None:
-        result = run_cli("--format", "json", "burn", "--file", "/tmp/nonexistent_burn_12345.json")
-        assert result.returncode == 1, "Expected exit code 1 for missing file"
-
-
-class TestReport:
-    """report subcommand."""
-
-    def test_report_no_env(self) -> None:
-        result = run_cli("--format", "json", "report", "--type", "reserve")
-        # Should complete without crashing; may fail gracefully or succeed with error info
-        assert result.returncode in (0, 1), f"Unexpected exit code: {result.returncode}"
-
-
-class TestOracleStatus:
-    """oracle-status subcommand."""
-
-    def test_oracle_status_no_env(self) -> None:
-        result = run_cli("--format", "json", "oracle-status")
-        assert result.returncode == 1, "Expected exit code 1 when ORACLE_ADDRESS not set"
-
-
-class TestInvariants:
-    """invariants subcommand."""
-
-    def test_invariants_no_env(self) -> None:
-        result = run_cli("--format", "json", "invariants")
-        # Should complete; invariants may be UNKNOWN without RPC
-        assert result.returncode in (0, 1), f"Unexpected exit code: {result.returncode}"
-
-
-class TestHealthCheck:
-    """health-check subcommand."""
-
-    def test_health_check_runs(self) -> None:
-        result = run_cli("--format", "json", "health-check")
-        output = result.stdout + result.stderr
-        assert "SecureMint Health Dashboard" in output or "health" in output.lower(), (
-            "Expected health-check to produce output"
+    @pytest.mark.asyncio
+    async def test_compliance_single_address(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+        mock_compliance = MagicMock()
+        mock_compliance.check_batch = AsyncMock(
+            return_value={
+                "results": [{"address": "0x1234", "compliant": True}]
+            }
         )
 
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api), \
+             patch("securemint_cli.ComplianceEngine", return_value=mock_compliance):
+            args = MagicMock()
+            args.address = "0x1234567890abcdef1234567890abcdef12345678"
+            args.input = None
+            args.output = None
+            args.jurisdiction = "US"
+            args.kyc = True
+            args.aml = True
+            args.sanctions = True
 
-class TestTreasuryStatus:
-    """treasury-status subcommand."""
-
-    def test_treasury_status_no_env(self) -> None:
-        result = run_cli("--format", "json", "treasury-status")
-        assert result.returncode == 1, "Expected exit code 1 when TREASURY_ADDRESS not set"
-
-
-class TestBridgeStatus:
-    """bridge-status subcommand."""
-
-    def test_bridge_status_no_env(self) -> None:
-        result = run_cli("--format", "json", "bridge-status")
-        assert result.returncode == 1, "Expected exit code 1 when BRIDGE_ADDRESS not set"
+            result = await cli.compliance_check(args)
+            assert result == 0
 
 
-class TestSmokeTest:
-    """smoke-test subcommand."""
-
-    def test_smoke_test_no_env(self) -> None:
-        result = run_cli("--format", "json", "smoke-test")
-        # Should handle missing env gracefully (exit 0 or 1)
-        assert result.returncode in (0, 1), f"Unexpected exit code: {result.returncode}"
+# ═══════════════════════════════════════════════════════════════════════════════
+# REPORT GENERATION TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
-class TestPreflight:
-    """preflight subcommand."""
+class TestReportGeneration:
+    """Tests for report command."""
 
-    def test_preflight_no_env(self) -> None:
-        result = run_cli("--format", "json", "preflight")
-        output = result.stdout + result.stderr
-        assert "FAIL" in output, "Expected FAIL results when no env vars are set"
+    @pytest.mark.asyncio
+    async def test_report_invalid_type(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
 
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api), \
+             patch("securemint_cli.ReportGenerator"):
+            args = MagicMock()
+            args.type = "invalid_type"
+            args.output_dir = None
+            args.days = 30
+            args.start_date = None
+            args.jurisdiction = None
+            args.include_proof = False
+            args.markdown = False
 
-class TestIntake:
-    """intake subcommand."""
+            result = await cli.generate_report(args)
+            assert result == 1
 
-    def test_intake_runs(self) -> None:
-        result = run_cli("--format", "json", "intake")
-        output = result.stdout + result.stderr
-        assert "Intake" in output or "intake" in output.lower() or "checks" in output.lower(), (
-            "Expected intake output to contain relevant content"
+    @pytest.mark.asyncio
+    async def test_report_reserve(self, cli: SecureMintCLI, tmp_path: Path) -> None:
+        mock_api = MagicMock()
+        mock_reporter = MagicMock()
+        mock_reporter.generate_reserve_attestation = AsyncMock(
+            return_value={"type": "reserve", "data": {}}
         )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api), \
+             patch("securemint_cli.ReportGenerator", return_value=mock_reporter):
+            args = MagicMock()
+            args.type = "reserve"
+            args.output_dir = str(tmp_path)
+            args.days = 30
+            args.start_date = None
+            args.jurisdiction = None
+            args.include_proof = True
+            args.markdown = False
+
+            result = await cli.generate_report(args)
+            assert result == 0
+            mock_reporter.generate_reserve_attestation.assert_called_once()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ORACLE OPERATIONS TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestOracleOperations:
+    """Tests for oracle command."""
+
+    @pytest.mark.asyncio
+    async def test_oracle_status(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+        mock_api.get_oracle_status = AsyncMock(
+            return_value={"healthy": True, "age": 120}
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api):
+            cli.api = mock_api
+            args = MagicMock()
+            args.action = "status"
+            args.backing = None
+            args.limit = None
+            args.output = None
+
+            result = await cli.oracle(args)
+            assert result == 0
+            mock_api.get_oracle_status.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_oracle_update_requires_backing(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api):
+            cli.api = mock_api
+            args = MagicMock()
+            args.action = "update"
+            args.backing = None
+            args.limit = None
+            args.output = None
+
+            result = await cli.oracle(args)
+            assert result == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TREASURY OPERATIONS TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestTreasuryOperations:
+    """Tests for treasury command."""
+
+    @pytest.mark.asyncio
+    async def test_treasury_status(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+        mock_api.get_treasury_status = AsyncMock(
+            return_value={
+                "total_reserves": 1000000,
+                "tiers": {"hot": 100000, "warm": 300000, "cold": 500000, "rwa": 100000},
+            }
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api):
+            cli.api = mock_api
+            args = MagicMock()
+            args.action = "status"
+            args.tier = None
+            args.amount = None
+            args.target = None
+            args.recipient = None
+
+            result = await cli.treasury(args)
+            assert result == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BRIDGE OPERATIONS TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestBridgeOperations:
+    """Tests for bridge command."""
+
+    @pytest.mark.asyncio
+    async def test_bridge_status(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+        mock_api.get_bridge_status = AsyncMock(
+            return_value={"active_chains": 3, "pending_transfers": 0}
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api):
+            cli.api = mock_api
+            args = MagicMock()
+            args.action = "status"
+            args.transfer_id = None
+
+            result = await cli.bridge(args)
+            assert result == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIMULATION TESTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestSimulation:
+    """Tests for simulate command."""
+
+    @pytest.mark.asyncio
+    async def test_simulate_success(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+        mock_api.simulate_bundle = AsyncMock(
+            return_value={
+                "success": True,
+                "gas_used": 42000,
+                "invariant_violations": [],
+            }
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api):
+            cli.api = mock_api
+            args = MagicMock()
+            args.tx_file = None
+            args.to = "0x1234567890abcdef1234567890abcdef12345678"
+            args.data = "0x"
+            args.value = "0"
+            args.output = None
+
+            result = await cli.simulate(args)
+            assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_simulate_failure(self, cli: SecureMintCLI) -> None:
+        mock_api = MagicMock()
+        mock_api.simulate_bundle = AsyncMock(
+            return_value={
+                "success": False,
+                "error": "Insufficient backing",
+            }
+        )
+
+        with patch("securemint_cli.SecureMintAPI", return_value=mock_api):
+            cli.api = mock_api
+            args = MagicMock()
+            args.tx_file = None
+            args.to = "0x1234567890abcdef1234567890abcdef12345678"
+            args.data = "0x"
+            args.value = "0"
+            args.output = None
+
+            result = await cli.simulate(args)
+            assert result == 1

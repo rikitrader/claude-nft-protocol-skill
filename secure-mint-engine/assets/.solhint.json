@@ -5,11 +5,17 @@
     "compiler-version": ["error", "^0.8.20"],
     "func-visibility": ["warn", { "ignoreConstructors": true }],
     "max-line-length": ["warn", 120],
-    "no-empty-blocks": "off",
-    "reason-string": ["warn", { "maxLength": 64 }],
+    "no-empty-blocks": "warn",
     "no-unused-vars": "error",
+    "no-unused-import": "error",
+    "reason-string": ["warn", { "maxLength": 64 }],
+    "constructor-syntax": "error",
+    "not-rely-on-time": "off",
+    "avoid-low-level-calls": "warn",
+    "avoid-tx-origin": "error",
     "no-inline-assembly": "off",
-    "avoid-low-level-calls": "off",
-    "not-rely-on-time": "off"
+    "state-visibility": "error",
+    "ordering": "warn",
+    "custom-errors": "error"
   }
 }

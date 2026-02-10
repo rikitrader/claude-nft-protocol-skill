@@ -1,578 +1,410 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./IBackingOracle.sol";
-import "./BackedToken.sol";
 
 /**
  * @title SecureMintPolicy
- * @author SecureMintEngine
- * @notice Oracle-gated mint policy that enforces ALL 6 conditions before
- *         any token can be minted. This is the core contract of the
- *         SecureMintEngine protocol.
+ * @notice Oracle-gated secure minting policy contract
+ * @dev Implements the SecureMintEngine specification with all required controls
  *
- * @dev Mint Conditions (ALL must hold for mint() to succeed):
+ * MINTING IS ALLOWED IFF ALL CONDITIONS HOLD:
+ * 1) Verified backing exists
+ * 2) Backing >= post-mint totalSupply (or required collateral ratio)
+ * 3) Oracle feeds are healthy (not stale, not deviated)
+ * 4) Mint amount <= rate limit
+ * 5) Mint amount <= global cap
+ * 6) Contract is NOT paused
  *
- *      1. Verified backing >= post-mint totalSupply
- *      2. Oracle reports healthy (isHealthy() == true)
- *      3. Oracle data is not stale (age < maxStaleness)
- *      4. Oracle deviation is within bounds (< maxDeviation)
- *      5. Mint amount <= per-epoch rate limit
- *      6. totalSupply + amount <= global supply cap
- *      7. Contract is NOT paused
- *      8. Caller has OPERATOR_ROLE
- *
- *      If ANY condition fails, mint() MUST revert.
- *
- *      Configuration changes (caps, oracle address) are timelocked.
+ * IF ANY CONDITION FAILS → mint() MUST revert
  */
-contract SecureMintPolicy is AccessControl, Pausable, ReentrancyGuard {
-    // -------------------------------------------------------------------
-    //  Roles
-    // -------------------------------------------------------------------
+contract SecureMintPolicy is Pausable, ReentrancyGuard, AccessControl {
+    // ═══════════════════════════════════════════════════════════════════════
+    // ROLES
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /// @notice Operators can execute mints (after all conditions are verified).
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-
-    /// @notice Admins can propose configuration changes (timelocked).
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    /// @notice Guardians can trigger emergency pause.
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
+    bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
 
-    // -------------------------------------------------------------------
-    //  Custom Errors
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════
 
-    error ZeroAddress();
-    error ZeroAmount();
-    error BackingInsufficient(uint256 backing, uint256 postMintSupply);
-    error OracleUnhealthy();
-    error OracleStale(uint256 lastUpdate, uint256 maxAge);
-    error OracleDeviationExceeded(uint256 deviation, uint256 maxDeviation);
-    error EpochCapExceeded(uint256 requested, uint256 remaining);
-    error GlobalSupplyCapExceeded(uint256 postMintSupply, uint256 globalCap);
-    error TimelockNotElapsed(uint256 availableAt);
-    error NoPendingChange();
-    error UnauthorizedCaller();
-    error EmergencyPauseAlreadySet();
+    /// @notice The backed token this policy controls
+    IBackedToken public immutable token;
 
-    // -------------------------------------------------------------------
-    //  Events
-    // -------------------------------------------------------------------
+    /// @notice The backing oracle (PoR or collateral oracle)
+    IBackingOracle public backingOracle;
 
-    event Minted(
-        address indexed to,
-        uint256 amount,
-        uint256 newTotalSupply,
-        uint256 oracleBacking,
-        uint256 timestamp
-    );
+    /// @notice Global supply cap - max total supply ever
+    uint256 public immutable GLOBAL_SUPPLY_CAP;
 
-    event EpochReset(
-        uint256 indexed epochNumber,
-        uint256 timestamp
-    );
-
-    event ConfigChangeProposed(
-        bytes32 indexed changeId,
-        string description,
-        uint256 availableAt
-    );
-
-    event ConfigChangeExecuted(bytes32 indexed changeId);
-    event ConfigChangeCancelled(bytes32 indexed changeId);
-
-    // -------------------------------------------------------------------
-    //  Structs
-    // -------------------------------------------------------------------
-
-    struct PendingChange {
-        bytes32 changeId;
-        uint256 availableAt;
-        bytes data;
-        bool exists;
-    }
-
-    // -------------------------------------------------------------------
-    //  State Variables
-    // -------------------------------------------------------------------
-
-    /// @notice The BackedToken contract this policy controls minting for.
-    BackedToken public immutable backedToken;
-
-    /// @notice The backing oracle consulted before every mint.
-    IBackingOracle public oracle;
-
-    /// @notice Global maximum supply cap (base units). 0 = unlimited.
-    uint256 public globalSupplyCap;
-
-    /// @notice Maximum tokens that can be minted per epoch (base units).
+    /// @notice Per-epoch mint cap
     uint256 public epochMintCap;
 
-    /// @notice Duration of a single epoch in seconds (default: 24 hours).
-    uint256 public epochDuration;
+    /// @notice Epoch duration in seconds
+    uint256 public constant EPOCH_DURATION = 1 hours;
 
-    /// @notice Maximum staleness for oracle data (seconds).
-    uint256 public maxStaleness;
+    /// @notice Maximum oracle data age in seconds
+    uint256 public maxOracleAge;
 
-    /// @notice Maximum acceptable oracle deviation (basis points).
-    uint256 public maxDeviation;
+    /// @notice Timelock duration for parameter changes
+    uint256 public constant TIMELOCK_DURATION = 48 hours;
 
-    /// @notice Timelock delay for configuration changes (seconds).
-    uint256 public immutable timelockDelay;
+    /// @notice Current epoch minted amount
+    uint256 public currentEpochMinted;
 
-    // --- Epoch tracking ---
+    /// @notice Timestamp of current epoch start
+    uint256 public epochStartTime;
 
-    /// @notice Start timestamp of the current epoch.
-    uint256 public epochStart;
+    // ═══════════════════════════════════════════════════════════════════════
+    // TIMELOCK STATE
+    // ═══════════════════════════════════════════════════════════════════════
 
-    /// @notice Amount minted so far in the current epoch.
-    uint256 public epochMinted;
-
-    /// @notice Monotonically increasing epoch counter.
-    uint256 public epochNumber;
-
-    // --- Timelock ---
-
-    /// @notice Pending timelocked configuration changes.
-    mapping(bytes32 => PendingChange) public pendingChanges;
-
-    /// @notice Address of the EmergencyPause contract (for integration hook verification).
-    address public emergencyPause;
-
-    // -------------------------------------------------------------------
-    //  Constructor
-    // -------------------------------------------------------------------
-
-    /**
-     * @param backedToken_   Address of the BackedToken contract.
-     * @param oracle_        Address of the IBackingOracle implementation.
-     * @param globalCap_     Initial global supply cap (0 = unlimited).
-     * @param epochCap_      Initial per-epoch mint cap.
-     * @param epochDuration_ Epoch duration in seconds.
-     * @param maxStaleness_  Oracle staleness threshold in seconds.
-     * @param maxDeviation_  Oracle deviation threshold in basis points.
-     * @param timelockDelay_ Timelock delay for config changes in seconds.
-     * @param admin          Initial admin address.
-     */
-    constructor(
-        address backedToken_,
-        address oracle_,
-        uint256 globalCap_,
-        uint256 epochCap_,
-        uint256 epochDuration_,
-        uint256 maxStaleness_,
-        uint256 maxDeviation_,
-        uint256 timelockDelay_,
-        address admin
-    ) {
-        if (backedToken_ == address(0)) revert ZeroAddress();
-        if (oracle_ == address(0)) revert ZeroAddress();
-        if (admin == address(0)) revert ZeroAddress();
-
-        backedToken = BackedToken(backedToken_);
-        oracle = IBackingOracle(oracle_);
-        globalSupplyCap = globalCap_;
-        epochMintCap = epochCap_;
-        epochDuration = epochDuration_;
-        maxStaleness = maxStaleness_;
-        maxDeviation = maxDeviation_;
-        timelockDelay = timelockDelay_;
-
-        epochStart = block.timestamp;
-        epochNumber = 1;
-
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ADMIN_ROLE, admin);
+    struct PendingChange {
+        uint256 newValue;
+        uint256 executeAfter;
+        bool pending;
     }
 
-    // -------------------------------------------------------------------
-    //  External — Mint (OPERATOR_ROLE only)
-    // -------------------------------------------------------------------
+    mapping(bytes32 => PendingChange) public pendingChanges;
+
+    bytes32 public constant CHANGE_EPOCH_CAP = keccak256("CHANGE_EPOCH_CAP");
+    bytes32 public constant CHANGE_ORACLE = keccak256("CHANGE_ORACLE");
+    bytes32 public constant CHANGE_MAX_ORACLE_AGE = keccak256("CHANGE_MAX_ORACLE_AGE");
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    event SecureMintExecuted(
+        address indexed to,
+        uint256 amount,
+        uint256 backingAtMint,
+        uint256 newTotalSupply,
+        uint256 oracleTimestamp
+    );
+
+    event EmergencyPause(address indexed triggeredBy, string reason);
+    event OracleHealthFailure(uint256 dataAge, bool isHealthy);
+    event BackingInsufficient(uint256 backing, uint256 required);
+    event EpochCapExceeded(uint256 requested, uint256 remaining);
+
+    event ChangeProposed(bytes32 indexed changeType, uint256 newValue, uint256 executeAfter);
+    event ChangeExecuted(bytes32 indexed changeType, uint256 newValue);
+    event ChangeCancelled(bytes32 indexed changeType);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ERRORS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    error OracleUnhealthy();
+    error OracleStale();
+    error InsufficientBacking();
+    error GlobalCapExceeded();
+    error EpochCapExceeded();
+    error ZeroAmount();
+    error ZeroAddress();
+    error TimelockNotReady();
+    error NoChangePending();
+    error ChangeAlreadyPending();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR
+    // ═══════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Mints `amount` tokens to `to` after verifying ALL conditions.
-     * @dev Reverts if any of the 6 mint conditions fail.
-     * @param to     Recipient address.
-     * @param amount Number of tokens to mint (base units).
+     * @notice Initialize the SecureMintPolicy
+     * @param _token Address of the BackedToken
+     * @param _oracle Address of the backing oracle
+     * @param _globalCap Maximum total supply (immutable)
+     * @param _epochCap Per-epoch mint cap
+     * @param _maxOracleAge Maximum acceptable oracle data age
+     * @param _admin Initial admin address (should be multisig)
      */
-    function mint(
-        address to,
-        uint256 amount
-    ) external onlyRole(OPERATOR_ROLE) whenNotPaused nonReentrant {
-        if (to == address(0)) revert ZeroAddress();
+    constructor(
+        address _token,
+        address _oracle,
+        uint256 _globalCap,
+        uint256 _epochCap,
+        uint256 _maxOracleAge,
+        address _admin
+    ) {
+        if (_token == address(0)) revert ZeroAddress();
+        if (_oracle == address(0)) revert ZeroAddress();
+        if (_admin == address(0)) revert ZeroAddress();
+
+        token = IBackedToken(_token);
+        backingOracle = IBackingOracle(_oracle);
+        GLOBAL_SUPPLY_CAP = _globalCap;
+        epochMintCap = _epochCap;
+        maxOracleAge = _maxOracleAge;
+        epochStartTime = block.timestamp;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(GOVERNOR_ROLE, _admin);
+        _grantRole(GUARDIAN_ROLE, _admin);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MINT FUNCTION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Mint tokens with full backing verification
+     * @dev Enforces ALL SecureMintEngine invariants
+     * @param to Recipient address
+     * @param amount Amount to mint
+     */
+    function mint(address to, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRole(MINTER_ROLE)
+    {
         if (amount == 0) revert ZeroAmount();
+        if (to == address(0)) revert ZeroAddress();
 
-        // --- Epoch management ---
-        _advanceEpochIfNeeded();
-
-        // --- Condition 1: Backing >= post-mint supply ---
-        uint256 postMintSupply = backedToken.totalSupply() + amount;
-        uint256 backing = oracle.getBackingAmount();
-        if (backing < postMintSupply) {
-            revert BackingInsufficient(backing, postMintSupply);
-        }
-
-        // --- Condition 2: Oracle is healthy ---
-        if (!oracle.isHealthy()) {
+        // ─────────────────────────────────────────────────────────────────
+        // CHECK 1: Oracle health
+        // ─────────────────────────────────────────────────────────────────
+        if (!backingOracle.isHealthy()) {
+            emit OracleHealthFailure(backingOracle.getDataAge(), false);
+            _triggerEmergencyPause("Oracle unhealthy");
             revert OracleUnhealthy();
         }
 
-        // --- Condition 3: Oracle data is not stale ---
-        uint256 lastUpdate = oracle.lastUpdate();
-        // slither-disable-next-line timestamp
-        if (block.timestamp - lastUpdate > maxStaleness) {
-            revert OracleStale(lastUpdate, maxStaleness);
+        // ─────────────────────────────────────────────────────────────────
+        // CHECK 2: Oracle staleness
+        // ─────────────────────────────────────────────────────────────────
+        uint256 dataAge = backingOracle.getDataAge();
+        if (dataAge > maxOracleAge) {
+            emit OracleHealthFailure(dataAge, true);
+            _triggerEmergencyPause("Oracle stale");
+            revert OracleStale();
         }
 
-        // --- Condition 4: Oracle deviation within bounds ---
-        uint256 dev = oracle.deviation();
-        if (dev > maxDeviation) {
-            revert OracleDeviationExceeded(dev, maxDeviation);
+        // ─────────────────────────────────────────────────────────────────
+        // CHECK 3: Backing verification
+        // ─────────────────────────────────────────────────────────────────
+        uint256 currentSupply = token.totalSupply();
+        uint256 postMintSupply = currentSupply + amount;
+
+        if (!backingOracle.canMint(currentSupply, amount)) {
+            uint256 backing = backingOracle.getVerifiedBacking();
+            uint256 required = backingOracle.getRequiredBacking(postMintSupply);
+            emit BackingInsufficient(backing, required);
+            revert InsufficientBacking();
         }
 
-        // --- Condition 5: Epoch rate limit ---
-        uint256 remaining = epochMintCap > epochMinted ? epochMintCap - epochMinted : 0;
-        if (amount > remaining) {
-            revert EpochCapExceeded(amount, remaining);
+        // ─────────────────────────────────────────────────────────────────
+        // CHECK 4: Global cap
+        // ─────────────────────────────────────────────────────────────────
+        if (postMintSupply > GLOBAL_SUPPLY_CAP) {
+            revert GlobalCapExceeded();
         }
 
-        // --- Condition 6: Global supply cap ---
-        if (globalSupplyCap > 0 && postMintSupply > globalSupplyCap) {
-            revert GlobalSupplyCapExceeded(postMintSupply, globalSupplyCap);
+        // ─────────────────────────────────────────────────────────────────
+        // CHECK 5: Epoch rate limit
+        // ─────────────────────────────────────────────────────────────────
+        _checkAndUpdateEpoch();
+
+        if (currentEpochMinted + amount > epochMintCap) {
+            emit EpochCapExceeded(amount, epochMintCap - currentEpochMinted);
+            revert EpochCapExceeded();
         }
 
-        // --- All conditions passed — execute mint ---
-        epochMinted += amount;
-        backedToken.mint(to, amount);
+        // ─────────────────────────────────────────────────────────────────
+        // EXECUTE MINT
+        // ─────────────────────────────────────────────────────────────────
+        currentEpochMinted += amount;
 
-        emit Minted(to, amount, backedToken.totalSupply(), backing, block.timestamp);
+        uint256 backingAtMint = backingOracle.getVerifiedBacking();
+        uint256 oracleTimestamp = backingOracle.lastUpdate();
+
+        token.mint(to, amount);
+
+        emit SecureMintExecuted(
+            to,
+            amount,
+            backingAtMint,
+            postMintSupply,
+            oracleTimestamp
+        );
     }
 
-    // -------------------------------------------------------------------
-    //  External — Pause (GUARDIAN_ROLE)
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════
+    // EPOCH MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function _checkAndUpdateEpoch() internal {
+        if (block.timestamp >= epochStartTime + EPOCH_DURATION) {
+            epochStartTime = block.timestamp;
+            currentEpochMinted = 0;
+        }
+    }
 
     /**
-     * @notice Emergency pause — immediately halts all minting.
+     * @notice Get remaining mintable amount in current epoch
+     */
+    function getRemainingEpochMint() external view returns (uint256) {
+        if (block.timestamp >= epochStartTime + EPOCH_DURATION) {
+            return epochMintCap;
+        }
+        return epochMintCap > currentEpochMinted ? epochMintCap - currentEpochMinted : 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EMERGENCY CONTROLS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Pause minting - callable by guardian
      */
     function pause() external onlyRole(GUARDIAN_ROLE) {
         _pause();
+        emit EmergencyPause(msg.sender, "Manual pause");
     }
 
     /**
-     * @notice Unpause minting operations.
+     * @notice Unpause minting - callable by guardian
      */
-    function unpause() external onlyRole(ADMIN_ROLE) {
+    function unpause() external onlyRole(GUARDIAN_ROLE) {
+        // Verify oracle is healthy before unpausing
+        require(backingOracle.isHealthy(), "Cannot unpause: oracle unhealthy");
+        require(backingOracle.getDataAge() <= maxOracleAge, "Cannot unpause: oracle stale");
         _unpause();
     }
 
-    /**
-     * @notice Called by EmergencyPause when pause level changes.
-     * @dev Level 0: unpause minting. Level 1+: pause minting.
-     *      Only callable by the registered EmergencyPause contract.
-     * @param level The new pause level (0=Normal, 1=MintPaused, 2=Restricted, 3=FullFreeze).
-     */
-    function onPauseLevelChanged(uint8 level) external {
-        if (msg.sender != emergencyPause) revert UnauthorizedCaller();
-        if (level >= 1) {
-            if (!paused()) _pause();
-        } else {
-            if (paused()) _unpause();
+    function _triggerEmergencyPause(string memory reason) internal {
+        if (!paused()) {
+            _pause();
+            emit EmergencyPause(address(this), reason);
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // TIMELOCKED PARAMETER CHANGES
+    // ═══════════════════════════════════════════════════════════════════════
+
     /**
-     * @notice One-time initializer for the EmergencyPause contract address.
-     * @dev After initial setup, use proposeEmergencyPauseChange/executeEmergencyPauseChange.
-     * @param emergencyPause_ Address of the EmergencyPause contract.
+     * @notice Propose a change to epoch mint cap
      */
-    function setEmergencyPause(address emergencyPause_) external onlyRole(ADMIN_ROLE) {
-        if (emergencyPause != address(0)) revert EmergencyPauseAlreadySet();
-        if (emergencyPause_ == address(0)) revert ZeroAddress();
-        emergencyPause = emergencyPause_;
+    function proposeEpochCapChange(uint256 newCap) external onlyRole(GOVERNOR_ROLE) {
+        _proposeChange(CHANGE_EPOCH_CAP, newCap);
     }
 
     /**
-     * @notice Proposes a timelocked change to the EmergencyPause contract address.
-     * @param newPause The new EmergencyPause contract address.
+     * @notice Execute epoch cap change after timelock
      */
-    function proposeEmergencyPauseChange(address newPause) external onlyRole(ADMIN_ROLE) {
-        if (newPause == address(0)) revert ZeroAddress();
-        bytes32 changeId = keccak256(abi.encode("emergencyPause", newPause, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newPause),
-            exists: true
+    function executeEpochCapChange() external onlyRole(GOVERNOR_ROLE) {
+        uint256 newCap = _executeChange(CHANGE_EPOCH_CAP);
+        epochMintCap = newCap;
+    }
+
+    /**
+     * @notice Propose a change to max oracle age
+     */
+    function proposeMaxOracleAgeChange(uint256 newAge) external onlyRole(GOVERNOR_ROLE) {
+        _proposeChange(CHANGE_MAX_ORACLE_AGE, newAge);
+    }
+
+    /**
+     * @notice Execute max oracle age change after timelock
+     */
+    function executeMaxOracleAgeChange() external onlyRole(GOVERNOR_ROLE) {
+        uint256 newAge = _executeChange(CHANGE_MAX_ORACLE_AGE);
+        maxOracleAge = newAge;
+    }
+
+    /**
+     * @notice Cancel any pending change
+     */
+    function cancelChange(bytes32 changeType) external onlyRole(GOVERNOR_ROLE) {
+        if (!pendingChanges[changeType].pending) revert NoChangePending();
+        delete pendingChanges[changeType];
+        emit ChangeCancelled(changeType);
+    }
+
+    function _proposeChange(bytes32 changeType, uint256 newValue) internal {
+        if (pendingChanges[changeType].pending) revert ChangeAlreadyPending();
+
+        uint256 executeAfter = block.timestamp + TIMELOCK_DURATION;
+        pendingChanges[changeType] = PendingChange({
+            newValue: newValue,
+            executeAfter: executeAfter,
+            pending: true
         });
-        emit ConfigChangeProposed(changeId, "emergencyPause", block.timestamp + timelockDelay);
+
+        emit ChangeProposed(changeType, newValue, executeAfter);
+    }
+
+    function _executeChange(bytes32 changeType) internal returns (uint256) {
+        PendingChange storage change = pendingChanges[changeType];
+        if (!change.pending) revert NoChangePending();
+        if (block.timestamp < change.executeAfter) revert TimelockNotReady();
+
+        uint256 newValue = change.newValue;
+        delete pendingChanges[changeType];
+
+        emit ChangeExecuted(changeType, newValue);
+        return newValue;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VIEW FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Check if minting is currently possible
+     */
+    function canMintNow(uint256 amount) external view returns (bool, string memory) {
+        if (paused()) return (false, "Paused");
+        if (!backingOracle.isHealthy()) return (false, "Oracle unhealthy");
+        if (backingOracle.getDataAge() > maxOracleAge) return (false, "Oracle stale");
+        if (token.totalSupply() + amount > GLOBAL_SUPPLY_CAP) return (false, "Global cap exceeded");
+        if (!backingOracle.canMint(token.totalSupply(), amount)) return (false, "Insufficient backing");
+
+        // Check epoch (simplified for view)
+        uint256 remaining = this.getRemainingEpochMint();
+        if (amount > remaining) return (false, "Epoch cap exceeded");
+
+        return (true, "");
     }
 
     /**
-     * @notice Executes a previously proposed EmergencyPause address change.
-     * @param changeId The change identifier from the proposal event.
+     * @notice Get all current limits and status
      */
-    function executeEmergencyPauseChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        emergencyPause = abi.decode(change.data, (address));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
+    function getStatus() external view returns (
+        bool isPaused,
+        bool oracleHealthy,
+        uint256 oracleAge,
+        uint256 currentBacking,
+        uint256 totalSupply,
+        uint256 globalCap,
+        uint256 epochRemaining
+    ) {
+        return (
+            paused(),
+            backingOracle.isHealthy(),
+            backingOracle.getDataAge(),
+            backingOracle.getVerifiedBacking(),
+            token.totalSupply(),
+            GLOBAL_SUPPLY_CAP,
+            this.getRemainingEpochMint()
+        );
     }
+}
 
-    // -------------------------------------------------------------------
-    //  External — Timelocked Configuration
-    // -------------------------------------------------------------------
+// ═══════════════════════════════════════════════════════════════════════════
+// INTERFACE FOR BACKED TOKEN
+// ═══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * @notice Proposes a change to the global supply cap (timelocked).
-     * @param newCap The new global supply cap.
-     */
-    function proposeGlobalCapChange(
-        uint256 newCap
-    ) external onlyRole(ADMIN_ROLE) {
-        bytes32 changeId = keccak256(abi.encode("globalSupplyCap", newCap, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newCap),
-            exists: true
-        });
-        emit ConfigChangeProposed(changeId, "globalSupplyCap", block.timestamp + timelockDelay);
-    }
-
-    /**
-     * @notice Executes a previously proposed global cap change.
-     * @param changeId The change identifier from the proposal event.
-     */
-    function executeGlobalCapChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        globalSupplyCap = abi.decode(change.data, (uint256));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
-    }
-
-    /**
-     * @notice Proposes a change to the epoch mint cap (timelocked).
-     * @param newCap The new epoch mint cap.
-     */
-    function proposeEpochCapChange(
-        uint256 newCap
-    ) external onlyRole(ADMIN_ROLE) {
-        bytes32 changeId = keccak256(abi.encode("epochMintCap", newCap, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newCap),
-            exists: true
-        });
-        emit ConfigChangeProposed(changeId, "epochMintCap", block.timestamp + timelockDelay);
-    }
-
-    /**
-     * @notice Executes a previously proposed epoch cap change.
-     * @param changeId The change identifier from the proposal event.
-     */
-    function executeEpochCapChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        epochMintCap = abi.decode(change.data, (uint256));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
-    }
-
-    /**
-     * @notice Proposes a change to the oracle address (timelocked).
-     * @param newOracle The new oracle address.
-     */
-    function proposeOracleChange(
-        address newOracle
-    ) external onlyRole(ADMIN_ROLE) {
-        if (newOracle == address(0)) revert ZeroAddress();
-        bytes32 changeId = keccak256(abi.encode("oracle", newOracle, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newOracle),
-            exists: true
-        });
-        emit ConfigChangeProposed(changeId, "oracle", block.timestamp + timelockDelay);
-    }
-
-    /**
-     * @notice Executes a previously proposed oracle change.
-     * @param changeId The change identifier from the proposal event.
-     */
-    function executeOracleChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        oracle = IBackingOracle(abi.decode(change.data, (address)));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
-    }
-
-    /**
-     * @notice Proposes a change to the maxStaleness threshold (timelocked).
-     * @param newMaxStaleness The new maxStaleness value in seconds.
-     */
-    function proposeMaxStalenessChange(
-        uint256 newMaxStaleness
-    ) external onlyRole(ADMIN_ROLE) {
-        bytes32 changeId = keccak256(abi.encode("maxStaleness", newMaxStaleness, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newMaxStaleness),
-            exists: true
-        });
-        emit ConfigChangeProposed(changeId, "maxStaleness", block.timestamp + timelockDelay);
-    }
-
-    /**
-     * @notice Executes a previously proposed maxStaleness change.
-     * @param changeId The change identifier from the proposal event.
-     */
-    function executeMaxStalenessChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        maxStaleness = abi.decode(change.data, (uint256));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
-    }
-
-    /**
-     * @notice Proposes a change to the maxDeviation threshold (timelocked).
-     * @param newMaxDeviation The new maxDeviation value in basis points.
-     */
-    function proposeMaxDeviationChange(
-        uint256 newMaxDeviation
-    ) external onlyRole(ADMIN_ROLE) {
-        bytes32 changeId = keccak256(abi.encode("maxDeviation", newMaxDeviation, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newMaxDeviation),
-            exists: true
-        });
-        emit ConfigChangeProposed(changeId, "maxDeviation", block.timestamp + timelockDelay);
-    }
-
-    /**
-     * @notice Executes a previously proposed maxDeviation change.
-     * @param changeId The change identifier from the proposal event.
-     */
-    function executeMaxDeviationChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        maxDeviation = abi.decode(change.data, (uint256));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
-    }
-
-    /**
-     * @notice Proposes a change to the epochDuration (timelocked).
-     * @param newEpochDuration The new epoch duration in seconds.
-     */
-    function proposeEpochDurationChange(
-        uint256 newEpochDuration
-    ) external onlyRole(ADMIN_ROLE) {
-        bytes32 changeId = keccak256(abi.encode("epochDuration", newEpochDuration, block.timestamp));
-        pendingChanges[changeId] = PendingChange({
-            changeId: changeId,
-            availableAt: block.timestamp + timelockDelay,
-            data: abi.encode(newEpochDuration),
-            exists: true
-        });
-        emit ConfigChangeProposed(changeId, "epochDuration", block.timestamp + timelockDelay);
-    }
-
-    /**
-     * @notice Executes a previously proposed epochDuration change.
-     * @param changeId The change identifier from the proposal event.
-     */
-    function executeEpochDurationChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        PendingChange storage change = pendingChanges[changeId];
-        if (!change.exists) revert NoPendingChange();
-        // slither-disable-next-line timestamp
-        if (block.timestamp < change.availableAt) revert TimelockNotElapsed(change.availableAt);
-
-        epochDuration = abi.decode(change.data, (uint256));
-        delete pendingChanges[changeId];
-        emit ConfigChangeExecuted(changeId);
-    }
-
-    /**
-     * @notice Cancels a pending timelocked change.
-     * @param changeId The change identifier to cancel.
-     */
-    function cancelChange(bytes32 changeId) external onlyRole(ADMIN_ROLE) {
-        if (!pendingChanges[changeId].exists) revert NoPendingChange();
-        delete pendingChanges[changeId];
-        emit ConfigChangeCancelled(changeId);
-    }
-
-    // -------------------------------------------------------------------
-    //  External — View Functions
-    // -------------------------------------------------------------------
-
-    /**
-     * @notice Returns the remaining mintable amount in the current epoch.
-     */
-    function epochRemaining() external view returns (uint256) {
-        return epochMintCap > epochMinted ? epochMintCap - epochMinted : 0;
-    }
-
-    /**
-     * @notice Returns the remaining amount under the global supply cap.
-     */
-    function globalRemaining() external view returns (uint256) {
-        if (globalSupplyCap == 0) return type(uint256).max;
-        uint256 supply = backedToken.totalSupply();
-        return globalSupplyCap > supply ? globalSupplyCap - supply : 0;
-    }
-
-    // -------------------------------------------------------------------
-    //  Internal
-    // -------------------------------------------------------------------
-
-    /**
-     * @dev Advances to the next epoch if the current one has expired.
-     *      Uses time-window based advancement (epochStart += epochDuration)
-     *      instead of resetting to block.timestamp to prevent epoch boundary
-     *      race conditions where two mints in the same block could both
-     *      get fresh epoch allocation.
-     */
-    function _advanceEpochIfNeeded() internal {
-        // slither-disable-next-line timestamp
-        while (block.timestamp >= epochStart + epochDuration) {
-            epochStart += epochDuration;
-            epochMinted = 0;
-            epochNumber += 1;
-            emit EpochReset(epochNumber, block.timestamp);
-        }
-    }
+interface IBackedToken {
+    function mint(address to, uint256 amount) external;
+    function totalSupply() external view returns (uint256);
 }

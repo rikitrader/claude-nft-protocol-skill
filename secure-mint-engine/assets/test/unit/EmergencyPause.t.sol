@@ -3,471 +3,803 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../../contracts/EmergencyPause.sol";
-import "../../contracts/BackedToken.sol";
-import "../../contracts/SecureMintPolicy.sol";
-import "../mocks/MockOracle.sol";
+import "../mocks/MockBackingOracle.sol";
 
 /**
- * @title EmergencyPauseTest
- * @notice Unit tests for the EmergencyPause 4-level graduated circuit breaker.
+ * @title EmergencyPause Unit Tests
+ * @notice Comprehensive tests for the 5-level circuit breaker system
+ * @dev Tests constructor defaults, level escalation, role access control,
+ *      auto-triggers, recovery timelock, event emissions, and view functions.
  */
 contract EmergencyPauseTest is Test {
-    // -------------------------------------------------------------------
-    //  State
-    // -------------------------------------------------------------------
+    EmergencyPause public pause;
+    MockBackingOracle public oracle;
 
-    EmergencyPause public ep;
-    BackedToken public token;
-    SecureMintPolicy public policy;
-    MockOracle public oracle;
+    address public admin = address(1);
+    address public guardian = address(2);
+    address public governor = address(3);
+    address public monitor = address(4);
+    address public attacker = address(5);
 
-    address public admin = makeAddr("admin");
-    address public guardian = makeAddr("guardian");
-    address public dao = makeAddr("dao");
-    address public user = makeAddr("user");
-
-    uint256 public constant FREEZE_TIMELOCK = 3 days;
-    uint256 public constant COOLDOWN = 1 hours;
-
-    bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-
-    // -------------------------------------------------------------------
-    //  Setup
-    // -------------------------------------------------------------------
+    // Events (must redeclare for vm.expectEmit)
+    event LevelChanged(
+        EmergencyPause.PauseLevel indexed fromLevel,
+        EmergencyPause.PauseLevel indexed toLevel,
+        EmergencyPause.TriggerReason indexed reason,
+        address triggeredBy,
+        string details
+    );
+    event RecoveryRequested(
+        EmergencyPause.PauseLevel targetLevel,
+        uint256 executeAfter,
+        address requestedBy
+    );
+    event RecoveryExecuted(EmergencyPause.PauseLevel newLevel, address executedBy);
+    event RecoveryCancelled(address cancelledBy);
+    event AutoTriggerFired(
+        EmergencyPause.TriggerReason reason,
+        EmergencyPause.PauseLevel newLevel,
+        string details
+    );
+    event ContractRegistered(address indexed contractAddress);
+    event ContractUnregistered(address indexed contractAddress);
+    event ThresholdUpdated(string thresholdType, uint256 oldValue, uint256 newValue);
 
     function setUp() public {
-        // Deploy token and oracle for integration hook testing
-        token = new BackedToken("USD Backed Token", "USDX", 18, admin);
-        oracle = new MockOracle();
+        oracle = new MockBackingOracle();
 
-        // Deploy policy
-        policy = new SecureMintPolicy(
-            address(token),
-            address(oracle),
-            10_000_000e18,
-            1_000_000e18,
-            24 hours,
-            3600,
-            500,
-            2 days,
-            admin
-        );
-
-        // Deploy EmergencyPause with references to token and policy
-        ep = new EmergencyPause(
-            admin,
-            FREEZE_TIMELOCK,
-            COOLDOWN,
-            address(token),
-            address(policy)
-        );
-
-        // Grant roles on EmergencyPause
         vm.startPrank(admin);
-        ep.grantRole(GUARDIAN_ROLE, guardian);
-        ep.grantRole(DAO_ROLE, dao);
+        pause = new EmergencyPause(admin);
 
-        // Grant PAUSER_ROLE on BackedToken to EmergencyPause so hooks work
-        token.grantRole(PAUSER_ROLE, address(ep));
-
-        // Register EmergencyPause on SecureMintPolicy so hooks work
-        policy.setEmergencyPause(address(ep));
+        // Grant roles to specific addresses (admin already has all roles from constructor)
+        pause.grantRole(pause.GUARDIAN_ROLE(), guardian);
+        pause.grantRole(pause.GOVERNOR_ROLE(), governor);
+        pause.grantRole(pause.MONITOR_ROLE(), monitor);
         vm.stopPrank();
     }
 
-    // -------------------------------------------------------------------
-    //  Escalation Tests
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    function test_EscalateLevel_L0ToL1() public {
-        assertEq(uint8(ep.currentLevel()), 0);
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Oracle anomaly");
-
-        assertEq(uint8(ep.currentLevel()), 1);
+    function test_constructor_setsNormalLevel() public view {
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
     }
 
-    function test_EscalateLevel_L1ToL2() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Step 1");
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Step 2");
-
-        assertEq(uint8(ep.currentLevel()), 2);
+    function test_constructor_setsLevelSetAtTimestamp() public view {
+        assertEq(pause.levelSetAt(), block.timestamp);
     }
 
-    function test_EscalateLevel_L2ToL3() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Step 1");
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Full freeze");
-
-        assertEq(uint8(ep.currentLevel()), 3);
-        assertTrue(ep.isFullFreeze());
+    function test_constructor_grantsAdminAllRoles() public view {
+        assertTrue(pause.hasRole(pause.DEFAULT_ADMIN_ROLE(), admin));
+        assertTrue(pause.hasRole(pause.GUARDIAN_ROLE(), admin));
+        assertTrue(pause.hasRole(pause.GOVERNOR_ROLE(), admin));
+        assertTrue(pause.hasRole(pause.MONITOR_ROLE(), admin));
     }
 
-    function test_EscalateSkipLevels_L0ToL3() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Critical incident");
-
-        assertEq(uint8(ep.currentLevel()), 3);
-        assertTrue(ep.fullFreezeAvailableAt() > 0);
+    function test_constructor_revertsOnZeroAdmin() public {
+        vm.expectRevert(EmergencyPause.ZeroAddress.selector);
+        new EmergencyPause(address(0));
     }
 
-    function test_RevertEscalateToSameOrLower() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Initial");
+    function test_constructor_defaultThresholds() public view {
+        assertEq(pause.oracleStalenessThreshold(), 1 hours);
+        assertEq(pause.priceDeviationThreshold(), 500); // 5%
+        assertEq(pause.reserveDeficitThreshold(), 0);
+    }
 
-        // Same level
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LEVEL ESCALATION TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_setElevated_byGuardian() public {
         vm.prank(guardian);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyPause.CannotEscalateToSameOrLower.selector,
-                EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED,
-                EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED
-            )
+        pause.setElevated("Suspicious activity detected");
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.ELEVATED));
+    }
+
+    function test_setRestricted_byGuardian() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle reporting issues");
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.RESTRICTED));
+    }
+
+    function test_setEmergency_byGuardian() public {
+        vm.prank(guardian);
+        pause.setEmergency("Critical vulnerability found");
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.EMERGENCY));
+    }
+
+    function test_setShutdown_byGuardian() public {
+        vm.prank(guardian);
+        pause.setShutdown("Complete protocol shutdown");
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.SHUTDOWN));
+    }
+
+    function test_escalateLevel_fromNormalToEmergency() public {
+        vm.prank(guardian);
+        pause.escalateLevel(
+            EmergencyPause.PauseLevel.EMERGENCY,
+            EmergencyPause.TriggerReason.EXPLOIT_DETECTED,
+            "Exploit in progress"
         );
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Same");
 
-        // Lower level
-        vm.prank(guardian);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyPause.CannotEscalateToSameOrLower.selector,
-                EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED,
-                EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED
-            )
-        );
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Lower");
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.EMERGENCY));
+        assertEq(uint256(pause.currentReason()), uint256(EmergencyPause.TriggerReason.EXPLOIT_DETECTED));
     }
 
-    function test_EscalateRevertsWithoutGuardianRole() public {
-        vm.prank(user);
+    function test_escalateLevel_revertsOnLowerLevel() public {
+        vm.prank(guardian);
+        pause.setRestricted("Initial escalation");
+
+        vm.prank(guardian);
+        vm.expectRevert(EmergencyPause.CannotEscalateToLowerLevel.selector);
+        pause.escalateLevel(
+            EmergencyPause.PauseLevel.ELEVATED,
+            EmergencyPause.TriggerReason.MANUAL,
+            "Try to lower"
+        );
+    }
+
+    function test_escalateLevel_revertsOnSameLevel() public {
+        vm.prank(guardian);
+        pause.setElevated("First");
+
+        vm.prank(guardian);
+        vm.expectRevert(EmergencyPause.CannotEscalateToLowerLevel.selector);
+        pause.escalateLevel(
+            EmergencyPause.PauseLevel.ELEVATED,
+            EmergencyPause.TriggerReason.MANUAL,
+            "Same level"
+        );
+    }
+
+    function test_setElevated_revertsWhenAlreadyElevatedOrHigher() public {
+        vm.prank(guardian);
+        pause.setElevated("First");
+
+        vm.prank(guardian);
+        vm.expectRevert(EmergencyPause.InvalidLevelTransition.selector);
+        pause.setElevated("Second attempt");
+    }
+
+    function test_setRestricted_revertsWhenAlreadyRestricted() public {
+        vm.prank(guardian);
+        pause.setRestricted("First");
+
+        vm.prank(guardian);
+        vm.expectRevert(EmergencyPause.InvalidLevelTransition.selector);
+        pause.setRestricted("Second attempt");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ROLE ACCESS CONTROL TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_setElevated_revertsForNonGuardian() public {
+        vm.prank(attacker);
         vm.expectRevert();
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Unauthorized");
+        pause.setElevated("Unauthorized");
     }
 
-    // -------------------------------------------------------------------
-    //  De-escalation Tests
-    // -------------------------------------------------------------------
-
-    function test_DeescalateLevel_L2ToL1() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Escalate");
-
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Partial recovery");
-
-        assertEq(uint8(ep.currentLevel()), 1);
-    }
-
-    function test_DeescalateLevel_L1ToL0() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Escalate");
-
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "All clear");
-
-        assertEq(uint8(ep.currentLevel()), 0);
-    }
-
-    function test_DeescalateRevertsToSameOrHigher() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Escalate");
-
-        // Same level
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyPause.CannotEscalateToSameOrLower.selector,
-                EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED,
-                EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED
-            )
-        );
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Same");
-
-        // Higher level
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyPause.CannotEscalateToSameOrLower.selector,
-                EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED,
-                EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE
-            )
-        );
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Higher");
-    }
-
-    function test_DeescalateRevertsWithoutAdminRole() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Escalate");
-
-        vm.prank(user);
+    function test_setRestricted_revertsForNonGuardian() public {
+        vm.prank(attacker);
         vm.expectRevert();
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "Unauthorized");
+        pause.setRestricted("Unauthorized");
     }
 
-    // -------------------------------------------------------------------
-    //  Full Freeze Timelock Tests
-    // -------------------------------------------------------------------
-
-    function test_FullFreezeTimelock() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Full freeze");
-
-        uint256 expectedAvailableAt = block.timestamp + FREEZE_TIMELOCK;
-        assertEq(ep.fullFreezeAvailableAt(), expectedAvailableAt);
-
-        // Try to deescalate before timelock expires
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyPause.FullFreezeTimelockActive.selector,
-                expectedAvailableAt
-            )
-        );
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Too early");
-
-        // After timelock expires, deescalation should succeed
-        vm.warp(expectedAvailableAt);
-
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Timelock elapsed");
-
-        assertEq(uint8(ep.currentLevel()), 2);
-    }
-
-    function test_FullFreezeTimelockPartialWait() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Freeze");
-
-        // Warp to just before the timelock expires
-        vm.warp(block.timestamp + FREEZE_TIMELOCK - 1);
-
-        vm.prank(admin);
+    function test_setEmergency_revertsForNonGuardian() public {
+        vm.prank(attacker);
         vm.expectRevert();
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "Still locked");
+        pause.setEmergency("Unauthorized");
     }
 
-    // -------------------------------------------------------------------
-    //  Cooldown Tests
-    // -------------------------------------------------------------------
-
-    function test_CooldownAfterDeescalation() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Escalate");
-
-        // First deescalation works
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Step down");
-        assertEq(uint8(ep.currentLevel()), 1);
-
-        // Immediate second deescalation should revert due to cooldown
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                EmergencyPause.CooldownActive.selector,
-                block.timestamp + COOLDOWN
-            )
-        );
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "Too fast");
-
-        // After cooldown elapses, should work
-        vm.warp(block.timestamp + COOLDOWN);
-
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "Cooldown elapsed");
-        assertEq(uint8(ep.currentLevel()), 0);
-    }
-
-    // -------------------------------------------------------------------
-    //  DAO Override Tests
-    // -------------------------------------------------------------------
-
-    function test_DaoOverride() public {
-        // Escalate to full freeze
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Full freeze");
-
-        // DAO can immediately override, bypassing timelock and cooldown
-        vm.prank(dao);
-        ep.daoOverride(EmergencyPause.PauseLevel.LEVEL_0_NORMAL);
-
-        assertEq(uint8(ep.currentLevel()), 0);
-        // Cooldown and timelock should be cleared
-        assertEq(ep.cooldownEndsAt(), 0);
-        assertEq(ep.fullFreezeAvailableAt(), 0);
-    }
-
-    function test_DaoOverrideToAnyLevel() public {
-        // DAO can set to any level, even escalating
-        vm.prank(dao);
-        ep.daoOverride(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED);
-        assertEq(uint8(ep.currentLevel()), 2);
-
-        // DAO can then go back down
-        vm.prank(dao);
-        ep.daoOverride(EmergencyPause.PauseLevel.LEVEL_0_NORMAL);
-        assertEq(uint8(ep.currentLevel()), 0);
-    }
-
-    function test_DaoOverrideRevertsWithoutDaoRole() public {
-        vm.prank(user);
+    function test_setShutdown_revertsForNonGuardian() public {
+        vm.prank(attacker);
         vm.expectRevert();
-        ep.daoOverride(EmergencyPause.PauseLevel.LEVEL_0_NORMAL);
+        pause.setShutdown("Unauthorized");
     }
 
-    function test_DaoOverrideBypassesCooldown() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Escalate");
-
-        // Deescalate to trigger cooldown
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Step down");
-
-        // Admin would be blocked by cooldown, but DAO is not
-        vm.prank(dao);
-        ep.daoOverride(EmergencyPause.PauseLevel.LEVEL_0_NORMAL);
-        assertEq(uint8(ep.currentLevel()), 0);
-    }
-
-    // -------------------------------------------------------------------
-    //  Integration Hook Tests
-    // -------------------------------------------------------------------
-
-    function test_IntegrationHooksCalled_BackedTokenPaused() public {
-        // When escalating to L2, BackedToken should become paused
-        assertFalse(token.paused());
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Restrict transfers");
-
-        assertTrue(token.paused());
-    }
-
-    function test_IntegrationHooksCalled_BackedTokenUnpaused() public {
-        // Escalate to L2 (pauses token)
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Pause");
-        assertTrue(token.paused());
-
-        // Deescalate to L0 (unpauses token)
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "Resume");
-        assertFalse(token.paused());
-    }
-
-    function test_IntegrationHooksCalled_PolicyPaused() public {
-        // When escalating to L1, SecureMintPolicy should become paused
-        assertFalse(policy.paused());
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Pause minting");
-
-        assertTrue(policy.paused());
-    }
-
-    function test_IntegrationHooksCalled_PolicyUnpaused() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Pause minting");
-        assertTrue(policy.paused());
-
-        vm.prank(admin);
-        ep.deescalate(EmergencyPause.PauseLevel.LEVEL_0_NORMAL, "Resume");
-        assertFalse(policy.paused());
-    }
-
-    function test_IntegrationHooks_L3FreezesBoth() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Full freeze");
-
-        assertTrue(token.paused());
-        assertTrue(policy.paused());
-    }
-
-    function test_IntegrationHooks_DaoOverrideUnfreezes() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Full freeze");
-
-        assertTrue(token.paused());
-        assertTrue(policy.paused());
-
-        vm.prank(dao);
-        ep.daoOverride(EmergencyPause.PauseLevel.LEVEL_0_NORMAL);
-
-        assertFalse(token.paused());
-        assertFalse(policy.paused());
-    }
-
-    // -------------------------------------------------------------------
-    //  View Helper Tests
-    // -------------------------------------------------------------------
-
-    function test_IsMintPaused() public {
-        assertFalse(ep.isMintPaused());
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Pause mint");
-        assertTrue(ep.isMintPaused());
-    }
-
-    function test_IsTransferPaused() public {
-        assertFalse(ep.isTransferPaused());
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_2_RESTRICTED, "Restrict");
-        assertTrue(ep.isTransferPaused());
-    }
-
-    function test_IsFullFreeze() public {
-        assertFalse(ep.isFullFreeze());
-
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_3_FULL_FREEZE, "Freeze");
-        assertTrue(ep.isFullFreeze());
-    }
-
-    function test_L1DoesNotPauseTransfers() public {
-        vm.prank(guardian);
-        ep.escalate(EmergencyPause.PauseLevel.LEVEL_1_MINT_PAUSED, "Mint only");
-
-        assertTrue(ep.isMintPaused());
-        assertFalse(ep.isTransferPaused());
-        assertFalse(ep.isFullFreeze());
-    }
-
-    // -------------------------------------------------------------------
-    //  Constructor Tests
-    // -------------------------------------------------------------------
-
-    function test_ConstructorRevertsZeroAdmin() public {
-        vm.expectRevert("EmergencyPause: zero admin");
-        new EmergencyPause(
-            address(0),
-            FREEZE_TIMELOCK,
-            COOLDOWN,
-            address(token),
-            address(policy)
+    function test_escalateLevel_revertsForMonitorRole() public {
+        vm.prank(monitor);
+        vm.expectRevert();
+        pause.escalateLevel(
+            EmergencyPause.PauseLevel.RESTRICTED,
+            EmergencyPause.TriggerReason.MANUAL,
+            "Monitor cannot escalate"
         );
     }
 
-    function test_ConstructorAcceptsZeroIntegrationAddresses() public {
-        // Zero addresses for token/policy are allowed (hooks simply skip)
-        EmergencyPause ep2 = new EmergencyPause(
-            admin,
-            FREEZE_TIMELOCK,
-            COOLDOWN,
-            address(0),
-            address(0)
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTO-TRIGGER: ORACLE UNHEALTHY
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_triggerOracleUnhealthy_setsRestricted() public {
+        vm.prank(monitor);
+        pause.triggerOracleUnhealthy("Chainlink feed stale");
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.RESTRICTED));
+        assertEq(uint256(pause.currentReason()), uint256(EmergencyPause.TriggerReason.ORACLE_UNHEALTHY));
+    }
+
+    function test_triggerOracleUnhealthy_emitsAutoTriggerEvent() public {
+        vm.expectEmit(false, false, false, true);
+        emit AutoTriggerFired(
+            EmergencyPause.TriggerReason.ORACLE_UNHEALTHY,
+            EmergencyPause.PauseLevel.RESTRICTED,
+            "Oracle down"
         );
 
-        assertEq(uint8(ep2.currentLevel()), 0);
+        vm.prank(monitor);
+        pause.triggerOracleUnhealthy("Oracle down");
+    }
+
+    function test_triggerOracleUnhealthy_noopWhenAlreadyRestricted() public {
+        // Manually set to RESTRICTED first
+        vm.prank(guardian);
+        pause.setRestricted("Already restricted");
+
+        uint256 historyBefore = pause.getLevelHistoryLength();
+
+        // Oracle trigger should not add another level change
+        vm.prank(monitor);
+        pause.triggerOracleUnhealthy("Oracle stale again");
+
+        assertEq(pause.getLevelHistoryLength(), historyBefore);
+    }
+
+    function test_triggerOracleUnhealthy_noopWhenAtEmergency() public {
+        vm.prank(guardian);
+        pause.setEmergency("Already emergency");
+
+        uint256 historyBefore = pause.getLevelHistoryLength();
+
+        vm.prank(monitor);
+        pause.triggerOracleUnhealthy("Oracle stale");
+
+        // No additional change
+        assertEq(pause.getLevelHistoryLength(), historyBefore);
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.EMERGENCY));
+    }
+
+    function test_triggerOracleUnhealthy_revertsForNonMonitor() public {
+        vm.prank(attacker);
+        vm.expectRevert();
+        pause.triggerOracleUnhealthy("Unauthorized trigger");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTO-TRIGGER: ORACLE STALE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_triggerOracleStale_setsRestricted() public {
+        vm.prank(monitor);
+        pause.triggerOracleStale(3601); // > 1 hour threshold
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.RESTRICTED));
+    }
+
+    function test_triggerOracleStale_noopBelowThreshold() public {
+        vm.prank(monitor);
+        pause.triggerOracleStale(3599); // < 1 hour threshold
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTO-TRIGGER: RESERVE MISMATCH
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_triggerReserveMismatch_setsEmergency() public {
+        vm.prank(monitor);
+        pause.triggerReserveMismatch(900_000, 1_000_000); // reserves < supply
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.EMERGENCY));
+        assertEq(uint256(pause.currentReason()), uint256(EmergencyPause.TriggerReason.RESERVE_MISMATCH));
+    }
+
+    function test_triggerReserveMismatch_noopWhenReservesAdequate() public {
+        vm.prank(monitor);
+        pause.triggerReserveMismatch(1_000_000, 1_000_000); // reserves == supply
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTO-TRIGGER: INVARIANT BREACH
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_triggerInvariantBreach_setsShutdown() public {
+        vm.prank(monitor);
+        pause.triggerInvariantBreach("INV-SM-1", "totalSupply exceeds backing");
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.SHUTDOWN));
+        assertEq(uint256(pause.currentReason()), uint256(EmergencyPause.TriggerReason.INVARIANT_BREACH));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUTO-TRIGGER: PRICE DEVIATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_triggerPriceDeviation_setsElevated() public {
+        vm.prank(monitor);
+        pause.triggerPriceDeviation(600); // 6% > 5% threshold
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.ELEVATED));
+    }
+
+    function test_triggerPriceDeviation_noopBelowThreshold() public {
+        vm.prank(monitor);
+        pause.triggerPriceDeviation(400); // 4% < 5% threshold
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RECOVERY: RETURN TO NORMAL FROM ELEVATED
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_returnToNormalFromElevated_byGuardian() public {
+        vm.prank(guardian);
+        pause.setElevated("Temporary alert");
+
+        vm.prank(guardian);
+        pause.returnToNormalFromElevated();
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+    }
+
+    function test_returnToNormalFromElevated_revertsWhenNotElevated() public {
+        // At NORMAL level
+        vm.prank(guardian);
+        vm.expectRevert(EmergencyPause.InvalidLevelTransition.selector);
+        pause.returnToNormalFromElevated();
+    }
+
+    function test_returnToNormalFromElevated_revertsWhenRestricted() public {
+        vm.prank(guardian);
+        pause.setRestricted("Too high for direct return");
+
+        vm.prank(guardian);
+        vm.expectRevert(EmergencyPause.InvalidLevelTransition.selector);
+        pause.returnToNormalFromElevated();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RECOVERY TIMELOCK TESTS (Level 2+)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_requestRecovery_fromRestrictedRequiresTimelock() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle issue");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        (EmergencyPause.PauseLevel targetLevel, uint256 executeAfter, bool pending,) = pause.pendingRecovery();
+        assertTrue(pending);
+        assertEq(uint256(targetLevel), uint256(EmergencyPause.PauseLevel.NORMAL));
+        assertEq(executeAfter, block.timestamp + pause.RECOVERY_TIMELOCK());
+    }
+
+    function test_executeRecovery_afterTimelock() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle issue");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        // Warp past timelock (24 hours)
+        vm.warp(block.timestamp + pause.RECOVERY_TIMELOCK() + 1);
+
+        vm.prank(governor);
+        pause.executeRecovery();
+
+        assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+    }
+
+    function test_executeRecovery_revertsBeforeTimelock() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle issue");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        // Try immediately
+        vm.prank(governor);
+        vm.expectRevert(EmergencyPause.RecoveryTimelockNotReady.selector);
+        pause.executeRecovery();
+    }
+
+    function test_executeRecovery_revertsWhenNoPending() public {
+        vm.prank(governor);
+        vm.expectRevert(EmergencyPause.NoPendingRecovery.selector);
+        pause.executeRecovery();
+    }
+
+    function test_requestRecovery_revertsWhenAlreadyPending() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle issue");
+
+        vm.startPrank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        vm.expectRevert(EmergencyPause.RecoveryAlreadyPending.selector);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+        vm.stopPrank();
+    }
+
+    function test_requestRecovery_revertsWhenTargetNotLower() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle issue");
+
+        vm.prank(governor);
+        vm.expectRevert(EmergencyPause.InvalidLevelTransition.selector);
+        pause.requestRecovery(EmergencyPause.PauseLevel.EMERGENCY);
+    }
+
+    function test_cancelRecovery_byGovernor() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle issue");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        vm.prank(governor);
+        pause.cancelRecovery();
+
+        (,,bool pending,) = pause.pendingRecovery();
+        assertFalse(pending);
+    }
+
+    function test_cancelRecovery_revertsWhenNoPending() public {
+        vm.prank(governor);
+        vm.expectRevert(EmergencyPause.NoPendingRecovery.selector);
+        pause.cancelRecovery();
+    }
+
+    function test_requestRecovery_fromEmergencyRequiresTimelock() public {
+        vm.prank(guardian);
+        pause.setEmergency("Critical event");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        (, uint256 executeAfter, bool pending,) = pause.pendingRecovery();
+        assertTrue(pending);
+        assertEq(executeAfter, block.timestamp + pause.RECOVERY_TIMELOCK());
+    }
+
+    function test_requestRecovery_fromShutdownRequiresTimelock() public {
+        vm.prank(guardian);
+        pause.setShutdown("Full shutdown");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        (, uint256 executeAfter, bool pending,) = pause.pendingRecovery();
+        assertTrue(pending);
+        assertEq(executeAfter, block.timestamp + pause.RECOVERY_TIMELOCK());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LEVEL 2 BLOCKS MINTING (VIEW FUNCTION TESTS)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_isMintingAllowed_trueAtNormal() public view {
+        assertTrue(pause.isMintingAllowed());
+    }
+
+    function test_isMintingAllowed_trueAtElevated() public {
+        vm.prank(guardian);
+        pause.setElevated("Elevated monitoring");
+
+        assertTrue(pause.isMintingAllowed());
+    }
+
+    function test_isMintingAllowed_falseAtRestricted() public {
+        vm.prank(guardian);
+        pause.setRestricted("Minting should be blocked");
+
+        assertFalse(pause.isMintingAllowed());
+    }
+
+    function test_isMintingAllowed_falseAtEmergency() public {
+        vm.prank(guardian);
+        pause.setEmergency("Emergency");
+
+        assertFalse(pause.isMintingAllowed());
+    }
+
+    function test_isMintingAllowed_falseAtShutdown() public {
+        vm.prank(guardian);
+        pause.setShutdown("Shutdown");
+
+        assertFalse(pause.isMintingAllowed());
+    }
+
+    function test_isBurningAllowed_trueUpToRestricted() public {
+        assertTrue(pause.isBurningAllowed());
+
+        vm.prank(guardian);
+        pause.setElevated("Elevated");
+        assertTrue(pause.isBurningAllowed());
+
+        // Reset to check RESTRICTED
+        vm.prank(admin);
+        pause = new EmergencyPause(admin);
+        vm.prank(admin);
+        pause.grantRole(pause.GUARDIAN_ROLE(), guardian);
+
+        vm.prank(guardian);
+        pause.setRestricted("Restricted");
+        assertTrue(pause.isBurningAllowed());
+    }
+
+    function test_isBurningAllowed_falseAtEmergency() public {
+        vm.prank(guardian);
+        pause.setEmergency("Emergency");
+
+        assertFalse(pause.isBurningAllowed());
+    }
+
+    function test_isTransferAllowed_falseAtEmergency() public {
+        vm.prank(guardian);
+        pause.setEmergency("Emergency");
+
+        assertFalse(pause.isTransferAllowed());
+    }
+
+    function test_isFullyPaused_trueAtEmergencyAndShutdown() public {
+        vm.prank(guardian);
+        pause.setEmergency("Emergency");
+        assertTrue(pause.isFullyPaused());
+    }
+
+    function test_isFullyPaused_falseAtRestricted() public {
+        vm.prank(guardian);
+        pause.setRestricted("Restricted");
+        assertFalse(pause.isFullyPaused());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EVENT EMISSION TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_escalation_emitsLevelChangedEvent() public {
+        vm.expectEmit(true, true, true, true);
+        emit LevelChanged(
+            EmergencyPause.PauseLevel.NORMAL,
+            EmergencyPause.PauseLevel.RESTRICTED,
+            EmergencyPause.TriggerReason.MANUAL,
+            guardian,
+            "Oracle down"
+        );
+
+        vm.prank(guardian);
+        pause.setRestricted("Oracle down");
+    }
+
+    function test_recovery_emitsRecoveryRequestedEvent() public {
+        vm.prank(guardian);
+        pause.setRestricted("Issue");
+
+        vm.expectEmit(false, false, false, true);
+        emit RecoveryRequested(
+            EmergencyPause.PauseLevel.NORMAL,
+            block.timestamp + pause.RECOVERY_TIMELOCK(),
+            governor
+        );
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+    }
+
+    function test_recovery_emitsRecoveryExecutedEvent() public {
+        vm.prank(guardian);
+        pause.setRestricted("Issue");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        vm.warp(block.timestamp + pause.RECOVERY_TIMELOCK() + 1);
+
+        vm.expectEmit(false, false, false, true);
+        emit RecoveryExecuted(EmergencyPause.PauseLevel.NORMAL, governor);
+
+        vm.prank(governor);
+        pause.executeRecovery();
+    }
+
+    function test_cancelRecovery_emitsEvent() public {
+        vm.prank(guardian);
+        pause.setRestricted("Issue");
+
+        vm.prank(governor);
+        pause.requestRecovery(EmergencyPause.PauseLevel.NORMAL);
+
+        vm.expectEmit(false, false, false, true);
+        emit RecoveryCancelled(governor);
+
+        vm.prank(governor);
+        pause.cancelRecovery();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONTRACT REGISTRATION TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_registerContract_byGovernor() public {
+        address contractAddr = address(0xDEAD);
+
+        vm.prank(governor);
+        pause.registerContract(contractAddr);
+
+        assertTrue(pause.registeredContracts(contractAddr));
+    }
+
+    function test_registerContract_revertsOnDuplicate() public {
+        address contractAddr = address(0xDEAD);
+
+        vm.startPrank(governor);
+        pause.registerContract(contractAddr);
+
+        vm.expectRevert(EmergencyPause.ContractAlreadyRegistered.selector);
+        pause.registerContract(contractAddr);
+        vm.stopPrank();
+    }
+
+    function test_registerContract_revertsOnZeroAddress() public {
+        vm.prank(governor);
+        vm.expectRevert(EmergencyPause.ZeroAddress.selector);
+        pause.registerContract(address(0));
+    }
+
+    function test_unregisterContract_byGovernor() public {
+        address contractAddr = address(0xDEAD);
+
+        vm.startPrank(governor);
+        pause.registerContract(contractAddr);
+        pause.unregisterContract(contractAddr);
+        vm.stopPrank();
+
+        assertFalse(pause.registeredContracts(contractAddr));
+    }
+
+    function test_unregisterContract_revertsForUnknownContract() public {
+        vm.prank(governor);
+        vm.expectRevert(EmergencyPause.ContractNotRegistered.selector);
+        pause.unregisterContract(address(0xDEAD));
+    }
+
+    function test_getRegisteredContracts_returnsAll() public {
+        vm.startPrank(governor);
+        pause.registerContract(address(0xA));
+        pause.registerContract(address(0xB));
+        pause.registerContract(address(0xC));
+        vm.stopPrank();
+
+        address[] memory contracts = pause.getRegisteredContracts();
+        assertEq(contracts.length, 3);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // THRESHOLD CONFIGURATION TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_setOracleStalenessThreshold_byGovernor() public {
+        vm.prank(governor);
+        pause.setOracleStalenessThreshold(2 hours);
+
+        assertEq(pause.oracleStalenessThreshold(), 2 hours);
+    }
+
+    function test_setPriceDeviationThreshold_byGovernor() public {
+        vm.prank(governor);
+        pause.setPriceDeviationThreshold(1000); // 10%
+
+        assertEq(pause.priceDeviationThreshold(), 1000);
+    }
+
+    function test_setThresholds_revertsForNonGovernor() public {
+        vm.prank(attacker);
+        vm.expectRevert();
+        pause.setOracleStalenessThreshold(2 hours);
+
+        vm.prank(attacker);
+        vm.expectRevert();
+        pause.setPriceDeviationThreshold(1000);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LEVEL HISTORY TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_levelHistory_recordsChanges() public {
+        vm.startPrank(guardian);
+        pause.setElevated("First");
+        pause.escalateLevel(
+            EmergencyPause.PauseLevel.RESTRICTED,
+            EmergencyPause.TriggerReason.MANUAL,
+            "Second"
+        );
+        pause.escalateLevel(
+            EmergencyPause.PauseLevel.EMERGENCY,
+            EmergencyPause.TriggerReason.EXPLOIT_DETECTED,
+            "Third"
+        );
+        vm.stopPrank();
+
+        assertEq(pause.getLevelHistoryLength(), 3);
+
+        EmergencyPause.LevelChange memory firstChange = pause.getLevelChange(0);
+        assertEq(uint256(firstChange.fromLevel), uint256(EmergencyPause.PauseLevel.NORMAL));
+        assertEq(uint256(firstChange.toLevel), uint256(EmergencyPause.PauseLevel.ELEVATED));
+
+        EmergencyPause.LevelChange memory thirdChange = pause.getLevelChange(2);
+        assertEq(uint256(thirdChange.fromLevel), uint256(EmergencyPause.PauseLevel.RESTRICTED));
+        assertEq(uint256(thirdChange.toLevel), uint256(EmergencyPause.PauseLevel.EMERGENCY));
+        assertEq(uint256(thirdChange.reason), uint256(EmergencyPause.TriggerReason.EXPLOIT_DETECTED));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GET STATUS VIEW TEST
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function test_getStatus_returnsCorrectValues() public {
+        vm.prank(guardian);
+        pause.setRestricted("Oracle down");
+
+        (
+            EmergencyPause.PauseLevel level,
+            EmergencyPause.TriggerReason reason,
+            string memory details,
+            uint256 setAt,
+            bool mintingAllowed,
+            bool burningAllowed,
+            bool transfersAllowed
+        ) = pause.getStatus();
+
+        assertEq(uint256(level), uint256(EmergencyPause.PauseLevel.RESTRICTED));
+        assertEq(uint256(reason), uint256(EmergencyPause.TriggerReason.MANUAL));
+        assertEq(details, "Oracle down");
+        assertEq(setAt, block.timestamp);
+        assertFalse(mintingAllowed);  // RESTRICTED blocks minting
+        assertTrue(burningAllowed);   // RESTRICTED allows burning
+        assertTrue(transfersAllowed); // RESTRICTED allows transfers
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FUZZ TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function testFuzz_triggerOracleStale_thresholdBehavior(uint256 staleness) public {
+        staleness = bound(staleness, 0, 10 hours);
+
+        vm.prank(monitor);
+        pause.triggerOracleStale(staleness);
+
+        if (staleness >= pause.oracleStalenessThreshold()) {
+            assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.RESTRICTED));
+        } else {
+            assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+        }
+    }
+
+    function testFuzz_triggerPriceDeviation_thresholdBehavior(uint256 deviation) public {
+        deviation = bound(deviation, 0, 5000);
+
+        vm.prank(monitor);
+        pause.triggerPriceDeviation(deviation);
+
+        if (deviation >= pause.priceDeviationThreshold()) {
+            assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.ELEVATED));
+        } else {
+            assertEq(uint256(pause.currentLevel()), uint256(EmergencyPause.PauseLevel.NORMAL));
+        }
     }
 }

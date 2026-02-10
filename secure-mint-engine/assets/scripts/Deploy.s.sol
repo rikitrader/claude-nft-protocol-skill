@@ -2,423 +2,474 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
+import "./DeployConfig.s.sol";
+
 import "../contracts/BackedToken.sol";
+import "../contracts/EmergencyPause.sol";
+import "../contracts/TreasuryVault.sol";
+import "../contracts/OracleRouter.sol";
 import "../contracts/ChainlinkPoRAdapter.sol";
 import "../contracts/SecureMintPolicy.sol";
-import "../contracts/TreasuryVault.sol";
-import "../contracts/EmergencyPause.sol";
-import "../contracts/Timelock.sol";
-import "../contracts/OracleRouter.sol";
-import "../contracts/Governor.sol";
 import "../contracts/RedemptionEngine.sol";
-import "../contracts/GuardianMultisig.sol";
-import "./DeployConfig.s.sol";
+import "../contracts/Governor.sol";
+import "../contracts/Timelock.sol";
 
 /**
  * @title Deploy
- * @author SecureMintEngine
- * @notice Foundry deployment script for the full SecureMintEngine protocol stack.
+ * @notice Full 6-step Foundry deployment script for the SecureMintEngine protocol
+ * @dev Deploys all core contracts and wires up AccessControl roles.
  *
- * @dev Deployment order:
+ * DEPLOYMENT ORDER:
+ *   1. BackedToken        – ERC-20 dumb ledger
+ *   2. EmergencyPause     – 4-level circuit breaker
+ *   3. TreasuryVault      – 4-tier reserve management
+ *   4. OracleRouter / ChainlinkPoRAdapter – oracle infrastructure
+ *   5. SecureMintPolicy   – oracle-gated mint controller
+ *   6. RedemptionEngine + Governor + Timelock – redemption & governance
  *
- *      Phase 1 — Core contracts:
+ * ROLE WIRING:
+ *   - MINTER_ROLE on SecureMintPolicy  -> granted to authorised minter (env)
+ *   - GUARDIAN_ROLE on all contracts    -> guardian multisig
+ *   - GOVERNOR_ROLE on policy/treasury  -> timelock (governance-controlled)
+ *   - SecureMintPolicy address is set as the sole mint authority on BackedToken
  *
- *      1. BackedToken           — The ERC-20 "dumb ledger"
- *      2. ChainlinkPoRAdapter   — IBackingOracle adapter wrapping a Chainlink PoR feed
- *      3. SecureMintPolicy      — Oracle-gated mint policy (core logic)
- *      4. TreasuryVault         — 4-tier collateral custody
- *      5. EmergencyPause        — Graduated circuit breaker
- *      6. Timelock              — Governance timelock controller
+ * USAGE:
+ *   forge script scripts/Deploy.s.sol:Deploy \
+ *       --rpc-url $RPC_URL \
+ *       --broadcast \
+ *       --verify \
+ *       -vvv
  *
- *      Phase 2 — Governance contracts:
- *
- *      7. OracleRouter          — Multi-oracle router with fallback
- *      8. Governor              — Lightweight on-chain DAO governance
- *      9. RedemptionEngine      — Burn-to-redeem mechanism
- *     10. GuardianMultisig      — Multisig for guardian emergency actions
- *
- *      After deployment, cross-references are wired:
- *        - MINTER_ROLE on BackedToken  -> SecureMintPolicy
- *        - PAUSER_ROLE on BackedToken  -> EmergencyPause
- *        - EmergencyPause address      -> SecureMintPolicy.setEmergencyPause()
- *        - GUARDIAN_ROLE on SecureMintPolicy -> guardian address
- *        - GUARDIAN_ROLE on EmergencyPause   -> guardian address
- *        - OPERATOR_ROLE on SecureMintPolicy -> operator address
- *        - TREASURER_ROLE on TreasuryVault   -> treasurer address
- *        - OPERATOR_ROLE on TreasuryVault    -> operator address
- *        - DAO_ROLE on EmergencyPause        -> dao address
- *        - GUARDIAN_ROLE on EmergencyPause   -> GuardianMultisig
- *        - PROPOSER_ROLE on Timelock         -> Governor
- *
- *      Usage:
- *        forge script scripts/Deploy.s.sol:Deploy \
- *          --rpc-url $RPC_URL \
- *          --broadcast \
- *          --verify \
- *          -vvvv
+ * ENVIRONMENT VARIABLES (override config defaults):
+ *   DEPLOYER_PRIVATE_KEY  – private key of the deployer EOA
+ *   ADMIN_ADDRESS         – protocol admin (multisig recommended)
+ *   GUARDIAN_ADDRESS       – guardian address (multisig recommended)
+ *   MINTER_ADDRESS        – address granted MINTER_ROLE on policy
+ *   RESERVE_ASSET         – reserve asset override (e.g. USDC address)
  */
 contract Deploy is Script {
-    // -------------------------------------------------------------------
-    //  Deployed Contract References — Phase 1 (Core)
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DEPLOYED ADDRESSES
+    // ═══════════════════════════════════════════════════════════════════════════
 
     BackedToken public backedToken;
+    EmergencyPause public emergencyPause;
+    TreasuryVault public treasuryVault;
+    OracleRouter public oracleRouter;
     ChainlinkPoRAdapter public chainlinkAdapter;
     SecureMintPolicy public secureMintPolicy;
-    TreasuryVault public treasuryVault;
-    EmergencyPause public emergencyPause;
+    RedemptionEngine public redemptionEngine;
+    SecureMintGovernor public governor;
     Timelock public timelock;
 
-    // -------------------------------------------------------------------
-    //  Deployed Contract References — Phase 2 (Governance)
-    // -------------------------------------------------------------------
-
-    OracleRouter public oracleRouter;
-    Governor public governor;
-    RedemptionEngine public redemptionEngine;
-    GuardianMultisig public guardianMultisig;
-
-    // -------------------------------------------------------------------
-    //  Shared Configuration
-    // -------------------------------------------------------------------
-
-    DeployConfig.DeploymentConfig internal cfg;
-
-    // -------------------------------------------------------------------
-    //  Main Entry Point
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MAIN ENTRY POINT
+    // ═══════════════════════════════════════════════════════════════════════════
 
     function run() external {
-        // ---------------------------------------------------------------
-        //  Step 0: Load configuration
-        // ---------------------------------------------------------------
-        console.log("=== SecureMintEngine Deployment ===");
-        console.log("");
+        // ── Load configuration ──────────────────────────────────────────────
+        DeployConfig.ChainConfig memory cfg = DeployConfig.getConfig(block.chainid);
 
-        cfg = DeployConfig.getConfigFromEnv(vm);
+        // ── Environment overrides ───────────────────────────────────────────
+        address admin = _envOrDefault("ADMIN_ADDRESS", cfg.admin);
+        address guardian = _envOrDefault("GUARDIAN_ADDRESS", cfg.guardian);
+        address minter = _envOr("MINTER_ADDRESS", admin);
+        address reserveAsset = _envOrDefault("RESERVE_ASSET", cfg.reserveAsset);
 
-        console.log("Configuration loaded:");
-        console.log("  admin:            ", cfg.admin);
-        console.log("  oracleAggregator: ", cfg.oracleAggregator);
-        console.log("  collateralToken:  ", cfg.collateralToken);
-        console.log("  guardian:         ", cfg.guardian);
-        console.log("  operator:         ", cfg.operator);
-        console.log("  treasurer:        ", cfg.treasurer);
-        console.log("  dao:              ", cfg.dao);
-        console.log("  feeRecipient:     ", cfg.feeRecipient);
-        console.log("  tokenName:        ", cfg.tokenName);
-        console.log("  tokenSymbol:      ", cfg.tokenSymbol);
-        console.log("  globalCap:        ", cfg.globalCap);
-        console.log("  epochCap:         ", cfg.epochCap);
-        console.log("  epochDuration:    ", cfg.epochDuration);
-        console.log("  maxStaleness:     ", cfg.maxStaleness);
-        console.log("  maxDeviation:     ", cfg.maxDeviation);
-        console.log("  timelockDelay:    ", cfg.timelockDelay);
-        console.log("");
+        require(admin != address(0), "Deploy: admin address required");
+        require(guardian != address(0), "Deploy: guardian address required");
+        require(reserveAsset != address(0), "Deploy: reserve asset required");
 
-        // Validate required addresses
-        require(cfg.admin != address(0), "Deploy: DEPLOY_ADMIN not set");
-        require(cfg.oracleAggregator != address(0), "Deploy: DEPLOY_ORACLE_AGGREGATOR not set");
-        require(cfg.collateralToken != address(0), "Deploy: DEPLOY_COLLATERAL_TOKEN not set");
-        require(cfg.guardian != address(0), "Deploy: DEPLOY_GUARDIAN not set");
-        require(cfg.operator != address(0), "Deploy: DEPLOY_OPERATOR not set");
-        require(cfg.treasurer != address(0), "Deploy: DEPLOY_TREASURER not set");
-        require(cfg.dao != address(0), "Deploy: DEPLOY_DAO not set");
-        require(cfg.feeRecipient != address(0), "Deploy: DEPLOY_FEE_RECIPIENT not set");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
 
-        vm.startBroadcast();
+        // ── Step 1: Deploy EmergencyPause ───────────────────────────────────
+        _step1_deployEmergencyPause(admin);
 
-        // ---------------------------------------------------------------
-        //  Step 1: Deploy BackedToken
-        // ---------------------------------------------------------------
-        console.log("[1/6] Deploying BackedToken...");
+        // ── Step 2: Deploy TreasuryVault ────────────────────────────────────
+        _step2_deployTreasuryVault(reserveAsset, admin, cfg.tierAllocations);
 
-        backedToken = new BackedToken(
-            cfg.tokenName,
-            cfg.tokenSymbol,
-            cfg.tokenDecimals,
-            cfg.admin
+        // ── Step 3: Deploy Oracle Infrastructure ────────────────────────────
+        _step3_deployOracle(cfg, admin);
+
+        // ── Step 4: Deploy SecureMintPolicy ─────────────────────────────────
+        // NOTE: BackedToken requires the policy address at construction, so
+        // we deploy the policy first with a placeholder token, then deploy
+        // the token. The policy's token reference is immutable, so we use
+        // CREATE2 prediction or deploy the policy first and then the token.
+        // In this script we deploy policy then token using predicted address.
+        address oracleAddress = address(oracleRouter) != address(0)
+            ? address(oracleRouter)
+            : address(chainlinkAdapter);
+
+        _step4_deploySecureMintPolicy(
+            oracleAddress,
+            cfg.globalSupplyCap,
+            cfg.epochMintCap,
+            cfg.maxOracleAge,
+            admin
         );
 
-        console.log("  BackedToken deployed at:", address(backedToken));
+        // ── Step 5: Deploy BackedToken ──────────────────────────────────────
+        _step5_deployBackedToken(cfg.tokenName, cfg.tokenSymbol, guardian);
 
-        // ---------------------------------------------------------------
-        //  Step 2: Deploy ChainlinkPoRAdapter (IBackingOracle)
-        // ---------------------------------------------------------------
-        console.log("[2/6] Deploying ChainlinkPoRAdapter...");
-
-        chainlinkAdapter = new ChainlinkPoRAdapter(
-            cfg.oracleAggregator,
-            cfg.maxStaleness,
-            cfg.maxDeviation,
-            cfg.admin
+        // ── Step 6: Deploy Redemption + Governance ──────────────────────────
+        _step6_deployRedemptionAndGovernance(
+            reserveAsset,
+            admin,
+            guardian,
+            cfg
         );
 
-        console.log("  ChainlinkPoRAdapter deployed at:", address(chainlinkAdapter));
-
-        // ---------------------------------------------------------------
-        //  Step 3: Deploy SecureMintPolicy
-        // ---------------------------------------------------------------
-        console.log("[3/6] Deploying SecureMintPolicy...");
-
-        secureMintPolicy = new SecureMintPolicy(
-            address(backedToken),
-            address(chainlinkAdapter),
-            cfg.globalCap,
-            cfg.epochCap,
-            cfg.epochDuration,
-            cfg.maxStaleness,
-            cfg.maxDeviation,
-            cfg.timelockDelay,
-            cfg.admin
-        );
-
-        console.log("  SecureMintPolicy deployed at:", address(secureMintPolicy));
-
-        // ---------------------------------------------------------------
-        //  Step 4: Deploy TreasuryVault
-        // ---------------------------------------------------------------
-        console.log("[4/6] Deploying TreasuryVault...");
-
-        treasuryVault = new TreasuryVault(
-            cfg.collateralToken,
-            address(backedToken),
-            address(chainlinkAdapter),
-            cfg.admin
-        );
-
-        console.log("  TreasuryVault deployed at:", address(treasuryVault));
-
-        // ---------------------------------------------------------------
-        //  Step 5: Deploy EmergencyPause
-        // ---------------------------------------------------------------
-        console.log("[5/6] Deploying EmergencyPause...");
-
-        emergencyPause = new EmergencyPause(
-            cfg.admin,
-            cfg.fullFreezeTimelockDelay,
-            cfg.cooldownPeriod,
-            address(backedToken),
-            address(secureMintPolicy)
-        );
-
-        console.log("  EmergencyPause deployed at:", address(emergencyPause));
-
-        // ---------------------------------------------------------------
-        //  Step 6: Deploy Timelock (Governance)
-        // ---------------------------------------------------------------
-        console.log("[6/6] Deploying Timelock...");
-
-        address[] memory proposers = new address[](1);
-        proposers[0] = cfg.admin;
-
-        address[] memory executors = new address[](1);
-        executors[0] = cfg.admin;
-
-        address[] memory cancellers = new address[](1);
-        cancellers[0] = cfg.admin;
-
-        timelock = new Timelock(
-            cfg.governanceTimelockMinDelay,
-            cfg.admin,
-            proposers,
-            executors,
-            cancellers
-        );
-
-        console.log("  Timelock deployed at:", address(timelock));
-
-        // ---------------------------------------------------------------
-        //  Step 7: Wire cross-references and grant roles (Core)
-        // ---------------------------------------------------------------
-        console.log("");
-        console.log("Wiring cross-references...");
-
-        // Grant MINTER_ROLE on BackedToken to SecureMintPolicy
-        console.log("  Granting MINTER_ROLE on BackedToken to SecureMintPolicy...");
-        backedToken.grantRole(backedToken.MINTER_ROLE(), address(secureMintPolicy));
-
-        // Grant PAUSER_ROLE on BackedToken to EmergencyPause
-        console.log("  Granting PAUSER_ROLE on BackedToken to EmergencyPause...");
-        backedToken.grantRole(backedToken.PAUSER_ROLE(), address(emergencyPause));
-
-        // Set EmergencyPause address on SecureMintPolicy
-        console.log("  Setting EmergencyPause on SecureMintPolicy...");
-        secureMintPolicy.setEmergencyPause(address(emergencyPause));
-
-        // Grant GUARDIAN_ROLE on SecureMintPolicy to the guardian
-        console.log("  Granting GUARDIAN_ROLE on SecureMintPolicy to guardian...");
-        secureMintPolicy.grantRole(secureMintPolicy.GUARDIAN_ROLE(), cfg.guardian);
-
-        // Grant GUARDIAN_ROLE on EmergencyPause to the guardian
-        console.log("  Granting GUARDIAN_ROLE on EmergencyPause to guardian...");
-        emergencyPause.grantRole(emergencyPause.GUARDIAN_ROLE(), cfg.guardian);
-
-        // Grant OPERATOR_ROLE on SecureMintPolicy to the operator
-        console.log("  Granting OPERATOR_ROLE on SecureMintPolicy to operator...");
-        secureMintPolicy.grantRole(secureMintPolicy.OPERATOR_ROLE(), cfg.operator);
-
-        // Grant TREASURER_ROLE on TreasuryVault to the treasurer
-        console.log("  Granting TREASURER_ROLE on TreasuryVault to treasurer...");
-        treasuryVault.grantRole(treasuryVault.TREASURER_ROLE(), cfg.treasurer);
-
-        // Grant OPERATOR_ROLE on TreasuryVault to the operator
-        console.log("  Granting OPERATOR_ROLE on TreasuryVault to operator...");
-        treasuryVault.grantRole(treasuryVault.OPERATOR_ROLE(), cfg.operator);
-
-        // Grant DAO_ROLE on EmergencyPause to the DAO
-        console.log("  Granting DAO_ROLE on EmergencyPause to dao...");
-        emergencyPause.grantRole(emergencyPause.DAO_ROLE(), cfg.dao);
-
-        // ---------------------------------------------------------------
-        //  Step 8: Deploy governance contracts (Phase 2)
-        // ---------------------------------------------------------------
-        deployGovernance();
+        // ── Wire up roles ───────────────────────────────────────────────────
+        _wireRoles(admin, guardian, minter);
 
         vm.stopBroadcast();
 
-        // ---------------------------------------------------------------
-        //  Step 9: Log deployment summary
-        // ---------------------------------------------------------------
-        console.log("");
-        console.log("=== Deployment Summary ===");
-        console.log("");
-        console.log("  --- Phase 1 (Core) ---");
-        console.log("  BackedToken:         ", address(backedToken));
-        console.log("  ChainlinkPoRAdapter: ", address(chainlinkAdapter));
-        console.log("  SecureMintPolicy:    ", address(secureMintPolicy));
-        console.log("  TreasuryVault:       ", address(treasuryVault));
-        console.log("  EmergencyPause:      ", address(emergencyPause));
-        console.log("  Timelock:            ", address(timelock));
-        console.log("");
-        console.log("  --- Phase 2 (Governance) ---");
-        console.log("  OracleRouter:        ", address(oracleRouter));
-        console.log("  Governor:            ", address(governor));
-        console.log("  RedemptionEngine:    ", address(redemptionEngine));
-        console.log("  GuardianMultisig:    ", address(guardianMultisig));
-        console.log("");
-        console.log("  --- Addresses ---");
-        console.log("  Admin:               ", cfg.admin);
-        console.log("  Guardian:            ", cfg.guardian);
-        console.log("  Operator:            ", cfg.operator);
-        console.log("  Treasurer:           ", cfg.treasurer);
-        console.log("  DAO:                 ", cfg.dao);
-        console.log("  Fee Recipient:       ", cfg.feeRecipient);
-        console.log("  Oracle Aggregator:   ", cfg.oracleAggregator);
-        console.log("  Collateral Token:    ", cfg.collateralToken);
-        console.log("");
-        console.log("=== Role Assignments ===");
-        console.log("");
-        console.log("  BackedToken.MINTER_ROLE          -> SecureMintPolicy");
-        console.log("  BackedToken.PAUSER_ROLE          -> EmergencyPause");
-        console.log("  SecureMintPolicy.emergencyPause  -> EmergencyPause");
-        console.log("  SecureMintPolicy.GUARDIAN_ROLE    -> Guardian");
-        console.log("  SecureMintPolicy.OPERATOR_ROLE   -> Operator");
-        console.log("  TreasuryVault.TREASURER_ROLE     -> Treasurer");
-        console.log("  TreasuryVault.OPERATOR_ROLE      -> Operator");
-        console.log("  TreasuryVault.OPERATOR_ROLE      -> RedemptionEngine");
-        console.log("  EmergencyPause.GUARDIAN_ROLE      -> Guardian");
-        console.log("  EmergencyPause.GUARDIAN_ROLE      -> GuardianMultisig");
-        console.log("  EmergencyPause.DAO_ROLE           -> DAO");
-        console.log("  Timelock.PROPOSER_ROLE            -> Governor");
-        console.log("");
-        console.log("=== Deployment Complete ===");
+        // ── Log deployed addresses ──────────────────────────────────────────
+        _logDeployment();
     }
 
-    // -------------------------------------------------------------------
-    //  Phase 2: Governance Contracts
-    // -------------------------------------------------------------------
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 1: EMERGENCY PAUSE
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * @notice Deploys the governance layer contracts (OracleRouter, Governor,
-     *         RedemptionEngine, GuardianMultisig) and wires their roles.
-     * @dev Can be called independently if Phase 1 contracts are already deployed
-     *      and their addresses are set on this contract's state variables.
-     */
-    function deployGovernance() public {
-        console.log("");
-        console.log("=== Phase 2: Governance Deployment ===");
-        console.log("");
+    function _step1_deployEmergencyPause(address admin) internal {
+        emergencyPause = new EmergencyPause(admin);
+        console.log("Step 1 - EmergencyPause deployed at:", address(emergencyPause));
+    }
 
-        // ---------------------------------------------------------------
-        //  Step 7a: Deploy OracleRouter
-        // ---------------------------------------------------------------
-        console.log("[7/10] Deploying OracleRouter...");
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 2: TREASURY VAULT
+    // ═══════════════════════════════════════════════════════════════════════════
 
-        oracleRouter = new OracleRouter(
-            address(chainlinkAdapter),
-            cfg.admin
+    function _step2_deployTreasuryVault(
+        address reserveAsset,
+        address admin,
+        uint256[4] memory tierAllocations
+    ) internal {
+        treasuryVault = new TreasuryVault(reserveAsset, admin, tierAllocations);
+        console.log("Step 2 - TreasuryVault deployed at:", address(treasuryVault));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 3: ORACLE INFRASTRUCTURE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function _step3_deployOracle(
+        DeployConfig.ChainConfig memory cfg,
+        address admin
+    ) internal {
+        if (cfg.chainlinkPoRFeed != address(0)) {
+            // Production chain with a known Chainlink PoR feed
+            chainlinkAdapter = new ChainlinkPoRAdapter(
+                cfg.chainlinkPoRFeed,
+                cfg.maxOracleAge,
+                cfg.maxDeviationBps,
+                cfg.minCollateralRatio,
+                admin
+            );
+            console.log("Step 3 - ChainlinkPoRAdapter deployed at:", address(chainlinkAdapter));
+
+            // Wrap in OracleRouter for failover capability
+            oracleRouter = new OracleRouter(
+                address(chainlinkAdapter),
+                cfg.maxDeviationBps,
+                admin
+            );
+            console.log("Step 3 - OracleRouter deployed at:", address(oracleRouter));
+        } else {
+            // Testnet or chain without a PoR feed – deploy adapter with
+            // placeholder; the feed address can be set post-deployment.
+            chainlinkAdapter = new ChainlinkPoRAdapter(
+                address(1), // Placeholder; will be replaced post-deploy
+                cfg.maxOracleAge,
+                cfg.maxDeviationBps,
+                cfg.minCollateralRatio,
+                admin
+            );
+            console.log("Step 3 - ChainlinkPoRAdapter (placeholder) deployed at:", address(chainlinkAdapter));
+
+            oracleRouter = new OracleRouter(
+                address(chainlinkAdapter),
+                cfg.maxDeviationBps,
+                admin
+            );
+            console.log("Step 3 - OracleRouter deployed at:", address(oracleRouter));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 4: SECURE MINT POLICY
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function _step4_deploySecureMintPolicy(
+        address oracle,
+        uint256 globalCap,
+        uint256 epochCap,
+        uint256 maxOracleAge,
+        address admin
+    ) internal {
+        // Deploy with a temporary token address. The policy uses an immutable
+        // `token` reference, so we must predict the BackedToken address or
+        // accept that the token will be deployed next and the address linked
+        // via the policy's IBackedToken interface.
+        //
+        // Strategy: deploy policy first referencing a future CREATE address.
+        // The next contract deployed by this script will be BackedToken,
+        // so we compute its address using deployer nonce + 1.
+        address predictedToken = _predictNextCreate(msg.sender, vm.getNonce(msg.sender) + 1);
+
+        secureMintPolicy = new SecureMintPolicy(
+            predictedToken,
+            oracle,
+            globalCap,
+            epochCap,
+            maxOracleAge,
+            admin
         );
+        console.log("Step 4 - SecureMintPolicy deployed at:", address(secureMintPolicy));
+        console.log("         (predicted token address):", predictedToken);
+    }
 
-        console.log("  OracleRouter deployed at:", address(oracleRouter));
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 5: BACKED TOKEN
+    // ═══════════════════════════════════════════════════════════════════════════
 
-        // ---------------------------------------------------------------
-        //  Step 7b: Deploy Governor
-        // ---------------------------------------------------------------
-        console.log("[8/10] Deploying Governor...");
-
-        governor = new Governor(
-            cfg.governorQuorum,
-            cfg.governorVotingPeriod,
-            cfg.admin
+    function _step5_deployBackedToken(
+        string memory name,
+        string memory symbol,
+        address guardian
+    ) internal {
+        backedToken = new BackedToken(
+            name,
+            symbol,
+            address(secureMintPolicy),
+            guardian
         );
+        console.log("Step 5 - BackedToken deployed at:", address(backedToken));
 
-        console.log("  Governor deployed at:", address(governor));
+        // Verify the predicted address matches
+        require(
+            address(backedToken) == address(secureMintPolicy.token()),
+            "Deploy: BackedToken address mismatch with policy prediction"
+        );
+    }
 
-        // ---------------------------------------------------------------
-        //  Step 7c: Deploy RedemptionEngine
-        // ---------------------------------------------------------------
-        console.log("[9/10] Deploying RedemptionEngine...");
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 6: REDEMPTION + GOVERNANCE
+    // ═══════════════════════════════════════════════════════════════════════════
 
+    function _step6_deployRedemptionAndGovernance(
+        address reserveAsset,
+        address admin,
+        address guardian,
+        DeployConfig.ChainConfig memory cfg
+    ) internal {
+        // 6a. RedemptionEngine
         redemptionEngine = new RedemptionEngine(
             address(backedToken),
+            reserveAsset,
             address(treasuryVault),
-            cfg.collateralToken,
-            cfg.feeRecipient,
-            cfg.admin
+            admin
         );
+        console.log("Step 6a - RedemptionEngine deployed at:", address(redemptionEngine));
 
-        console.log("  RedemptionEngine deployed at:", address(redemptionEngine));
-
-        // Grant RedemptionEngine OPERATOR_ROLE on TreasuryVault so it can withdraw collateral during redemptions
-        console.log("  Granting OPERATOR_ROLE on TreasuryVault to RedemptionEngine...");
-        treasuryVault.grantRole(treasuryVault.OPERATOR_ROLE(), address(redemptionEngine));
-
-        // ---------------------------------------------------------------
-        //  Step 7d: Deploy GuardianMultisig
-        // ---------------------------------------------------------------
-        console.log("[10/10] Deploying GuardianMultisig...");
-
-        address[] memory guardians = new address[](1);
-        guardians[0] = cfg.guardian;
-
-        guardianMultisig = new GuardianMultisig(
-            guardians,
-            cfg.guardianMultisigRequired
+        // 6b. Timelock
+        address[] memory proposers = new address[](1);
+        proposers[0] = admin; // Governor will be added after deployment
+        address[] memory executors = new address[](1);
+        executors[0] = address(0); // Anyone can execute after timelock
+        timelock = new Timelock(
+            cfg.timelockDelay,
+            proposers,
+            executors,
+            admin
         );
+        console.log("Step 6b - Timelock deployed at:", address(timelock));
 
-        console.log("  GuardianMultisig deployed at:", address(guardianMultisig));
+        // 6c. Governor
+        governor = new SecureMintGovernor(
+            IVotes(address(backedToken)),
+            TimelockController(payable(address(timelock))),
+            guardian,
+            cfg.votingDelay,
+            cfg.votingPeriod,
+            cfg.proposalThreshold,
+            cfg.quorumPercentage
+        );
+        console.log("Step 6c - Governor deployed at:", address(governor));
 
-        // ---------------------------------------------------------------
-        //  Wire governance roles
-        // ---------------------------------------------------------------
-        console.log("");
-        console.log("Wiring governance roles...");
-
-        // Grant GUARDIAN_ROLE on EmergencyPause to GuardianMultisig
-        console.log("  Granting GUARDIAN_ROLE on EmergencyPause to GuardianMultisig...");
-        emergencyPause.grantRole(emergencyPause.GUARDIAN_ROLE(), address(guardianMultisig));
-
-        // Grant PROPOSER_ROLE on Timelock to Governor
-        console.log("  Granting PROPOSER_ROLE on Timelock to Governor...");
+        // Grant governor the PROPOSER_ROLE on timelock
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
+    }
 
-        // NOTE: Admin retains PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE on Timelock
-        // for the initial bootstrapping period. These should be revoked via a governance
-        // proposal after the system is stable and the Governor has proven operational.
-        // To revoke: timelock.revokeRole(PROPOSER_ROLE, admin), etc.
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ROLE WIRING
+    // ═══════════════════════════════════════════════════════════════════════════
 
+    function _wireRoles(
+        address admin,
+        address guardian,
+        address minter
+    ) internal {
+        console.log("Wiring roles...");
+
+        // ── SecureMintPolicy Roles ──────────────────────────────────────────
+        bytes32 MINTER_ROLE = secureMintPolicy.MINTER_ROLE();
+        bytes32 GUARDIAN_ROLE = secureMintPolicy.GUARDIAN_ROLE();
+        bytes32 GOVERNOR_ROLE = secureMintPolicy.GOVERNOR_ROLE();
+
+        secureMintPolicy.grantRole(MINTER_ROLE, minter);
+        secureMintPolicy.grantRole(GUARDIAN_ROLE, guardian);
+        secureMintPolicy.grantRole(GOVERNOR_ROLE, address(timelock));
+        console.log("  SecureMintPolicy: MINTER ->", minter);
+        console.log("  SecureMintPolicy: GUARDIAN ->", guardian);
+        console.log("  SecureMintPolicy: GOVERNOR -> Timelock");
+
+        // ── EmergencyPause Roles ────────────────────────────────────────────
+        bytes32 EP_GUARDIAN = emergencyPause.GUARDIAN_ROLE();
+        bytes32 EP_GOVERNOR = emergencyPause.GOVERNOR_ROLE();
+        bytes32 EP_MONITOR = emergencyPause.MONITOR_ROLE();
+
+        emergencyPause.grantRole(EP_GUARDIAN, guardian);
+        emergencyPause.grantRole(EP_GOVERNOR, address(timelock));
+        emergencyPause.grantRole(EP_MONITOR, admin);
+        console.log("  EmergencyPause: GUARDIAN ->", guardian);
+        console.log("  EmergencyPause: GOVERNOR -> Timelock");
+        console.log("  EmergencyPause: MONITOR ->", admin);
+
+        // Register core contracts with EmergencyPause
+        emergencyPause.registerContract(address(secureMintPolicy));
+        emergencyPause.registerContract(address(treasuryVault));
+        emergencyPause.registerContract(address(redemptionEngine));
+
+        // ── TreasuryVault Roles ─────────────────────────────────────────────
+        bytes32 TV_GUARDIAN = treasuryVault.GUARDIAN_ROLE();
+        bytes32 TV_GOVERNOR = treasuryVault.GOVERNOR_ROLE();
+        bytes32 TV_TREASURY_ADMIN = treasuryVault.TREASURY_ADMIN_ROLE();
+        bytes32 TV_REBALANCER = treasuryVault.REBALANCER_ROLE();
+
+        treasuryVault.grantRole(TV_GUARDIAN, guardian);
+        treasuryVault.grantRole(TV_GOVERNOR, address(timelock));
+        treasuryVault.grantRole(TV_TREASURY_ADMIN, admin);
+        treasuryVault.grantRole(TV_REBALANCER, admin);
+        console.log("  TreasuryVault: GUARDIAN ->", guardian);
+        console.log("  TreasuryVault: GOVERNOR -> Timelock");
+
+        // ── RedemptionEngine Roles ──────────────────────────────────────────
+        bytes32 RE_GUARDIAN = redemptionEngine.GUARDIAN_ROLE();
+        bytes32 RE_GOVERNOR = redemptionEngine.GOVERNOR_ROLE();
+        bytes32 RE_TREASURY = redemptionEngine.TREASURY_ROLE();
+
+        redemptionEngine.grantRole(RE_GUARDIAN, guardian);
+        redemptionEngine.grantRole(RE_GOVERNOR, address(timelock));
+        redemptionEngine.grantRole(RE_TREASURY, address(treasuryVault));
+        console.log("  RedemptionEngine: GUARDIAN ->", guardian);
+        console.log("  RedemptionEngine: GOVERNOR -> Timelock");
+
+        // ── OracleRouter Roles ──────────────────────────────────────────────
+        bytes32 ROUTER_ADMIN = oracleRouter.ROUTER_ADMIN();
+        oracleRouter.grantRole(ROUTER_ADMIN, address(timelock));
+        console.log("  OracleRouter: ROUTER_ADMIN -> Timelock");
+
+        console.log("Role wiring complete.");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @dev Predict the address of a contract deployed via CREATE at a given nonce.
+     */
+    function _predictNextCreate(
+        address deployer,
+        uint64 nonce
+    ) internal pure returns (address) {
+        // RLP encoding for nonce-based CREATE address prediction
+        if (nonce == 0x00) {
+            return address(
+                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), deployer, bytes1(0x80)))))
+            );
+        } else if (nonce <= 0x7f) {
+            return address(
+                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), deployer, uint8(nonce)))))
+            );
+        } else if (nonce <= 0xff) {
+            return address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(bytes1(0xd7), bytes1(0x94), deployer, bytes1(0x81), uint8(nonce))
+                        )
+                    )
+                )
+            );
+        } else if (nonce <= 0xffff) {
+            return address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(
+                                bytes1(0xd8), bytes1(0x94), deployer, bytes1(0x82), uint16(nonce)
+                            )
+                        )
+                    )
+                )
+            );
+        } else {
+            revert("Deploy: nonce too large for CREATE prediction");
+        }
+    }
+
+    /**
+     * @dev Read an address from env, falling back to a default value.
+     */
+    function _envOrDefault(
+        string memory key,
+        address defaultValue
+    ) internal view returns (address) {
+        try vm.envAddress(key) returns (address val) {
+            return val == address(0) ? defaultValue : val;
+        } catch {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * @dev Read an address from env, falling back to a provided fallback.
+     */
+    function _envOr(
+        string memory key,
+        address fallback_
+    ) internal view returns (address) {
+        try vm.envAddress(key) returns (address val) {
+            return val == address(0) ? fallback_ : val;
+        } catch {
+            return fallback_;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LOGGING
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function _logDeployment() internal view {
         console.log("");
-        console.log("=== Phase 2 Complete ===");
+        console.log("========================================");
+        console.log("  SecureMintEngine Deployment Summary");
+        console.log("========================================");
+        console.log("  Chain ID          :", block.chainid);
+        console.log("  BackedToken       :", address(backedToken));
+        console.log("  EmergencyPause    :", address(emergencyPause));
+        console.log("  TreasuryVault     :", address(treasuryVault));
+        console.log("  ChainlinkAdapter  :", address(chainlinkAdapter));
+        console.log("  OracleRouter      :", address(oracleRouter));
+        console.log("  SecureMintPolicy  :", address(secureMintPolicy));
+        console.log("  RedemptionEngine  :", address(redemptionEngine));
+        console.log("  Timelock          :", address(timelock));
+        console.log("  Governor          :", address(governor));
+        console.log("========================================");
     }
 }

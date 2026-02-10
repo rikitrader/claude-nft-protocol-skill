@@ -1,490 +1,221 @@
-# Monetary Theory Foundations
+# Monetary Theory Foundations for Token Design
 
-> Monetary economics principles applied to crypto token design. Understanding these
-> concepts is essential for designing tokens that claim backing, stability, or
-> reserve-based value.
+## Source: Modern Money Mechanics (Federal Reserve Bank of Chicago)
 
----
-
-## Table of Contents
-
-1. [Modern Money Mechanics Applied to Crypto](#modern-money-mechanics-applied-to-crypto)
-2. [Money Multiplier Concept](#money-multiplier-concept)
-3. [Reserve Requirements Parallel](#reserve-requirements-parallel)
-4. [Fractional vs Full Reserve Models](#fractional-vs-full-reserve-models)
-5. [Why Cryptographic Enforcement Matters](#why-cryptographic-enforcement-matters)
-6. [Historical Failures](#historical-failures)
-7. [Design Implications for SecureMintEngine](#design-implications-for-securemintengine)
-8. [Source Materials](#source-materials)
+This reference extracts key principles from traditional monetary theory that MUST inform blockchain token design, particularly for backed/reserve-based tokens.
 
 ---
 
-## Modern Money Mechanics Applied to Crypto
+## Core Principle: Money Creation Through Lending
 
-### Traditional Money Creation
+### The Fractional Reserve System
 
-In the traditional banking system, money is created through a process described in the Federal Reserve's "Modern Money Mechanics" (1961, revised through 1994):
+In traditional banking:
+1. Banks hold only a **fraction** of deposits as reserves
+2. The remainder can be lent out
+3. Loans create new deposits (money creation)
+4. This creates a **money multiplier effect**
 
-1. The central bank creates **base money** (M0) -- physical currency and reserves
-2. Commercial banks receive deposits and are required to hold a fraction as reserves
-3. Banks lend out the remainder, which gets redeposited, creating new money
-4. This process repeats, multiplying the money supply
+**Critical Lesson for Token Design:**
+> If a token claims to be "fully backed," it MUST NOT operate on fractional reserves unless explicitly disclosed and enforced on-chain.
 
-### The Crypto Parallel
+### The Money Multiplier Formula
 
-In crypto token systems, the minting process mirrors money creation:
+```
+Money Multiplier = 1 / Reserve Ratio
 
-| Traditional Banking | Crypto Token System | SecureMintEngine Enforcement |
-|-------------------|-------------------|---------------------------|
-| Central bank prints currency | Protocol mints tokens | Oracle-gated mint function |
-| Reserve requirement (e.g., 10%) | Collateral ratio (e.g., 150%) | INV-SM-1: BackingAlwaysCoversSupply |
-| Bank examiner audits | Smart contract verification | Chainlink PoR + invariant tests |
-| FDIC insurance | Insurance fund / overcollateralization | Overcollateralization buffer |
-| Lender of last resort | Emergency reserves / governance | Emergency pause + treasury |
-| Fractional reserve banking | Partial collateralization | Configurable reserve ratio |
+Example:
+- 10% reserve requirement → 10x multiplier
+- 100% reserve requirement → 1x multiplier (no multiplication)
+```
 
-### Key Insight
-
-The fundamental difference between traditional and crypto money creation is **trust vs verification**:
-
-- **Traditional**: Trust the bank to maintain reserves (verified by periodic audits)
-- **Crypto**: Verify reserves cryptographically on every mint operation
-
-This is the "Don't Trust, Verify" principle that SecureMintEngine enforces.
+**For Backed Tokens:**
+- **1:1 Backing Claim** = 100% reserve ratio = No money multiplication
+- Any claim of "full backing" with fractional reserves = FRAUD VECTOR
 
 ---
 
-## Money Multiplier Concept
+## Key Principles from Modern Money Mechanics
 
-### The Formula
+### Principle 1: Reserves Constrain Money Creation
 
-```
-Money Multiplier (m) = 1 / Reserve Ratio (r)
+> "The actual process of money creation takes place primarily in banks... Banks can build up deposits by increasing loans and investments so long as they keep enough currency on hand to redeem whatever amounts the holders of deposits want to convert into currency."
 
-If r = 10%:  m = 1 / 0.10 = 10x
-If r = 20%:  m = 1 / 0.20 = 5x
-If r = 100%: m = 1 / 1.00 = 1x (no multiplication)
-```
+**Token Design Implication:**
+- Minting MUST be constrained by verified reserves
+- Without reserve verification, minting is unbounded
+- Unbounded minting = guaranteed failure mode
 
-### In Traditional Banking
+### Principle 2: The Reserve Requirement is the Control Mechanism
 
-With a 10% reserve requirement:
-- $100 deposited -> Bank holds $10, lends $90
-- $90 deposited at another bank -> Holds $9, lends $81
-- $81 deposited -> Holds $8.10, lends $72.90
-- ... continues until total money created = $1,000 from original $100
+> "The amount of reserves in the banking system determines the permissible level of deposits."
 
-### In Crypto Token Systems
+**Token Design Implication:**
+- `total_supply <= f(verified_reserves)`
+- The reserve check IS the control mechanism
+- No other control is sufficient for backed tokens
 
-The money multiplier applies differently depending on the model:
+### Principle 3: Expansion and Contraction
 
-**Full Reserve (100% collateral)**:
-```
-Multiplier = 1x
-$100 collateral -> $100 tokens minted
-No amplification. Maximum safety.
-SecureMintEngine DEFAULT mode.
-```
+When reserves increase → money supply CAN expand
+When reserves decrease → money supply MUST contract
 
-**Overcollateralized (150% collateral)**:
-```
-Multiplier = 0.67x
-$150 collateral -> $100 tokens minted
-Less than 1:1. Extra safety margin.
-Used by MakerDAO, Liquity.
-```
+**Token Design Implication:**
+- Minting allowed when: `reserves > required_backing(supply + mint_amount)`
+- Burning/redemption always allowed
+- System must handle contraction gracefully
 
-**Fractional Reserve (50% collateral)**:
-```
-Multiplier = 2x
-$100 collateral -> $200 tokens minted
-DANGEROUS without proper risk management.
-Requires: dynamic interest rates, liquidation mechanisms, insurance.
-```
+### Principle 4: The "Leakage" Problem
 
-**Algorithmic (0% collateral)**:
-```
-Multiplier = infinity (theoretically)
-$0 collateral -> unlimited tokens
-PROVEN TO FAIL. See: Terra/Luna.
-SecureMintEngine PROHIBITS this model for backed tokens.
-```
+Money can "leak" from the system through:
+- Currency withdrawals
+- Required reserves
+- Loan defaults
 
-### Design Decision
-
-SecureMintEngine defaults to **full reserve (1:1)** or **overcollateralized** models because:
-
-1. Lower multiplier = lower systemic risk
-2. No "bank run" scenario when fully backed
-3. Oracle accuracy requirements are less strict (no liquidation cascades)
-4. Simpler to audit and verify
-5. Historical evidence shows lower multiplier = higher survival rate
+**Token Design Implication:**
+- Always maintain buffer above minimum backing
+- Monitor for reserve leakage
+- Auto-pause if backing falls below threshold
 
 ---
 
-## Reserve Requirements Parallel
+## Mapping to SecureMintEngine Invariants
 
-### Traditional Reserve Requirements
-
-| Country | Reserve Requirement | Notes |
-|---------|-------------------|-------|
-| United States | 0% (since March 2020) | Previously 10% for large banks |
-| European Union | 1% | Minimum reserve ratio |
-| China | ~7.4% | Varies by bank type |
-| India | 4.5% | Cash Reserve Ratio |
-
-### Crypto Reserve Models
-
-| Protocol | Reserve Type | Ratio | Enforcement |
-|----------|-------------|-------|-------------|
-| USDC (Circle) | Fiat + T-Bills | ~100% | Monthly attestation |
-| DAI (Maker) | Crypto collateral | 150%+ | On-chain, automated |
-| USDT (Tether) | Mixed assets | ~100% (claimed) | Quarterly attestation |
-| FRAX | Hybrid | Variable | On-chain + algorithmic |
-| GHO (Aave) | Crypto collateral | Variable | On-chain, overcollateralized |
-| **SME Default** | **Configurable** | **>= 100%** | **On-chain, per-transaction** |
-
-### Why On-Chain Enforcement is Superior
-
-Traditional reserve requirements rely on:
-- Periodic examination (quarterly or annually)
-- Self-reporting by institutions
-- Delayed detection of violations
-- Political pressure to lower requirements
-
-On-chain enforcement provides:
-- **Per-transaction verification**: Every mint checks reserves
-- **Real-time monitoring**: Continuous, not periodic
-- **Immutable rules**: Cannot be changed without governance + timelock
-- **Public auditability**: Anyone can verify at any time
-- **Automatic enforcement**: Violations prevented, not just detected
+| Traditional Banking | SecureMintEngine | Invariant |
+|---------------------|------------------|-----------|
+| Reserve Requirement | Collateral Ratio | INV-SM-1: BackingAlwaysCoversSupply |
+| Fed Audit | Oracle/PoR Check | INV-SM-2: OracleHealthRequired |
+| Lending Limits | Rate Limits + Caps | INV-SM-3: MintIsBounded |
+| Bank Charter | Authorized Minter | INV-SM-4: NoBypassPath |
 
 ---
 
-## Fractional vs Full Reserve Models
+## The "Follow-the-Money" Doctrine (Derived)
 
-### Full Reserve Model
+From Modern Money Mechanics, we derive the core doctrine:
 
-```
-Properties:
-  - Reserve Ratio: 100%
-  - Money Multiplier: 1x
-  - Run Risk: None (all tokens redeemable)
-  - Capital Efficiency: Low
-  - Complexity: Low
-  - Safety: Maximum
+### Rule 1: Track the Real Asset
+> Money's value derives from what backs it. If you can't track the backing, the money is suspect.
 
-How it works:
-  1. User deposits $100 USDC
-  2. Protocol mints 100 tokens
-  3. $100 USDC sits in vault
-  4. User can always redeem 100 tokens for $100 USDC
-  5. No lending, no leverage, no multiplication
+**Implementation:** Proof-of-Reserve oracles, on-chain collateral tracking
 
-SecureMintEngine implementation:
-  reserveRatio = 1e18  // 100%
-  No lending module
-  Direct 1:1 mint/redeem
-```
+### Rule 2: Constrain Creation to Backing
+> Money creation must be limited by available backing. Unlimited creation = inflation = value destruction.
 
-### Overcollateralized Model
+**Implementation:** `mint()` reverts if `backing < required_backing(post_mint_supply)`
 
-```
-Properties:
-  - Reserve Ratio: 150%+
-  - Money Multiplier: < 1x
-  - Run Risk: Very low (excess collateral absorbs drawdowns)
-  - Capital Efficiency: Low-Medium
-  - Complexity: Medium (requires liquidation)
-  - Safety: Very High
+### Rule 3: Verify Continuously, Not Once
+> Backing must be verified continuously, not just at creation. Reserves can disappear.
 
-How it works:
-  1. User deposits $150 ETH
-  2. Protocol mints 100 stablecoin tokens
-  3. If ETH price drops, position approaches liquidation
-  4. Liquidators repay debt and receive collateral at discount
-  5. System remains solvent as long as liquidations are timely
+**Implementation:** Every mint checks oracle. Stale oracle = pause.
 
-SecureMintEngine implementation:
-  reserveRatio = 1.5e18  // 150%
-  Oracle: Chainlink ETH/USD with fallback
-  Liquidation module: Required
-  Auto-pause on oracle failure
-```
+### Rule 4: Allow Destruction (Redemption)
+> Holders must be able to redeem for backing. This maintains the peg/value.
 
-### Fractional Reserve Model
+**Implementation:** Burn always allowed. Redemption mechanisms clear.
+
+---
+
+## Formulas for Token Design
+
+### Required Backing Calculation
 
 ```
-Properties:
-  - Reserve Ratio: < 100%
-  - Money Multiplier: > 1x
-  - Run Risk: HIGH (not all tokens redeemable simultaneously)
-  - Capital Efficiency: High
-  - Complexity: High
-  - Safety: Low (requires sophisticated risk management)
+// For 1:1 backed tokens (e.g., stablecoins)
+required_backing = total_supply
 
-How it works:
-  1. Protocol holds $50M in reserves
-  2. Mints $100M in tokens
-  3. Works fine in normal conditions (not all users redeem at once)
-  4. During stress: redemption queue, withdrawal limits
-  5. If run occurs: reserves insufficient, depeg likely
+// For over-collateralized tokens
+required_backing = total_supply × collateral_ratio
+// e.g., 150% collateral ratio: required_backing = supply × 1.5
 
-SecureMintEngine implementation:
-  NOT RECOMMENDED
-  If used: reserveRatio = 0.5e18 minimum
-  REQUIRES: dynamic interest rates, redemption queue, insurance fund
-  REQUIRES: T3 risk tier (maximum restrictions)
-  REQUIRES: explicit governance vote to enable
+// For fractional reserve (if disclosed)
+required_backing = total_supply × reserve_ratio
+// e.g., 20% reserves: required_backing = supply × 0.2
 ```
 
-### Algorithmic Stability Model
+### Mint Allowance Check
+
+```solidity
+function canMint(uint256 amount) public view returns (bool) {
+    uint256 postMintSupply = totalSupply() + amount;
+    uint256 requiredBacking = calculateRequiredBacking(postMintSupply);
+    uint256 currentBacking = oracle.getVerifiedBacking();
+
+    return currentBacking >= requiredBacking;
+}
+```
+
+### Health Factor
 
 ```
-Properties:
-  - Reserve Ratio: 0% (or near 0%)
-  - Money Multiplier: Infinite
-  - Run Risk: CATASTROPHIC
-  - Capital Efficiency: Maximum
-  - Complexity: Maximum
-  - Safety: PROVEN FAILURE
+health_factor = current_backing / required_backing
 
-SecureMintEngine position:
-  PROHIBITED for any token claiming backing
-  ME-05 elimination rule blocks this mechanic
-  No override allowed
+health_factor >= 1.0  → System healthy
+health_factor < 1.0   → System undercollateralized → PAUSE
+health_factor < 0.9   → Critical → Emergency actions
 ```
 
 ---
 
-## Why Cryptographic Enforcement Matters
+## Anti-Patterns from Monetary History
 
-### The Trust Problem
+### Anti-Pattern 1: Unaudited Reserves
+**Historical Example:** Wildcat banking era
+**Failure Mode:** Claimed backing that didn't exist
+**Prevention:** On-chain or cryptographically verified reserves only
 
-Every financial system ultimately answers one question: **"Is there enough money to pay everyone back?"**
+### Anti-Pattern 2: Rehypothecation
+**Historical Example:** 2008 financial crisis
+**Failure Mode:** Same collateral backing multiple obligations
+**Prevention:** Locked collateral, transparent on-chain tracking
 
-Traditional finance answers this with:
-- Legal contracts
-- Regulatory oversight
-- Insurance (FDIC, SIPC)
-- Central bank backstop
-- Periodic audits
+### Anti-Pattern 3: Admin Override
+**Historical Example:** Currency debasement by rulers
+**Failure Mode:** Authority mints without backing
+**Prevention:** No admin mint capability. Only oracle-gated SecureMint.
 
-These mechanisms have failure modes:
-- **FTX**: $8B customer funds missing, auditors missed it
-- **Wirecard**: $2B in assets that never existed
-- **Lehman Brothers**: $600B in liabilities, $639B in assets (supposedly)
-- **SVB**: $209B in assets, but duration mismatch caused bank run
-
-### The Cryptographic Solution
-
-Blockchain enables a fundamentally different approach:
-
-1. **Reserves are publicly visible**: Anyone can audit at any time
-2. **Minting is gated by code**: Not by human judgment
-3. **Rules are immutable**: Cannot be changed without transparent governance
-4. **Enforcement is automatic**: Violations are prevented, not detected after the fact
-5. **No trusted intermediary**: Math replaces trust
-
-### SecureMintEngine's Enforcement Stack
-
-```
-Layer 1: Smart Contract Code
-  - Mint function requires oracle health + reserve sufficiency
-  - Cannot be bypassed (INV-SM-4)
-  - Immutable (or timelock + multisig for upgrades)
-
-Layer 2: Oracle Network
-  - Decentralized price feeds (3+ independent sources)
-  - Cross-validation between providers
-  - Staleness detection and auto-pause
-
-Layer 3: Proof of Reserve
-  - Chainlink PoR for off-chain reserves
-  - Continuous attestation (not quarterly)
-  - Automated minting pause on attestation failure
-
-Layer 4: Invariant Tests
-  - Mathematical proofs that backing always covers supply
-  - Tested via Foundry with 10,000+ fuzz runs
-  - Run in CI on every commit
-
-Layer 5: Monitoring & Response
-  - Real-time reserve ratio monitoring
-  - Automated alerts on deviation
-  - Emergency pause capability (immediate, no timelock)
-```
-
-### The Key Principle
-
-> "Code is law" is incomplete. "Verified code enforcing economic invariants" is the full principle.
-
-The code must:
-1. **Be audited**: Multiple professional audits
-2. **Be formally verified**: Mathematical proofs where possible
-3. **Be tested exhaustively**: Fuzz testing, invariant testing
-4. **Be monitored continuously**: Real-time health checks
-5. **Have emergency brakes**: Pause mechanism for unknown unknowns
+### Anti-Pattern 4: Delayed Verification
+**Historical Example:** Bank runs
+**Failure Mode:** Backing checked too infrequently
+**Prevention:** Real-time oracle checks on every mint
 
 ---
 
-## Historical Failures
+## References
 
-### Terra/Luna (May 2022)
+### Primary Sources
+- Modern Money Mechanics (Federal Reserve Bank of Chicago)
+  - https://upload.wikimedia.org/wikipedia/commons/4/4a/Modern_Money_Mechanics.pdf
 
-**Type**: Algorithmic stablecoin (0% collateral)
-**Loss**: ~$40 billion
-**Mechanism**: UST maintained peg via LUNA mint/burn arbitrage
-**Failure Mode**: Death spiral -- UST depeg -> LUNA hyperinflation -> complete collapse
-
-**Lessons for SecureMintEngine**:
-- Algorithmic stability without collateral is inherently fragile
-- "Reflexive" mechanisms (token A backs token B, B backs A) are circular
-- Market confidence is not a substitute for real reserves
-- ME-05 elimination rule: No pure algorithmic stability
-
-### Iron Finance / TITAN (June 2021)
-
-**Type**: Fractional algorithmic stablecoin (partial collateral)
-**Loss**: TITAN price collapsed from $64 to $0.000000015
-**Mechanism**: Partially-backed IRON token with TITAN as secondary collateral
-**Failure Mode**: TITAN price crash -> IRON undercollateralized -> bank run -> death spiral
-
-**Lessons**:
-- Endogenous collateral (own token) creates reflexive risk
-- Partial algorithmic stability is as dangerous as full algorithmic
-- Even DeFi veterans (Mark Cuban) lost significant capital
-
-### Basis Cash (2020-2021)
-
-**Type**: Algorithmic stablecoin modeled on Basis paper
-**Loss**: Complete peg failure, project abandoned
-**Mechanism**: Bond/share/cash token system
-**Failure Mode**: Could not restore peg once broken; no real demand for bonds
-
-**Lessons**:
-- Theoretical models often fail in practice
-- "Coupon" / "bond" mechanisms assume rational actors during panic
-- Seigniorage-based stability has no floor
-
-### Tether Concerns (Ongoing)
-
-**Type**: Fiat-backed stablecoin
-**Issues**: Transparency concerns, attestation delays
-**Current Status**: Operating but with ongoing regulatory scrutiny
-
-**Lessons for SecureMintEngine**:
-- Even the largest stablecoin faces trust questions without full transparency
-- Quarterly attestations are insufficient (continuous is better)
-- Real-time Proof of Reserve is the gold standard
-
-### FTX / FTT (November 2022)
-
-**Type**: Exchange token used as collateral
-**Loss**: ~$8 billion in customer funds
-**Mechanism**: FTT used as collateral for loans, creating circular dependency
-**Failure Mode**: FTT price drop -> collateral insufficient -> insolvency revealed
-
-**Lessons**:
-- Self-referential collateral is worthless in a crisis
-- Centralized custody with no transparency enables fraud
-- On-chain reserves with public verification prevent this class of failure
+### Supplementary Sources
+- Understanding Money Mechanics (Robert Murphy)
+  - https://mises.org/library/periodical/understanding-money-mechanics
+- Monetary Economics (Handa)
+  - https://dcbrozenwurcel.files.wordpress.com/2018/04/handa-monetary-economics.pdf
+- Monetary Economics (Godley & Lavoie)
+  - https://joseluisoreiro.com.br/site/link/933ba4894c7bd29837b2f70f0a3fb2c94ac5ae5f.pdf
 
 ---
 
-## Design Implications for SecureMintEngine
+## Application to Blockchain Tokens
 
-### Principle 1: Follow the Money
+The principles above translate directly to blockchain implementation:
 
-Every token minted must trace back to verifiable backing. The backing must:
-- Exist (provable via oracle or PoR)
-- Be sufficient (>= reserve ratio)
-- Be accessible (can be liquidated or redeemed)
-- Be independent (not circular/self-referential)
+| Traditional Finance | Blockchain Equivalent |
+|--------------------|----------------------|
+| Central Bank | Smart Contract (immutable rules) |
+| Reserve Audit | Proof-of-Reserve Oracle |
+| Reserve Requirement | Collateral Ratio in Contract |
+| Bank Charter | Authorized Minter Role |
+| Fed Funds Rate | Protocol Parameters (timelocked) |
+| Bank Run | Mass Redemption Event |
+| Deposit Insurance | Protocol Insurance Fund (if any) |
 
-### Principle 2: Default to Safety
+**The key difference:**
+In traditional finance, trust is placed in institutions.
+In blockchain, trust is placed in **code + cryptographic verification**.
 
-- Default reserve ratio: 100% (full reserve)
-- Default oracle requirement: YES (non-negotiable for backed tokens)
-- Default minting model: Oracle-gated (INV-SM-4)
-- Default to overcollateralization if any uncertainty exists
-
-### Principle 3: Make Failure Expensive, Not Impossible
-
-Rather than claiming the system "cannot fail," design for graceful degradation:
-- Oracle fails -> Minting pauses (not protocol failure)
-- Price drops -> Liquidation cascade (not insolvency)
-- Reserve drops below 100% -> Minting stops, redemptions continue
-- Governance captured -> Timelocks provide intervention window
-
-### Principle 4: Learn from History
-
-Every design decision should reference historical precedent:
-- "Why not algorithmic?" -> Terra/Luna, Iron Finance
-- "Why not fractional?" -> Traditional bank runs, FTX
-- "Why oracle-gated?" -> FTX (no verification), Tether (delayed verification)
-- "Why overcollateralized?" -> MakerDAO survived March 2020 crash
-
----
-
-## Source Materials
-
-### Primary References
-
-1. **Modern Money Mechanics** - Federal Reserve Bank of Chicago (1961, revised 1994)
-   - Original explanation of money creation in fractional reserve banking
-   - Available: Federal Reserve Archives
-
-2. **The Bitcoin Standard** - Saifedean Ammous (2018)
-   - Comparison of monetary systems and sound money principles
-   - ISBN: 978-1119473862
-
-3. **Mastering Ethereum** - Andreas Antonopoulos, Gavin Wood (2018)
-   - Smart contract security and token design
-   - Available: https://github.com/ethereumbook/ethereumbook
-
-4. **DeFi and the Future of Finance** - Campbell Harvey, Ashwin Ramachandran, Joey Santoro (2021)
-   - Academic analysis of DeFi protocols and risks
-   - ISBN: 978-1119836018
-
-### Protocol Documentation
-
-5. **MakerDAO Technical Docs** - https://docs.makerdao.com
-   - Reference implementation of overcollateralized stablecoin
-
-6. **Aave V3 Technical Paper** - https://aave.com/technical-paper
-   - Lending/borrowing mechanics with variable rates
-
-7. **Chainlink Proof of Reserve** - https://chain.link/proof-of-reserve
-   - Oracle-based reserve verification
-
-### Post-Mortems
-
-8. **Terra/Luna Post-Mortem** - Multiple sources
-   - Nansen: https://nansen.ai (on-chain analysis of UST depeg)
-   - Jump Crypto analysis of the death spiral
-
-9. **Rekt.news Leaderboard** - https://rekt.news/leaderboard/
-   - Comprehensive database of DeFi exploits
-
-10. **DeFiSafety** - https://defisafety.com
-    - Protocol safety scoring and analysis
-
-### Academic Papers
-
-11. **An Empirical Study of Stablecoin Stability** - Lyons & Viswanath-Natraj (2023)
-    - Analysis of stablecoin peg maintenance mechanisms
-
-12. **Algorithmic Stablecoins: Design and Failures** - Klages-Mundt et al. (2022)
-    - Formal analysis of why algorithmic stablecoins fail
-
-13. **Oracle Manipulation Attacks on DeFi** - Qin et al. (2022)
-    - Classification and analysis of oracle-based attacks
-
-### Regulatory References
-
-14. **FSOC Report on Digital Asset Financial Stability** - US Treasury (2022)
-    - Regulatory perspective on stablecoin risks
-
-15. **MiCA Regulation** - European Commission (2023)
-    - EU framework for crypto-asset regulation including stablecoins
+This is why SecureMintEngine requires:
+- On-chain enforcement (not promises)
+- Cryptographic proofs (not attestations)
+- Immutable rules (not discretionary decisions)

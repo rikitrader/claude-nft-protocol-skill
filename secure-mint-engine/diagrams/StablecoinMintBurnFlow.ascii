@@ -1,108 +1,180 @@
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                    STABLECOIN MINT / BURN FLOW                               ║
-║                    With Evidence Logging and Compliance                      ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+====================================================================
+                STABLECOIN MINT / BURN FLOW ENGINE
+====================================================================
 
-  ══════════════════════════  MINT FLOW  ══════════════════════════════════
+PURPOSE: Core mint/burn lifecycle for reserve-backed stablecoins
+INTEGRATION: SecureMintPolicy.sol, BackedToken.sol, IBackingOracle.sol
 
-  ┌────────────────┐
-  │  USER REQUEST  │   amount, collateral type, destination address
-  │  mint(amount)  │
-  └───────┬────────┘
-          │
-          ▼
-  ┌────────────────┐     ┌────────────────────────────────────┐
-  │  COMPLIANCE    │     │  Checks:                           │
-  │  CHECK         │────▶│  - KYC/AML status verified         │
-  │                │     │  - Sanctions screening passed      │
-  │                │     │  - Jurisdiction allowed             │
-  └───────┬────────┘     └────────────────────────────────────┘
-          │ PASS
-          ▼
-  ┌────────────────┐     ┌────────────────────────────────────┐
-  │  ORACLE        │     │  Validations:                      │
-  │  VALIDATION    │────▶│  - Price feed not stale (< 1hr)    │
-  │                │     │  - Deviation < 2% from median      │
-  │                │     │  - Multi-oracle consensus reached   │
-  └───────┬────────┘     └────────────────────────────────────┘
-          │ PASS
-          ▼
-  ┌────────────────┐     ┌────────────────────────────────────┐
-  │  BACKING       │     │  Requirements:                     │
-  │  CHECK         │────▶│  - Collateral deposited            │
-  │                │     │  - Ratio >= 100% (overcollateral.) │
-  │                │     │  - Reserve health factor > 1.0     │
-  └───────┬────────┘     └────────────────────────────────────┘
-          │ PASS
-          ▼
-  ┌────────────────┐     ┌────────────────────────────────────┐
-  │  RATE LIMIT    │     │  Limits:                           │
-  │  ENFORCEMENT   │────▶│  - Per-user: 1M / 24h             │
-  │                │     │  - Per-block: 500K                  │
-  │                │     │  - Global: 50M / 24h               │
-  └───────┬────────┘     └────────────────────────────────────┘
-          │ PASS
-          ▼
-  ┌────────────────┐       ┌───────────────────────────────┐
-  │  MINT          │       │  Evidence Log Entry:           │
-  │  EXECUTION     │──────▶│  {                             │
-  │                │       │    txHash, timestamp,          │
-  │  token.mint(   │       │    minter, amount,             │
-  │    to, amount) │       │    oraclePrice, collateral,    │
-  │                │       │    backingRatio, blockNumber   │
-  └───────┬────────┘       │  }                             │
-          │                └───────────────────────────────┘
-          ▼
-  ┌────────────────┐
-  │  CONFIRMATION  │   Emit MintExecuted event
-  │  & RECEIPT     │   Return tx receipt to user
-  └────────────────┘
+====================================================================
+MINT FLOW (COLLATERAL → TOKEN)
+====================================================================
 
-  ══════════════════════════  BURN FLOW  ══════════════════════════════════
+                USER
+                  |
+                  v
+        +----------------------+
+        |  DEPOSIT COLLATERAL  |
+        |  (USDC / ETH / RWA)  |
+        +----------+-----------+
+                   |
+                   v
+        +----------------------+
+        | COLLATERAL VAULT     |
+        | (Escrow / Custody)   |
+        |                      |
+        | - Immutable custody  |
+        | - Audit trail        |
+        | - Multi-sig access   |
+        +----------+-----------+
+                   |
+                   v
+        +----------------------+
+        | ORACLE RESERVE CHECK |
+        | (Price + PoR Feeds)  |
+        |                      |
+        | Checks:              |
+        | - Collateral value   |
+        | - Reserve balance    |
+        | - Oracle health      |
+        | - Staleness < 1hr    |
+        | - Deviation < 5%     |
+        +----------+-----------+
+                   |
+         PASS? ----+---- NO → REJECT TX
+                   |         (revert with reason)
+                   v
+        +----------------------+
+        | MINT POLICY ENGINE   |
+        | (SecureMintPolicy)   |
+        |                      |
+        | Enforces:            |
+        | - Supply Cap Check   |
+        | - Rate Limit (epoch) |
+        | - Health Factor ≥1.0 |
+        | - Pause status       |
+        | - Access control     |
+        +----------+-----------+
+                   |
+         ALL PASS? +---- NO → REJECT TX
+                   |         (revert with reason)
+                   v
+        +----------------------+
+        | STABLECOIN CONTRACT  |
+        | (BackedToken)        |
+        |                      |
+        |  mint(user, amount)  |
+        |                      |
+        | Events emitted:      |
+        | - Mint(user, amount) |
+        | - OracleSnapshot     |
+        | - BackingVerified    |
+        +----------+-----------+
+                   |
+                   v
+        +----------------------+
+        | EVIDENCE LOGGING     |
+        |                      |
+        | Records:             |
+        | - Timestamp          |
+        | - Oracle state       |
+        | - Collateral amount  |
+        | - Token minted       |
+        | - Health factor      |
+        +----------+-----------+
+                   |
+                   v
+            USER RECEIVES TOKEN
 
-  ┌────────────────┐
-  │  USER REQUEST  │   amount, redemption preference
-  │  burn(amount)  │
-  └───────┬────────┘
-          │
-          ▼
-  ┌────────────────┐     ┌────────────────────────────────────┐
-  │  BALANCE       │     │  Checks:                           │
-  │  VERIFICATION  │────▶│  - User holds sufficient tokens    │
-  │                │     │  - Tokens not locked/vesting        │
-  └───────┬────────┘     └────────────────────────────────────┘
-          │ PASS
-          ▼
-  ┌────────────────┐     ┌────────────────────────────────────┐
-  │  ORACLE        │     │  Same validation as mint:          │
-  │  VALIDATION    │────▶│  - Fresh price, consensus,         │
-  │                │     │  - Deviation within bounds          │
-  └───────┬────────┘     └────────────────────────────────────┘
-          │ PASS
-          ▼
-  ┌────────────────┐       ┌───────────────────────────────┐
-  │  BURN          │       │  Evidence Log Entry:           │
-  │  EXECUTION     │──────▶│  {                             │
-  │                │       │    txHash, timestamp,          │
-  │  token.burn(   │       │    burner, amount,             │
-  │    from,amount)│       │    oraclePrice, redemption,    │
-  └───────┬────────┘       │    collateralReleased          │
-          │                │  }                             │
-          ▼                └───────────────────────────────┘
-  ┌────────────────┐
-  │  COLLATERAL    │   Release backing collateral
-  │  RELEASE       │   to user's address
-  └───────┬────────┘
-          ▼
-  ┌────────────────┐
-  │  CONFIRMATION  │   Emit BurnExecuted event
-  │  & RECEIPT     │   Return tx receipt + collateral info
-  └────────────────┘
+====================================================================
+BURN FLOW (TOKEN → COLLATERAL)
+====================================================================
 
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  LEGEND                                                                      │
-│                                                                              │
-│  -->   Flow direction           PASS  Gate check succeeded                   │
-│  ┌─┐   Process step            { }   Evidence log payload                   │
-│  ════  Section separator        KYC   Know Your Customer                     │
-└──────────────────────────────────────────────────────────────────────────────┘
+USER → burn(token)
+          |
+          v
++----------------------+
+| STABLECOIN CONTRACT  |
+| (BackedToken)        |
+|                      |
+| burn(amount)         |
+|                      |
+| Checks:              |
+| - Balance sufficient |
+| - Amount > 0         |
+| - Not paused         |
++----------+-----------+
+           |
+           v
++----------------------+
+| REDEMPTION ENGINE    |
+|                      |
+| Calculates:          |
+| - Collateral to      |
+|   release            |
+| - Redemption fee     |
+|   (if applicable)    |
+| - Slippage tolerance |
++----------+-----------+
+           |
+           v
++----------------------+
+| COLLATERAL RELEASE   |
+| from VAULT           |
+|                      |
+| - Verify burn tx     |
+| - Calculate payout   |
+| - Release collateral |
+| - Update reserves    |
++----------+-----------+
+           |
+           v
++----------------------+
+| EVIDENCE LOGGING     |
+|                      |
+| Records:             |
+| - Burn amount        |
+| - Collateral out     |
+| - Fee charged        |
+| - New total supply   |
++----------+-----------+
+           |
+           v
+USER RECEIVES COLLATERAL
+
+====================================================================
+INVARIANTS ENFORCED
+====================================================================
+
+INV-MINT-1: backing(t) >= required_backing(totalSupply(t)) ALWAYS
+INV-MINT-2: mint() reverts if oracle_healthy == false
+INV-MINT-3: minted(epoch) <= epoch_cap
+INV-MINT-4: totalSupply <= global_cap
+INV-BURN-1: burn() only reduces supply, never increases
+INV-BURN-2: collateral_released <= collateral_deposited
+
+====================================================================
+FAIL STATES & RECOVERY
+====================================================================
+
+| Failure Mode          | System Response                      |
+|-----------------------|--------------------------------------|
+| Oracle stale          | Pause mint, allow burn               |
+| Oracle deviation >5%  | Pause mint, trigger alert            |
+| Reserve shortfall     | Pause mint, DAO escalation           |
+| Rate limit exceeded   | Reject tx, wait for epoch reset      |
+| Global cap reached    | Reject mint, allow burn              |
+| Contract paused       | Block mint/burn, await resolution    |
+
+====================================================================
+INTEGRATION POINTS
+====================================================================
+
+→ SecureMintPolicy.sol  : Mint authorization logic
+→ BackedToken.sol       : ERC-20 token contract
+→ IBackingOracle.sol    : Oracle interface
+→ CollateralVault.sol   : Escrow contract (to be implemented)
+→ EvidenceLogging.sol   : Audit trail (to be implemented)
+
+====================================================================
+END STABLECOIN MINT / BURN FLOW ENGINE
+====================================================================
