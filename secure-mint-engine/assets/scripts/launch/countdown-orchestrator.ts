@@ -57,7 +57,7 @@ function toUTCDate(dateStr: string, timeStr: string, timezone: string): Date {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const offset = TIMEZONE_OFFSETS[timezone] || 0;
 
-  // Create date in local timezone then adjust to UTC
+  // Convert local time to UTC: subtract the local offset (e.g., EST=-5, so 2PM EST → 2PM - (-5) = 7PM UTC)
   const date = new Date(Date.UTC(year, month - 1, day, hours - offset, minutes));
   return date;
 }
@@ -277,7 +277,7 @@ class LaunchCountdownOrchestrator {
     const answer = await this.question('Select (number): ');
     const parsed = parseInt(answer.trim(), 10);
     const index = isNaN(parsed) ? 0 : parsed - 1;
-    return options[index] || options[0];
+    return (index >= 0 && index < options.length) ? options[index] : options[0];
   }
 
   private async selectMultiple(prompt: string, options: string[]): Promise<string[]> {
@@ -386,7 +386,8 @@ class LaunchCountdownOrchestrator {
     console.log('│  SECTION 4: LIQUIDITY DETAILS                                   │');
     console.log('└─────────────────────────────────────────────────────────────────┘');
 
-    this.config.initialLiquidity = parseFloat((await this.question('Initial Liquidity ($): ')).replace(/,/g, ''));
+    const rawLiquidity = parseFloat((await this.question('Initial Liquidity ($): ')).replace(/,/g, ''));
+    this.config.initialLiquidity = isNaN(rawLiquidity) ? 0 : rawLiquidity;
     this.config.liquidityToken = await this.question('Paired Token (e.g., ETH, USDC): ');
     this.config.targetDEX = await this.selectOne('Target DEX:', ['Uniswap V3', 'Uniswap V2', 'SushiSwap', 'Curve', 'Balancer', 'PancakeSwap']);
 
@@ -783,6 +784,9 @@ Process
       const configPath = path.resolve(process.cwd(), 'launch-config.json');
       const checklistPath = path.resolve(process.cwd(), 'launch-checklist.json');
 
+      // Show PII warning BEFORE saving files so user can abort
+      console.log(PII_WARNING);
+
       // Save files with overwrite confirmation
       if (await this.confirmOverwrite(reportPath)) {
         fs.writeFileSync(reportPath, report);
@@ -802,9 +806,6 @@ Process
           status: this.checklistStatus
         }, null, 2));
       }
-
-      // Show PII warning
-      console.log(PII_WARNING);
 
       const daysUntilLaunch = this.calculateDaysUntilLaunch();
       const goNoGo = this.generateGoNoGoAssessment();

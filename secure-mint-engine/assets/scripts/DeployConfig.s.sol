@@ -12,7 +12,7 @@ import "forge-std/Script.sol";
  *
  * SUPPORTED CHAINS:
  * - Ethereum Mainnet  (chainId = 1)
- * - Goerli Testnet    (chainId = 5)
+ * - Holesky Testnet   (chainId = 17000)
  * - Sepolia Testnet   (chainId = 11155111)
  * - Polygon PoS       (chainId = 137)
  * - Arbitrum One      (chainId = 42161)
@@ -71,8 +71,8 @@ library DeployConfig {
     function getConfig(uint256 chainId) internal pure returns (ChainConfig memory config) {
         if (chainId == 1) {
             config = _mainnet();
-        } else if (chainId == 5) {
-            config = _goerli();
+        } else if (chainId == 17000) {
+            config = _holesky();
         } else if (chainId == 11155111) {
             config = _sepolia();
         } else if (chainId == 137) {
@@ -126,14 +126,14 @@ library DeployConfig {
     }
 
     /**
-     * @dev Goerli testnet configuration.
-     *      Relaxed limits for integration testing on a soon-deprecated chain.
+     * @dev Holesky testnet configuration.
+     *      Relaxed limits for integration testing.
      */
-    function _goerli() private pure returns (ChainConfig memory) {
+    function _holesky() private pure returns (ChainConfig memory) {
         return ChainConfig({
-            tokenName: "Backed USD (Goerli)",
+            tokenName: "Backed USD (Holesky)",
             tokenSymbol: "bUSD",
-            chainlinkPoRFeed: address(0), // No PoR feed on Goerli – use mock
+            chainlinkPoRFeed: address(0), // No PoR feed on Holesky – use mock
             maxOracleAge: 7200, // 2 hours (relaxed)
             maxDeviationBps: 500, // 5 %
             minCollateralRatio: 10_000, // 100 %
@@ -143,7 +143,7 @@ library DeployConfig {
             epochRedemptionCap: 10_000_000e6,
             minRedemption: 1e6,
             maxInstantRedemption: 50_000e6,
-            reserveAsset: 0x07865c6E87B9F70255377e024ace6630C1Eaa37F, // USDC Goerli
+            reserveAsset: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, // USDC on Holesky
             treasury: address(0),
             tierAllocations: [uint256(1000), 2000, 5000, 2000],
             admin: address(0),

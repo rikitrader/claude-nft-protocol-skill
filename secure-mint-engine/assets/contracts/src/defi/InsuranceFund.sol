@@ -52,6 +52,9 @@ contract InsuranceFund is AccessControl, ReentrancyGuard, Pausable {
     /// @notice Total claims paid out
     uint256 public totalClaimsPaid;
 
+    /// @notice Total funds allocated across all coverage types
+    uint256 public totalAllocated;
+
     /// @notice Coverage types
     enum CoverageType {
         DEPEG,
@@ -211,10 +214,22 @@ contract InsuranceFund is AccessControl, ReentrancyGuard, Pausable {
         CoverageType coverageType,
         uint256 amount
     ) external onlyRole(FUND_MANAGER_ROLE) {
-        require(amount <= totalFundBalance, "Insufficient balance");
+        require(amount <= totalFundBalance - totalAllocated, "Insufficient unallocated balance");
 
         coverageParams[coverageType].totalAllocated += amount;
+        totalAllocated += amount;
         emit CoverageAllocated(coverageType, amount);
+    }
+
+    /**
+     * @notice Sync internal balance with actual token balance
+     * @dev Allows recovering from balance drift (e.g., direct transfers to contract)
+     */
+    function syncBalance() external onlyRole(FUND_MANAGER_ROLE) {
+        uint256 actual = reserveAsset.balanceOf(address(this));
+        if (actual > totalFundBalance) {
+            totalFundBalance = actual;
+        }
     }
 
     /**
@@ -322,6 +337,7 @@ contract InsuranceFund is AccessControl, ReentrancyGuard, Pausable {
 
         Claim storage claim = claims[claimId];
         if (claim.status != ClaimStatus.APPROVED) revert ClaimNotPending();
+        require(block.timestamp >= claim.processedAt + assessmentPeriod, "Assessment period not elapsed");
         if (claim.claimAmount > totalFundBalance) revert InsufficientFunds();
 
         claim.status = ClaimStatus.PAID;
@@ -398,7 +414,9 @@ contract InsuranceFund is AccessControl, ReentrancyGuard, Pausable {
 
     function getCoverageAvailable(CoverageType coverageType) external view returns (uint256) {
         CoverageParams storage params = coverageParams[coverageType];
-        uint256 remaining = params.totalAllocated - params.totalClaimed;
+        uint256 remaining = params.totalAllocated > params.totalClaimed
+            ? params.totalAllocated - params.totalClaimed
+            : 0;
         return remaining < totalFundBalance ? remaining : totalFundBalance;
     }
 

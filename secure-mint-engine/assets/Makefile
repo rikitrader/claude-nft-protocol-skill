@@ -627,17 +627,17 @@ infra-deploy: tf-init tf-apply k8s-deploy ## Full infrastructure deployment
 
 py-setup: ## Setup Python engine
 	@echo "$(BLUE)Setting up Python engine...$(NC)"
-	@cd python-engine && pip install -r requirements.txt
+	@cd python-engine && python3 -m pip install -r requirements.txt
 	@echo "$(GREEN)Python engine ready!$(NC)"
 
 py-invariants: ## Check invariants via Python
 	@echo "$(BLUE)Checking invariants...$(NC)"
-	@cd python-engine && python securemint_cli.py invariants
+	@cd python-engine && python3 securemint_cli.py invariants
 	@echo "$(GREEN)Invariant check complete!$(NC)"
 
 py-report: ## Generate report via Python
 	@echo "$(BLUE)Generating report...$(NC)"
-	@cd python-engine && python report_generator.py
+	@cd python-engine && python3 report_generator.py
 	@echo "$(GREEN)Report generated!$(NC)"
 
 # ═══════════════════════════════════════════════════════════════════════════════

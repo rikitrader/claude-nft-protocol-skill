@@ -48,6 +48,7 @@ contract RedemptionEngine is AccessControl, ReentrancyGuard, Pausable {
 
     uint256 public constant BASIS_POINTS = 10000;
     uint256 public constant EPOCH_DURATION = 1 hours;
+    uint256 public constant MAX_BASE_FEE = 500; // 5% maximum
 
     // ═══════════════════════════════════════════════════════════════════════════
     // STATE
@@ -239,9 +240,21 @@ contract RedemptionEngine is AccessControl, ReentrancyGuard, Pausable {
         uint256 fee = _calculateFee(amount);
         uint256 amountAfterFee = amount - fee;
 
+        // Normalize decimals between backed token and reserve asset
+        uint256 backedDecimals = IERC20Metadata(address(backedToken)).decimals();
+        uint256 reserveDecimals = IERC20Metadata(address(reserveAsset)).decimals();
+        uint256 reserveAmount;
+        if (backedDecimals > reserveDecimals) {
+            reserveAmount = amountAfterFee / (10 ** (backedDecimals - reserveDecimals));
+        } else if (reserveDecimals > backedDecimals) {
+            reserveAmount = amountAfterFee * (10 ** (reserveDecimals - backedDecimals));
+        } else {
+            reserveAmount = amountAfterFee;
+        }
+
         // Check reserves
         uint256 reserveBalance = reserveAsset.balanceOf(treasuryVault);
-        if (reserveBalance < amountAfterFee) revert InsufficientReserves();
+        if (reserveBalance < reserveAmount) revert InsufficientReserves();
 
         // Update state
         currentEpochRedeemed += amount;
@@ -253,11 +266,19 @@ contract RedemptionEngine is AccessControl, ReentrancyGuard, Pausable {
         IBurnable(address(backedToken)).burn(amount);
 
         // Transfer reserves from treasury to user
-        reserveAsset.safeTransferFrom(treasuryVault, redeemer, amountAfterFee);
+        reserveAsset.safeTransferFrom(treasuryVault, redeemer, reserveAmount);
 
         // Transfer fee to fee recipient
         if (fee > 0) {
-            reserveAsset.safeTransferFrom(treasuryVault, feeRecipient, fee);
+            uint256 reserveFee;
+            if (backedDecimals > reserveDecimals) {
+                reserveFee = fee / (10 ** (backedDecimals - reserveDecimals));
+            } else if (reserveDecimals > backedDecimals) {
+                reserveFee = fee * (10 ** (reserveDecimals - backedDecimals));
+            } else {
+                reserveFee = fee;
+            }
+            reserveAsset.safeTransferFrom(treasuryVault, feeRecipient, reserveFee);
         }
 
         emit InstantRedemption(redeemer, amount, amountAfterFee, fee);
@@ -420,6 +441,7 @@ contract RedemptionEngine is AccessControl, ReentrancyGuard, Pausable {
     // ═══════════════════════════════════════════════════════════════════════════
 
     function setBaseFee(uint256 _fee) external onlyRole(GOVERNOR_ROLE) {
+        require(_fee <= MAX_BASE_FEE, "Fee too high");
         emit FeeUpdated("baseFee", baseFee, _fee);
         baseFee = _fee;
     }

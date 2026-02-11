@@ -121,13 +121,17 @@ export function cacheMiddleware(config: CacheConfig) {
       if (cached) {
         const data = JSON.parse(cached);
         res.setHeader('X-Cache', 'HIT');
-        res.setHeader('X-Cache-Key', cacheKey);
+        if (process.env.NODE_ENV !== 'production') {
+          res.setHeader('X-Cache-Key', cacheKey);
+        }
         return res.json(data);
       }
 
       // Cache miss - capture response
       res.setHeader('X-Cache', 'MISS');
-      res.setHeader('X-Cache-Key', cacheKey);
+      if (process.env.NODE_ENV !== 'production') {
+        res.setHeader('X-Cache-Key', cacheKey);
+      }
 
       // Override res.json to cache the response
       const originalJson = res.json.bind(res);
@@ -251,8 +255,16 @@ export async function acquireLock(
   return result === 'OK';
 }
 
-export async function releaseLock(lockKey: string): Promise<void> {
-  await redis.del(`lock:${lockKey}`);
+export async function releaseLock(lockKey: string, lockValue?: string): Promise<void> {
+  if (lockValue) {
+    // Only release if we own the lock
+    const current = await redis.get(`lock:${lockKey}`);
+    if (current === lockValue) {
+      await redis.del(`lock:${lockKey}`);
+    }
+  } else {
+    await redis.del(`lock:${lockKey}`);
+  }
 }
 
 export async function withLock<T>(
@@ -436,8 +448,11 @@ export function perUserRateLimitMiddleware() {
       next();
     } catch (error) {
       console.error('Rate limit check error:', error);
-      // Fail open in case of Redis issues (but log for monitoring)
-      next();
+      // Fail CLOSED for security - deny if we can't verify rate limits
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: 'Rate limiting service unavailable. Please try again later.',
+      });
     }
   };
 }

@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "../interfaces/IBackingOracle.sol";
+import "../interfaces/IEmergencyPause.sol";
 
 /**
  * @title SecureMintPolicyUpgradeable
@@ -367,6 +369,9 @@ contract SecureMintPolicyUpgradeable is
     }
 
     function unpause() external onlyRole(PAUSER_ROLE) {
+        IBackingOracle oracleContract = IBackingOracle(oracle);
+        (uint256 backing, ) = oracleContract.latestBacking();
+        require(backing > 0, "Cannot unpause: oracle unhealthy");
         _unpause();
     }
 
@@ -397,16 +402,4 @@ contract SecureMintPolicyUpgradeable is
 interface IMintableToken {
     function mint(address to, uint256 amount) external;
     function totalSupply() external view returns (uint256);
-}
-
-interface IBackingOracle {
-    function latestBacking()
-        external
-        view
-        returns (uint256 backing, uint256 timestamp);
-    function stalenessThreshold() external view returns (uint256);
-}
-
-interface IEmergencyPause {
-    function currentAlertLevel() external view returns (uint8);
 }

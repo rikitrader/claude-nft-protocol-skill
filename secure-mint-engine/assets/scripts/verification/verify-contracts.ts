@@ -3,7 +3,7 @@
  * Automated verification on Etherscan, Sourcify, and Blockscout
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
@@ -283,16 +283,16 @@ export class ContractVerifier {
         fs.writeFileSync(argsFile, argsContent);
       }
 
-      const command = [
-        'npx hardhat verify',
-        `--network ${config.network}`,
+      const args = [
+        'hardhat', 'verify',
+        '--network', config.network,
         config.contractAddress,
-        config.constructorArgs?.length ? `--constructor-args ${argsFile}` : '',
-      ]
-        .filter(Boolean)
-        .join(' ');
+      ];
+      if (config.constructorArgs?.length) {
+        args.push('--constructor-args', argsFile);
+      }
 
-      execSync(command, { stdio: 'inherit' });
+      execFileSync('npx', args, { stdio: 'inherit', encoding: 'utf8' });
 
       // Cleanup
       if (fs.existsSync(argsFile)) {
@@ -320,8 +320,8 @@ export class ContractVerifier {
 
   private async getFlattenedSource(contractName: string): Promise<string> {
     const contractPath = `contracts/src/${contractName}.sol`;
-    const output = execSync(`npx hardhat flatten ${contractPath}`);
-    return output.toString();
+    const output = execFileSync('npx', ['hardhat', 'flatten', contractPath], { encoding: 'utf8' });
+    return output;
   }
 
   private async prepareSourcifyFiles(contractName: string): Promise<Array<{ name: string; content: string }>> {

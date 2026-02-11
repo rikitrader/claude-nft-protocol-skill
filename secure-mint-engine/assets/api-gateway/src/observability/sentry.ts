@@ -293,7 +293,12 @@ export function secureMintErrorHandler() {
 
       // Add request context
       scope.setTag('endpoint', `${req.method} ${req.path}`);
-      scope.setExtra('body', req.body);
+      const sanitizedBody = { ...req.body };
+      delete sanitizedBody.signedTransaction;
+      delete sanitizedBody.signature;
+      delete sanitizedBody.privateKey;
+      delete sanitizedBody.mnemonic;
+      scope.setExtra('body', sanitizedBody);
       scope.setExtra('query', req.query);
       scope.setExtra('params', req.params);
 

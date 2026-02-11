@@ -22,9 +22,17 @@ import sys
 import json
 import asyncio
 import argparse
+import stat
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
+
+# Load .env file if python-dotenv is available (HIGH-1)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv is optional
 
 # Add local modules to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -45,14 +53,21 @@ class SecureMintCLI:
 
     def load_config(self):
         """Load configuration from file."""
+        # Validate CHAIN_ID from environment (MEDIUM-10)
+        chain_id_str = os.getenv("CHAIN_ID", "1")
+        try:
+            chain_id = int(chain_id_str)
+        except ValueError:
+            print(f"Error: CHAIN_ID must be an integer, got: {chain_id_str!r}")
+            chain_id = 1
+
         if self.config_path.exists():
             with open(self.config_path) as f:
                 self.config = json.load(f)
         else:
             self.config = {
                 "rpc_url": os.getenv("RPC_URL", "http://localhost:8545"),
-                "chain_id": int(os.getenv("CHAIN_ID", "1")),
-                "private_key": os.getenv("PRIVATE_KEY", ""),
+                "chain_id": chain_id,
                 "contracts": {
                     "token": os.getenv("TOKEN_ADDRESS", ""),
                     "policy": os.getenv("POLICY_ADDRESS", ""),
@@ -62,11 +77,20 @@ class SecureMintCLI:
                 }
             }
 
-    def save_config(self):
-        """Save configuration to file."""
+        # Always load private key from environment only (CRITICAL-2 Fix B)
+        self.config["private_key"] = os.getenv("PRIVATE_KEY", "")
+
+    def save_config(self) -> None:
+        """Save configuration to file (excludes secrets)."""
+        config_to_save = {k: v for k, v in self.config.items() if k != "private_key"}
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config_path, 'w') as f:
-            json.dump(self.config, f, indent=2)
+        fd = os.open(
+            str(self.config_path),
+            os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            stat.S_IRUSR | stat.S_IWUSR  # 0600
+        )
+        with os.fdopen(fd, 'w') as f:
+            json.dump(config_to_save, f, indent=2)
 
     def connect(self):
         """Initialize API connection."""
@@ -164,6 +188,10 @@ class SecureMintCLI:
         bulk = BulkOperator(api)
 
         input_file = Path(args.input)
+        if not input_file.exists():
+            print(f"Error: Input file not found: {input_file}")
+            return 1
+
         if input_file.suffix == '.csv':
             requests = bulk.load_csv(input_file)
         else:
@@ -543,7 +571,10 @@ def main():
     bridge_parser.add_argument("--transfer-id", help="Transfer ID")
 
     # Parse and execute
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        return 1
 
     if not args.command:
         parser.print_help()

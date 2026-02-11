@@ -8,6 +8,14 @@ import { ethers } from 'ethers';
 
 const router = Router();
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // VALIDATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -51,7 +59,7 @@ router.post('/simulate', mintValidation, validate, async (req: Request, res: Res
     const { recipient, amount } = req.body;
 
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-    const policyAddress = process.env.POLICY_ADDRESS!;
+    const policyAddress = requireEnv('POLICY_ADDRESS');
 
     const policyAbi = [
       'function canMint(address recipient, uint256 amount) view returns (bool, string)',
@@ -82,7 +90,12 @@ router.post('/simulate', mintValidation, validate, async (req: Request, res: Res
 
     res.json(simulation);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Operation error:', error);
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : error.message,
+    });
   }
 });
 
@@ -170,7 +183,12 @@ router.post('/execute', mintValidation, validate, async (req: Request, res: Resp
       verifiedChainId: Number(tx.chainId),
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Operation error:', error);
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : error.message,
+    });
   }
 });
 
@@ -181,7 +199,7 @@ router.post('/execute', mintValidation, validate, async (req: Request, res: Resp
 router.get('/capacity', async (req: Request, res: Response) => {
   try {
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-    const policyAddress = process.env.POLICY_ADDRESS!;
+    const policyAddress = requireEnv('POLICY_ADDRESS');
 
     const policyAbi = [
       'function epochCapacity() view returns (uint256)',
@@ -208,7 +226,12 @@ router.get('/capacity', async (req: Request, res: Response) => {
       currentEpoch: currentEpoch.toString(),
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Operation error:', error);
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : error.message,
+    });
   }
 });
 
@@ -220,19 +243,27 @@ router.get('/history', async (req: Request, res: Response) => {
   try {
     const { page = '1', limit = '20', address } = req.query;
 
+    const pageNum = Math.max(1, Math.min(parseInt(page as string) || 1, 1000));
+    const limitNum = Math.max(1, Math.min(parseInt(limit as string) || 20, 100));
+
     // Would query from database or indexer
     const history: any[] = [];
 
     res.json({
       data: history,
       pagination: {
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
+        page: pageNum,
+        limit: limitNum,
         total: 0,
       },
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Operation error:', error);
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : error.message,
+    });
   }
 });
 
@@ -252,8 +283,21 @@ router.post('/batch', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Maximum 100 requests per batch' });
     }
 
+    // Validate each request in the batch
+    const { ethers: ethersLib } = await import('ethers');
+    for (const [index, req] of requests.entries()) {
+      if (!ethersLib.isAddress(req.recipient)) {
+        return res.status(400).json({ error: `Invalid recipient address at index ${index}` });
+      }
+      try {
+        BigInt(req.amount);
+      } catch {
+        return res.status(400).json({ error: `Invalid amount at index ${index}` });
+      }
+    }
+
     const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-    const policyAddress = process.env.POLICY_ADDRESS!;
+    const policyAddress = requireEnv('POLICY_ADDRESS');
 
     const policyAbi = [
       'function canMint(address recipient, uint256 amount) view returns (bool, string)',
@@ -294,7 +338,12 @@ router.post('/batch', async (req: Request, res: Response) => {
       results,
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Operation error:', error);
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
+        : error.message,
+    });
   }
 });
 

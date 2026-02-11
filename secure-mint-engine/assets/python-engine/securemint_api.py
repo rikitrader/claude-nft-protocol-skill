@@ -6,6 +6,7 @@ Direct blockchain interaction for local Python execution.
 import os
 import json
 import asyncio
+import threading
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,9 +23,9 @@ except ImportError:
     _POA_V7 = False
 
 
-@dataclass
+@dataclass  # NOTE: Should be frozen=True for immutability, but setattr is used in __init__
 class ContractAddresses:
-    """Contract addresses for SecureMint system."""
+    """Contract addresses for SecureMint system. Treat as immutable after construction."""
     token: str = ""
     policy: str = ""
     oracle: str = ""
@@ -64,6 +65,10 @@ class SecureMintAPI:
         self.chain_id = chain_id
         self.w3 = Web3(Web3.HTTPProvider(rpc_url))
 
+        # Thread-safe nonce management (CRITICAL-4)
+        self._nonce_lock = threading.Lock()
+        self._pending_nonce: Optional[int] = None
+
         # Add PoA middleware for testnets
         if chain_id in [5, 11155111, 80001, 421613]:  # Goerli, Sepolia, Mumbai, Arbitrum Goerli
             if _POA_V7:
@@ -81,7 +86,7 @@ class SecureMintAPI:
         if contracts:
             for name, addr in contracts.items():
                 if hasattr(self.addresses, name) and addr:
-                    setattr(self.addresses, name, Web3.to_checksum_address(addr))
+                    setattr(self.addresses, name, self._validate_address(addr, name))
 
         # Load ABIs and create contract instances
         self._load_contracts()
@@ -122,6 +127,27 @@ class SecureMintAPI:
 
         return None
 
+    def _validate_address(self, address: str, field_name: str = "address") -> str:
+        """Validate and return checksum address."""
+        if not address or not isinstance(address, str):
+            raise ValueError(f"Invalid {field_name}: must be a non-empty string")
+        if not address.startswith("0x") or len(address) != 42:
+            raise ValueError(f"Invalid {field_name}: must be 42-char hex string starting with 0x")
+        try:
+            return Web3.to_checksum_address(address)
+        except ValueError as e:
+            raise ValueError(f"Invalid {field_name} '{address}': {e}") from e
+
+    def _get_next_nonce(self) -> int:
+        """Thread-safe nonce management."""
+        with self._nonce_lock:
+            chain_nonce = self.w3.eth.get_transaction_count(self.account.address, "pending")
+            if self._pending_nonce is None or chain_nonce > self._pending_nonce:
+                self._pending_nonce = chain_nonce
+            else:
+                self._pending_nonce += 1
+            return self._pending_nonce
+
     # ═══════════════════════════════════════════════════════════════════════════
     # TOKEN OPERATIONS
     # ═══════════════════════════════════════════════════════════════════════════
@@ -131,14 +157,15 @@ class SecureMintAPI:
         token = self.contracts.get("token")
         if not token:
             raise ValueError("Token contract not configured")
-        return token.functions.totalSupply().call()
+        return await asyncio.to_thread(token.functions.totalSupply().call)
 
     async def get_balance(self, address: str) -> int:
         """Get token balance for address."""
         token = self.contracts.get("token")
         if not token:
             raise ValueError("Token contract not configured")
-        return token.functions.balanceOf(Web3.to_checksum_address(address)).call()
+        validated = self._validate_address(address)
+        return await asyncio.to_thread(token.functions.balanceOf(validated).call)
 
     async def mint(self, recipient: str, amount: int) -> Dict[str, Any]:
         """Mint tokens to recipient."""
@@ -146,10 +173,14 @@ class SecureMintAPI:
         if not policy:
             raise ValueError("Policy contract not configured")
 
-        tx = policy.functions.mint(
-            Web3.to_checksum_address(recipient),
-            amount
-        ).build_transaction(self._build_tx_params())
+        validated_recipient = self._validate_address(recipient, "recipient")
+        tx = await asyncio.to_thread(
+            policy.functions.mint(
+                validated_recipient,
+                amount
+            ).build_transaction,
+            self._build_tx_params()
+        )
 
         return await self._send_transaction(tx)
 
@@ -159,7 +190,8 @@ class SecureMintAPI:
         if not token:
             raise ValueError("Token contract not configured")
 
-        tx = token.functions.burn(amount).build_transaction(
+        tx = await asyncio.to_thread(
+            token.functions.burn(amount).build_transaction,
             self._build_tx_params()
         )
 
@@ -174,7 +206,7 @@ class SecureMintAPI:
         oracle = self.contracts.get("oracle")
         if not oracle:
             raise ValueError("Oracle contract not configured")
-        return oracle.functions.getLatestBacking().call()
+        return await asyncio.to_thread(oracle.functions.getLatestBacking().call)
 
     async def get_oracle_status(self) -> Dict[str, Any]:
         """Get comprehensive oracle status."""
@@ -182,16 +214,17 @@ class SecureMintAPI:
         if not oracle:
             raise ValueError("Oracle contract not configured")
 
-        backing = oracle.functions.getLatestBacking().call()
-        last_update = oracle.functions.lastUpdateTimestamp().call()
-        staleness = oracle.functions.stalenessThreshold().call()
+        backing = await asyncio.to_thread(oracle.functions.getLatestBacking().call)
+        last_update = await asyncio.to_thread(oracle.functions.lastUpdateTimestamp().call)
+        staleness = await asyncio.to_thread(oracle.functions.stalenessThreshold().call)
+        latest_block = await asyncio.to_thread(self.w3.eth.get_block, 'latest')
 
         return {
             "backing": backing,
             "backing_formatted": backing / 1e6,  # Assuming 6 decimals
             "last_update": last_update,
             "staleness_threshold": staleness,
-            "is_stale": (self.w3.eth.get_block('latest')['timestamp'] - last_update) > staleness
+            "is_stale": (latest_block['timestamp'] - last_update) > staleness
         }
 
     async def update_oracle(self, backing: int) -> Dict[str, Any]:
@@ -200,7 +233,8 @@ class SecureMintAPI:
         if not oracle:
             raise ValueError("Oracle contract not configured")
 
-        tx = oracle.functions.updateBacking(backing).build_transaction(
+        tx = await asyncio.to_thread(
+            oracle.functions.updateBacking(backing).build_transaction,
             self._build_tx_params()
         )
 
@@ -213,23 +247,25 @@ class SecureMintAPI:
             raise ValueError("Oracle contract not configured")
 
         # Get BackingUpdated events
-        latest_block = self.w3.eth.block_number
+        latest_block = await asyncio.to_thread(getattr, self.w3.eth, 'block_number')
         from_block = max(0, latest_block - 100000)  # ~2 weeks on mainnet
 
-        events = oracle.events.BackingUpdated.get_logs(
+        events = await asyncio.to_thread(
+            oracle.events.BackingUpdated.get_logs,
             from_block=from_block,
             to_block=latest_block
         )
 
-        return [
-            {
+        results = []
+        for e in events[-limit:]:
+            block = await asyncio.to_thread(self.w3.eth.get_block, e['blockNumber'])
+            results.append({
                 "block": e['blockNumber'],
                 "tx_hash": e['transactionHash'].hex(),
                 "backing": e['args']['backing'],
-                "timestamp": self.w3.eth.get_block(e['blockNumber'])['timestamp']
-            }
-            for e in events[-limit:]
-        ]
+                "timestamp": block['timestamp']
+            })
+        return results
 
     # ═══════════════════════════════════════════════════════════════════════════
     # TREASURY OPERATIONS
@@ -245,8 +281,8 @@ class SecureMintAPI:
         total = 0
 
         for i in range(4):  # 4 tiers
-            tier_info = treasury.functions.tiers(i).call()
-            balance = treasury.functions.tierBalances(i).call()
+            tier_info = await asyncio.to_thread(treasury.functions.tiers(i).call)
+            balance = await asyncio.to_thread(treasury.functions.tierBalances(i).call)
             tiers.append({
                 "tier": i,
                 "name": ["INSTANT", "LIQUID", "YIELD", "STRATEGIC"][i],
@@ -280,11 +316,15 @@ class SecureMintAPI:
         if not treasury:
             raise ValueError("Treasury contract not configured")
 
-        tx = treasury.functions.allocate(
-            tier,
-            amount,
-            Web3.to_checksum_address(target)
-        ).build_transaction(self._build_tx_params())
+        validated_target = self._validate_address(target, "target")
+        tx = await asyncio.to_thread(
+            treasury.functions.allocate(
+                tier,
+                amount,
+                validated_target
+            ).build_transaction,
+            self._build_tx_params()
+        )
 
         return await self._send_transaction(tx)
 
@@ -294,7 +334,8 @@ class SecureMintAPI:
         if not treasury:
             raise ValueError("Treasury contract not configured")
 
-        tx = treasury.functions.rebalance().build_transaction(
+        tx = await asyncio.to_thread(
+            treasury.functions.rebalance().build_transaction,
             self._build_tx_params()
         )
 
@@ -311,11 +352,15 @@ class SecureMintAPI:
         if not treasury:
             raise ValueError("Treasury contract not configured")
 
-        tx = treasury.functions.withdraw(
-            tier,
-            amount,
-            Web3.to_checksum_address(recipient)
-        ).build_transaction(self._build_tx_params())
+        validated_recipient = self._validate_address(recipient, "recipient")
+        tx = await asyncio.to_thread(
+            treasury.functions.withdraw(
+                tier,
+                amount,
+                validated_recipient
+            ).build_transaction,
+            self._build_tx_params()
+        )
 
         return await self._send_transaction(tx)
 
@@ -330,13 +375,13 @@ class SecureMintAPI:
             raise ValueError("Bridge contract not configured")
 
         return {
-            "validator_threshold": bridge.functions.validatorThreshold().call(),
-            "validator_count": bridge.functions.validatorCount().call(),
-            "outbound_nonce": bridge.functions.outboundNonce().call(),
-            "bridge_fee_bps": bridge.functions.bridgeFee().call(),
-            "min_transfer": bridge.functions.minTransferAmount().call(),
-            "max_transfer": bridge.functions.maxTransferAmount().call(),
-            "is_paused": bridge.functions.paused().call()
+            "validator_threshold": await asyncio.to_thread(bridge.functions.validatorThreshold().call),
+            "validator_count": await asyncio.to_thread(bridge.functions.validatorCount().call),
+            "outbound_nonce": await asyncio.to_thread(bridge.functions.outboundNonce().call),
+            "bridge_fee_bps": await asyncio.to_thread(bridge.functions.bridgeFee().call),
+            "min_transfer": await asyncio.to_thread(bridge.functions.minTransferAmount().call),
+            "max_transfer": await asyncio.to_thread(bridge.functions.maxTransferAmount().call),
+            "is_paused": await asyncio.to_thread(bridge.functions.paused().call)
         }
 
     async def get_pending_transfers(self) -> List[Dict[str, Any]]:
@@ -345,20 +390,23 @@ class SecureMintAPI:
         if not bridge:
             raise ValueError("Bridge contract not configured")
 
-        latest_block = self.w3.eth.block_number
+        latest_block = await asyncio.to_thread(getattr, self.w3.eth, 'block_number')
         from_block = max(0, latest_block - 50000)
 
-        initiated = bridge.events.TransferInitiated.get_logs(
+        initiated = await asyncio.to_thread(
+            bridge.events.TransferInitiated.get_logs,
             from_block=from_block,
             to_block=latest_block
         )
 
+        executed_events = await asyncio.to_thread(
+            bridge.events.TransferExecuted.get_logs,
+            from_block=from_block,
+            to_block=latest_block
+        )
         executed = {
             e['args']['transferId'].hex()
-            for e in bridge.events.TransferExecuted.get_logs(
-                from_block=from_block,
-                to_block=latest_block
-            )
+            for e in executed_events
         }
 
         pending = []
@@ -385,9 +433,11 @@ class SecureMintAPI:
             raise ValueError("Bridge contract not configured")
 
         # Get transfer status
-        status = bridge.functions.getTransferStatus(
-            bytes.fromhex(transfer_id.replace("0x", ""))
-        ).call()
+        status = await asyncio.to_thread(
+            bridge.functions.getTransferStatus(
+                bytes.fromhex(transfer_id.replace("0x", ""))
+            ).call
+        )
 
         return {
             "exists": status[0],
@@ -403,9 +453,12 @@ class SecureMintAPI:
         if not bridge:
             raise ValueError("Bridge contract not configured")
 
-        tx = bridge.functions.executeTransfer(
-            bytes.fromhex(transfer_id.replace("0x", ""))
-        ).build_transaction(self._build_tx_params())
+        tx = await asyncio.to_thread(
+            bridge.functions.executeTransfer(
+                bytes.fromhex(transfer_id.replace("0x", ""))
+            ).build_transaction,
+            self._build_tx_params()
+        )
 
         return await self._send_transaction(tx)
 
@@ -435,8 +488,8 @@ class SecureMintAPI:
         try:
             policy = self.contracts.get("policy")
             if policy:
-                epoch_minted = policy.functions.epochMintedAmount().call()
-                epoch_capacity = policy.functions.epochCapacity().call()
+                epoch_minted = await asyncio.to_thread(policy.functions.epochMintedAmount().call)
+                epoch_capacity = await asyncio.to_thread(policy.functions.epochCapacity().call)
                 results["rate_limiting"] = {
                     "valid": epoch_minted <= epoch_capacity,
                     "epoch_minted": epoch_minted,
@@ -463,7 +516,7 @@ class SecureMintAPI:
         try:
             emergency = self.contracts.get("emergency")
             if emergency:
-                level = emergency.functions.currentLevel().call()
+                level = await asyncio.to_thread(emergency.functions.currentLevel().call)
                 results["emergency_pause"] = {
                     "valid": True,  # Just checking state, not validity
                     "level": level,
@@ -474,10 +527,13 @@ class SecureMintAPI:
 
         all_valid = all(r.get("valid", False) for r in results.values())
 
+        latest_block = await asyncio.to_thread(self.w3.eth.get_block, 'latest')
+        block_number = await asyncio.to_thread(getattr, self.w3.eth, 'block_number')
+
         return {
             "all_valid": all_valid,
-            "timestamp": self.w3.eth.get_block('latest')['timestamp'],
-            "block_number": self.w3.eth.block_number,
+            "timestamp": latest_block['timestamp'],
+            "block_number": block_number,
             "results": results
         }
 
@@ -488,21 +544,18 @@ class SecureMintAPI:
     async def simulate_transaction(self, tx: Dict[str, Any]) -> Dict[str, Any]:
         """Simulate a single transaction."""
         try:
-            # Use eth_call to simulate
-            result = self.w3.eth.call({
+            call_params = {
                 "to": tx.get("to"),
                 "from": tx.get("from", self.account.address if self.account else None),
                 "data": tx.get("data"),
                 "value": int(tx.get("value", 0))
-            })
+            }
+
+            # Use eth_call to simulate
+            result = await asyncio.to_thread(self.w3.eth.call, call_params)
 
             # Estimate gas
-            gas = self.w3.eth.estimate_gas({
-                "to": tx.get("to"),
-                "from": tx.get("from", self.account.address if self.account else None),
-                "data": tx.get("data"),
-                "value": int(tx.get("value", 0))
-            })
+            gas = await asyncio.to_thread(self.w3.eth.estimate_gas, call_params)
 
             return {
                 "success": True,
@@ -559,13 +612,17 @@ class SecureMintAPI:
         if not self.account:
             raise ValueError("No account configured - private key required for transactions")
 
+        base_fee = self.w3.eth.gas_price
+        priority_fee = self.w3.to_wei(2, 'gwei')
+        max_fee = max(base_fee * 2, priority_fee)  # Ensure maxFee >= priorityFee
+
         return {
             "from": self.account.address,
-            "nonce": self.w3.eth.get_transaction_count(self.account.address),
+            "nonce": self._get_next_nonce(),
             "chainId": self.chain_id,
-            "gas": 500000,  # Will be estimated
-            "maxFeePerGas": self.w3.eth.gas_price * 2,
-            "maxPriorityFeePerGas": self.w3.to_wei(2, 'gwei')
+            "gas": 500000,  # Will be estimated by _send_transaction
+            "maxFeePerGas": max_fee,
+            "maxPriorityFeePerGas": priority_fee
         }
 
     async def _send_transaction(self, tx: Dict[str, Any]) -> Dict[str, Any]:
@@ -573,17 +630,25 @@ class SecureMintAPI:
         if not self.account:
             raise ValueError("No account configured")
 
-        # Estimate gas
-        tx['gas'] = self.w3.eth.estimate_gas(tx)
+        # Estimate gas with 20% buffer (MEDIUM-2: mandatory gas estimation)
+        try:
+            estimated = await asyncio.to_thread(self.w3.eth.estimate_gas, tx)
+            tx['gas'] = int(estimated * 1.2)  # 20% buffer
+        except Exception as e:
+            raise ValueError(f"Gas estimation failed: {e}. Transaction not sent.") from e
 
         # Sign
         signed = self.account.sign_transaction(tx)
 
         # Send
-        tx_hash = self.w3.eth.send_raw_transaction(signed.rawTransaction)
+        tx_hash = await asyncio.to_thread(
+            self.w3.eth.send_raw_transaction, signed.rawTransaction
+        )
 
         # Wait for receipt
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
+        receipt = await asyncio.to_thread(
+            self.w3.eth.wait_for_transaction_receipt, tx_hash, 300
+        )
 
         return {
             "tx_hash": tx_hash.hex(),

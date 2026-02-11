@@ -111,6 +111,19 @@ contract BackedToken is ERC20, ERC20Burnable, Pausable {
     }
 
     /**
+     * @notice Force set guardian via governance (SecureMintPolicy) or current guardian
+     * @dev Provides a governance override in case guardian key is compromised
+     *      Guardian MUST be the GuardianMultisig contract for operational security
+     * @param newGuardian New guardian address
+     */
+    function forceSetGuardian(address newGuardian) external {
+        require(msg.sender == secureMintPolicy || msg.sender == guardian, "Only governance or guardian");
+        if (newGuardian == address(0)) revert ZeroAddress();
+        emit GuardianChanged(guardian, newGuardian);
+        guardian = newGuardian;
+    }
+
+    /**
      * @notice Override to add pause check to transfers
      */
     function _beforeTokenTransfer(

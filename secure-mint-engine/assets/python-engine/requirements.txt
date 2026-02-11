@@ -10,13 +10,7 @@ eth-typing>=3.0.0
 aiohttp>=3.9.0
 aiofiles>=23.0.0
 
-# CLI
-argparse>=1.4.0
-click>=8.0.0  # Alternative CLI framework
-
-# Data Processing
-pandas>=2.0.0
-numpy>=1.24.0
+# CLI (argparse is stdlib since Python 2.7, no external dependency needed)
 
 # Utilities
 python-dotenv>=1.0.0

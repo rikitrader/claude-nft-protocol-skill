@@ -132,8 +132,14 @@ contract ChainlinkPoRAdapter is IBackingOracle, AccessControl {
 
     /// @inheritdoc IBackingOracle
     function getDataAge() external view override returns (uint256) {
-        (, , , uint256 updatedAt, ) = primaryFeed.latestRoundData();
-        return block.timestamp - updatedAt;
+        try primaryFeed.latestRoundData() returns (
+            uint80, int256, uint256, uint256 updatedAt, uint80
+        ) {
+            if (updatedAt == 0) return type(uint256).max;
+            return block.timestamp - updatedAt;
+        } catch {
+            return type(uint256).max;
+        }
     }
 
     /// @inheritdoc IBackingOracle

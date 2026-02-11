@@ -125,7 +125,7 @@ module "eks" {
   cluster_name    = "securemint-${var.environment}"
   cluster_version = "1.28"
 
-  cluster_endpoint_public_access  = true
+  cluster_endpoint_public_access  = false
   cluster_endpoint_private_access = true
 
   vpc_id     = module.vpc.vpc_id

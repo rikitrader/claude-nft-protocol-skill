@@ -32,6 +32,11 @@ contract BackingOraclePoR is IBackingOracle, IProofOfReserve, AccessControl {
     bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
     bytes32 public constant ATTESTOR_ROLE = keccak256("ATTESTOR_ROLE");
 
+    uint256 public constant MIN_REQUIRED_RATIO = 10000; // At least 100%
+    uint256 public constant MIN_ATTESTORS = 1;
+    uint256 public constant MAX_DATA_AGE_LIMIT = 86400; // 24 hours
+    uint256 public constant MAX_ATTESTORS = 20;
+
     // ═══════════════════════════════════════════════════════════════════════════
     // STATE
     // ═══════════════════════════════════════════════════════════════════════════
@@ -288,6 +293,7 @@ contract BackingOraclePoR is IBackingOracle, IProofOfReserve, AccessControl {
             }
         }
         if (!found) {
+            require(attestorList.length < MAX_ATTESTORS, "Too many attestors");
             attestorList.push(msg.sender);
         }
 
@@ -352,7 +358,10 @@ contract BackingOraclePoR is IBackingOracle, IProofOfReserve, AccessControl {
     // ═══════════════════════════════════════════════════════════════════════════
 
     function _getChainlinkReserves() internal view returns (uint256) {
-        (, int256 answer, , uint256 updatedAt,) = chainlinkPoRFeed.latestRoundData();
+        (uint80 roundId, int256 answer, , uint256 updatedAt, uint80 answeredInRound) = chainlinkPoRFeed.latestRoundData();
+
+        // Round completeness check
+        if (answeredInRound < roundId) return 0;
 
         // Staleness check
         if (block.timestamp - updatedAt > maxDataAge) {
@@ -387,6 +396,7 @@ contract BackingOraclePoR is IBackingOracle, IProofOfReserve, AccessControl {
     // ═══════════════════════════════════════════════════════════════════════════
 
     function setMaxDataAge(uint256 _age) external onlyRole(GOVERNOR_ROLE) {
+        require(_age > 0 && _age <= MAX_DATA_AGE_LIMIT, "Invalid data age");
         emit ParameterUpdated("maxDataAge", maxDataAge, _age);
         maxDataAge = _age;
     }
@@ -397,11 +407,13 @@ contract BackingOraclePoR is IBackingOracle, IProofOfReserve, AccessControl {
     }
 
     function setRequiredRatio(uint256 _ratio) external onlyRole(GOVERNOR_ROLE) {
+        require(_ratio >= MIN_REQUIRED_RATIO, "Ratio below minimum");
         emit ParameterUpdated("requiredRatio", requiredRatio, _ratio);
         requiredRatio = _ratio;
     }
 
     function setMinAttestors(uint256 _min) external onlyRole(GOVERNOR_ROLE) {
+        require(_min >= MIN_ATTESTORS, "Min attestors below minimum");
         emit ParameterUpdated("minAttestors", minAttestors, _min);
         minAttestors = _min;
     }

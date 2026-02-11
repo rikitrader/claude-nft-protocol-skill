@@ -71,16 +71,37 @@ contract OracleRouter is IBackingOracle, AccessControl {
 
     /// @inheritdoc IBackingOracle
     function getVerifiedBacking() external view override returns (uint256) {
+        uint256[] memory values = new uint256[](oracles.length);
+        uint256 healthyCount = 0;
+
         for (uint256 i = 0; i < oracles.length; i++) {
-            try oracles[i].getVerifiedBacking() returns (uint256 backing) {
-                if (oracles[i].isHealthy()) {
-                    return backing;
-                }
-            } catch {
-                continue;
+            try oracles[i].isHealthy() returns (bool healthy) {
+                if (!healthy) continue;
+                try oracles[i].getVerifiedBacking() returns (uint256 backing) {
+                    values[healthyCount] = backing;
+                    healthyCount++;
+                } catch { continue; }
+            } catch { continue; }
+        }
+
+        if (healthyCount == 0) revert NoHealthyOracle();
+
+        // Cross-check deviation if multiple healthy oracles
+        if (healthyCount > 1 && maxDeviationBps > 0) {
+            for (uint256 i = 1; i < healthyCount; i++) {
+                uint256 larger = values[0] > values[i] ? values[0] : values[i];
+                uint256 smaller = values[0] > values[i] ? values[i] : values[0];
+                uint256 deviation = ((larger - smaller) * 10000) / larger;
+                require(deviation <= maxDeviationBps, "Oracle deviation too high");
             }
         }
-        revert NoHealthyOracle();
+
+        // Return conservative (minimum) value
+        uint256 minValue = values[0];
+        for (uint256 i = 1; i < healthyCount; i++) {
+            if (values[i] < minValue) minValue = values[i];
+        }
+        return minValue;
     }
 
     /// @inheritdoc IBackingOracle

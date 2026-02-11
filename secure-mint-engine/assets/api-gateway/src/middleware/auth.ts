@@ -34,9 +34,12 @@ function validateJwtSecret(): void {
   }
 }
 
-// Validate at module load (fail fast in production)
-if (process.env.NODE_ENV === 'production') {
-  validateJwtSecret();
+// Validate at module load (fail fast in all non-development environments)
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV !== 'development') {
+    throw new Error('FATAL: JWT_SECRET environment variable is required in all non-development environments');
+  }
+  console.warn('WARNING: JWT_SECRET not set. Using development fallback. DO NOT use in production.');
 }
 
 // Use validated secret or fallback for non-production

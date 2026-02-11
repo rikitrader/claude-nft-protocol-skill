@@ -124,6 +124,12 @@ contract Deploy is Script {
         // ── Wire up roles ───────────────────────────────────────────────────
         _wireRoles(admin, guardian, minter);
 
+        // ── Renounce deployer admin roles ─────────────────────────────────
+        secureMintPolicy.renounceRole(secureMintPolicy.DEFAULT_ADMIN_ROLE(), msg.sender);
+        emergencyPause.renounceRole(emergencyPause.DEFAULT_ADMIN_ROLE(), msg.sender);
+        treasuryVault.renounceRole(treasuryVault.DEFAULT_ADMIN_ROLE(), msg.sender);
+        oracleRouter.renounceRole(oracleRouter.DEFAULT_ADMIN_ROLE(), msg.sender);
+
         vm.stopBroadcast();
 
         // ── Log deployed addresses ──────────────────────────────────────────

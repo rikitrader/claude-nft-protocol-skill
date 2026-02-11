@@ -571,9 +571,13 @@ class TokenomicsStressTest {
     }
 
     // Calculate slippage for various trade sizes
-    // FIXED: Guard against division by zero when dexLiquidity is 0
-    const slippage1M = safeDivide(1000000, this.config.dexLiquidity, 100) * 0.3 * 100;
-    const slippage10M = safeDivide(10000000, this.config.dexLiquidity, 100) * 0.3 * 100;
+    // When dexLiquidity is 0, slippage should be 100% (max) not an arbitrary number
+    const slippage1M = this.config.dexLiquidity > 0
+      ? (1000000 / this.config.dexLiquidity) * 0.3 * 100
+      : 100;
+    const slippage10M = this.config.dexLiquidity > 0
+      ? (10000000 / this.config.dexLiquidity) * 0.3 * 100
+      : 100;
 
     return {
       scenario: 'Liquidity Crisis Simulation',
@@ -682,8 +686,8 @@ class TokenomicsStressTest {
       attackVectors.push('Oracle manipulation');
     }
 
-    // Governance attacks
-    if (this.config.top10HoldersPercent < 30) { // Low concentration means easier vote manipulation
+    // Governance attacks - HIGH concentration means fewer entities can collude to control votes
+    if (this.config.top10HoldersPercent > 50) {
       attackVectors.push('Governance vote manipulation');
     }
 

@@ -186,12 +186,18 @@ contract TreasuryVault is AccessControl, ReentrancyGuard, Pausable {
 
         reserveAsset.safeTransferFrom(msg.sender, address(this), amount);
 
-        // Distribute according to target allocations
-        for (uint8 i = 0; i < NUM_TIERS; i++) {
+        // Distribute according to target allocations, last tier gets remainder
+        uint256 distributed = 0;
+        for (uint8 i = 0; i < NUM_TIERS - 1; i++) {
             uint256 tierAmount = (amount * targetAllocations[i]) / BASIS_POINTS;
             tierBalances[i] += tierAmount;
+            distributed += tierAmount;
             emit Deposit(msg.sender, tierAmount, i);
         }
+        // Last tier gets remainder to prevent rounding loss
+        uint256 lastTierAmount = amount - distributed;
+        tierBalances[NUM_TIERS - 1] += lastTierAmount;
+        emit Deposit(msg.sender, lastTierAmount, NUM_TIERS - 1);
 
         totalReserves += amount;
     }
@@ -250,7 +256,8 @@ contract TreasuryVault is AccessControl, ReentrancyGuard, Pausable {
             tierBalances[i] -= deduct;
             remaining -= deduct;
         }
-        totalReserves -= amount;
+        uint256 totalDeducted = amount - remaining;
+        totalReserves = totalReserves >= totalDeducted ? totalReserves - totalDeducted : 0;
 
         reserveAsset.safeTransfer(to, amount);
 
@@ -431,6 +438,7 @@ contract TreasuryVault is AccessControl, ReentrancyGuard, Pausable {
      * @param _threshold New threshold in basis points
      */
     function setRebalanceThreshold(uint256 _threshold) external onlyRole(GOVERNOR_ROLE) {
+        require(_threshold > 0 && _threshold <= 10000, "Invalid threshold");
         rebalanceThreshold = _threshold;
     }
 

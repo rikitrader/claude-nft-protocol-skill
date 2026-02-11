@@ -17,7 +17,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - DATABASE_URL=postgresql://securemint:securemint@postgres:5432/securemint
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-securemint}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-securemint}
       - REDIS_URL=redis://redis:6379
       - RPC_URL=${RPC_URL:-http://hardhat:8545}
       - JWT_SECRET=${JWT_SECRET:-dev-secret}
@@ -58,11 +58,11 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
-      - POSTGRES_USER=securemint
-      - POSTGRES_PASSWORD=securemint
-      - POSTGRES_DB=securemint
+      - POSTGRES_USER=${POSTGRES_USER:-securemint}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - POSTGRES_DB=${POSTGRES_DB:-securemint}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -81,10 +81,10 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -101,7 +101,7 @@ services:
     image: node:20-alpine
     working_dir: /app
     ports:
-      - "8545:8545"
+      - "127.0.0.1:8545:8545"
     volumes:
       - ../contracts:/app
     command: sh -c "npm install && npx hardhat node --hostname 0.0.0.0"
@@ -113,17 +113,17 @@ services:
   # Graph Node (Subgraph)
   # ═══════════════════════════════════════════════════════════════════════════
   graph-node:
-    image: graphprotocol/graph-node:latest
+    image: graphprotocol/graph-node:v0.35.1
     ports:
-      - "8000:8000"
-      - "8001:8001"
-      - "8020:8020"
-      - "8030:8030"
-      - "8040:8040"
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8020:8020"
+      - "127.0.0.1:8030:8030"
+      - "127.0.0.1:8040:8040"
     environment:
       postgres_host: postgres
-      postgres_user: securemint
-      postgres_pass: securemint
+      postgres_user: ${POSTGRES_USER:-securemint}
+      postgres_pass: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       postgres_db: graph
       ipfs: 'ipfs:5001'
       ethereum: 'mainnet:http://hardhat:8545'
@@ -140,9 +140,9 @@ services:
   # IPFS
   # ═══════════════════════════════════════════════════════════════════════════
   ipfs:
-    image: ipfs/kubo:latest
+    image: ipfs/kubo:v0.27.0
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     volumes:
       - ipfs_data:/data/ipfs
     healthcheck:
@@ -158,9 +158,9 @@ services:
   # Prometheus
   # ═══════════════════════════════════════════════════════════════════════════
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.51.0
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ../infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../infrastructure/monitoring/prometheus/rules:/etc/prometheus/rules:ro
@@ -177,13 +177,14 @@ services:
   # Grafana
   # ═══════════════════════════════════════════════════════════════════════════
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.4.1
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
     volumes:
       - ../infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - grafana_data:/var/lib/grafana

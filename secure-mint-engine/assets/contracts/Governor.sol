@@ -182,7 +182,7 @@ contract SecureMintGovernor is
         returns (ProposalState)
     {
         if (vetoedProposals[proposalId]) {
-            return ProposalState.Defeated;
+            return ProposalState.Canceled;
         }
         return super.state(proposalId);
     }

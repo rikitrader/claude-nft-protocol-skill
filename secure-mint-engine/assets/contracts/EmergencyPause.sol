@@ -96,6 +96,9 @@ contract EmergencyPause is AccessControl, ReentrancyGuard {
     uint256 public priceDeviationThreshold = 500; // 5% in basis points
     uint256 public reserveDeficitThreshold = 0; // Any deficit triggers
 
+    /// @notice Maximum history entries to prevent unbounded storage growth
+    uint256 public constant MAX_HISTORY = 1000;
+
     /// @notice Level escalation history
     struct LevelChange {
         PauseLevel fromLevel;
@@ -411,14 +414,16 @@ contract EmergencyPause is AccessControl, ReentrancyGuard {
     ) internal {
         PauseLevel oldLevel = currentLevel;
 
-        levelHistory.push(LevelChange({
-            fromLevel: oldLevel,
-            toLevel: newLevel,
-            reason: reason,
-            triggeredBy: msg.sender,
-            timestamp: block.timestamp,
-            details: details
-        }));
+        if (levelHistory.length < MAX_HISTORY) {
+            levelHistory.push(LevelChange({
+                fromLevel: oldLevel,
+                toLevel: newLevel,
+                reason: reason,
+                triggeredBy: msg.sender,
+                timestamp: block.timestamp,
+                details: details
+            }));
+        }
 
         currentLevel = newLevel;
         levelSetAt = block.timestamp;

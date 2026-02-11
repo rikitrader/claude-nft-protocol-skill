@@ -10,6 +10,7 @@ import json
 import sys
 import os
 from pathlib import Path
+from typing import Tuple
 
 try:
     import jsonschema
@@ -25,7 +26,7 @@ def load_json_file(filepath: str) -> dict:
         return json.load(f)
 
 
-def validate_file(data_file: str, schema_file: str) -> tuple[bool, str]:
+def validate_file(data_file: str, schema_file: str) -> Tuple[bool, str]:
     """
     Validate a JSON file against a schema.
 

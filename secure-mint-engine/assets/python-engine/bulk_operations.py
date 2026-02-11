@@ -527,7 +527,8 @@ class BulkOperator:
         self,
         request_count: int,
         gas_per_tx: int = 100000,
-        gas_price_gwei: float = 30
+        gas_price_gwei: float = 30,
+        eth_price_usd: Optional[float] = None
     ) -> Dict[str, Any]:
         """Estimate total gas cost for batch."""
         total_gas = request_count * gas_per_tx
@@ -539,5 +540,5 @@ class BulkOperator:
             "total_gas": total_gas,
             "gas_price_gwei": gas_price_gwei,
             "estimated_cost_eth": cost_eth,
-            "estimated_cost_usd": cost_eth * 2000  # Rough estimate
+            "estimated_cost_usd": cost_eth * eth_price_usd if eth_price_usd else "N/A (provide eth_price_usd)"
         }

@@ -41,7 +41,7 @@ const config = {
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3001'],
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100'),
-  jwtSecret: process.env.JWT_SECRET || 'development-secret',
+  jwtSecret: process.env.JWT_SECRET || '',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ async function createApp(): Promise<Express> {
 
   // Security middleware
   app.use(helmet({
-    contentSecurityPolicy: config.env === 'production' ? undefined : false,
+    contentSecurityPolicy: config.env === 'production' ? undefined : { directives: { defaultSrc: ["'self'"] } },
   }));
 
   // CORS
@@ -66,7 +66,7 @@ async function createApp(): Promise<Express> {
   app.use(compression());
 
   // Body parsing
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '256kb' }));
   app.use(express.urlencoded({ extended: true }));
 
   // Rate limiting
@@ -139,6 +139,7 @@ async function createApp(): Promise<Express> {
 
   app.use(
     '/graphql',
+    authMiddleware,
     cors<cors.CorsRequest>({ origin: config.corsOrigins }),
     express.json(),
     expressMiddleware(apolloServer, {
@@ -167,10 +168,20 @@ async function startServer() {
   const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/graphql',
+    maxPayload: 64 * 1024, // 64KB max message size
   });
 
   const schema = makeExecutableSchema({ typeDefs, resolvers });
-  useServer({ schema }, wsServer);
+  useServer({
+    schema,
+    onConnect: async (ctx) => {
+      const token = ctx.connectionParams?.Authorization as string;
+      if (!token) {
+        return false; // Reject unauthenticated connections
+      }
+      return true;
+    },
+  }, wsServer);
 
   httpServer.listen(config.port, () => {
     console.log(`

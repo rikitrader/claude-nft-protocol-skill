@@ -22,12 +22,6 @@
     "constable-states",
     "external-function",
     "events-access",
-    "missing-zero-check",
-    "timestamp",
-    "assembly",
-    "low-level-calls",
-    "calls-loop",
-    "incorrect-equality",
     "boolean-equal"
   ],
   "exclude_informational": false,

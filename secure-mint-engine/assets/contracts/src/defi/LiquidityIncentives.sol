@@ -333,15 +333,18 @@ contract LiquidityIncentives is AccessControl, ReentrancyGuard, Pausable {
 
             // Transfer rewards
             _safeRewardTransfer(msg.sender, boostedReward);
-            totalRewardsDistributed += boostedReward;
 
             // Pay referral bonus
+            uint256 referralReward = 0;
             if (user.referrer != address(0)) {
-                uint256 referralReward = (boostedReward * referralBonusBps) / 10000;
+                referralReward = (boostedReward * referralBonusBps) / 10000;
                 _safeRewardTransfer(user.referrer, referralReward);
                 totalReferralRewards += referralReward;
                 emit ReferralReward(user.referrer, msg.sender, referralReward);
             }
+
+            // Track total rewards distributed (including referral)
+            totalRewardsDistributed += boostedReward + referralReward;
 
             emit RewardsClaimed(poolId, msg.sender, boostedReward);
         }
@@ -358,6 +361,14 @@ contract LiquidityIncentives is AccessControl, ReentrancyGuard, Pausable {
         UserInfo storage user = userInfo[poolId][msg.sender];
 
         uint256 amount = user.amount;
+
+        // Apply penalty for breaking lock early
+        uint256 penalty = 0;
+        if (user.lockEndTime > block.timestamp) {
+            penalty = (amount * 1000) / 10000; // 10% penalty for breaking lock
+        }
+        uint256 withdrawAmount = amount - penalty;
+
         user.amount = 0;
         user.rewardDebt = 0;
         user.pendingRewards = 0;
@@ -366,9 +377,12 @@ contract LiquidityIncentives is AccessControl, ReentrancyGuard, Pausable {
 
         pool.totalStaked -= amount;
 
-        pool.lpToken.safeTransfer(msg.sender, amount);
+        pool.lpToken.safeTransfer(msg.sender, withdrawAmount);
+        if (penalty > 0) {
+            pool.lpToken.safeTransfer(address(this), penalty); // Keep penalty in contract
+        }
 
-        emit EmergencyWithdraw(poolId, msg.sender, amount);
+        emit EmergencyWithdraw(poolId, msg.sender, withdrawAmount);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════

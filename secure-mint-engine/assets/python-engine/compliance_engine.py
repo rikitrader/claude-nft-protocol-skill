@@ -8,7 +8,7 @@ import json
 import asyncio
 import aiohttp
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -54,7 +54,7 @@ class ScreeningResult:
     sanctions_match: bool = False
     pep_match: bool = False
     provider_data: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ComplianceEngine:
@@ -70,12 +70,10 @@ class ComplianceEngine:
     - Risk scoring
     """
 
-    # Sanctions lists (cached locally)
-    OFAC_ADDRESSES = set()  # Loaded from file
-
     def __init__(self, api, jurisdiction: str = "US"):
         self.api = api
         self.jurisdiction = jurisdiction
+        self.ofac_addresses: set = set()
 
         # Provider configurations
         self.providers = {
@@ -107,7 +105,7 @@ class ComplianceEngine:
         if os.path.exists(sanctions_file):
             with open(sanctions_file) as f:
                 data = json.load(f)
-                self.OFAC_ADDRESSES = set(
+                self.ofac_addresses = set(
                     addr.lower() for addr in data.get("addresses", [])
                 )
 
@@ -131,7 +129,7 @@ class ComplianceEngine:
         - Summary statistics
         - Risk distribution
         """
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         results = []
 
         # Process in parallel batches
@@ -157,7 +155,7 @@ class ComplianceEngine:
             for level in RiskLevel
         }
 
-        end_time = datetime.now()
+        end_time = datetime.now(timezone.utc)
 
         return {
             "results": [self._result_to_dict(r) for r in results],
@@ -199,7 +197,7 @@ class ComplianceEngine:
 
         # 1. Sanctions check (fastest, local)
         if check_sanctions:
-            if address_lower in self.OFAC_ADDRESSES:
+            if address_lower in self.ofac_addresses:
                 result.compliant = False
                 result.sanctions_match = True
                 result.risk_level = RiskLevel.BLOCKED
@@ -294,7 +292,15 @@ class ComplianceEngine:
                 return {"risk_score": 0, "alerts": []}
 
         except Exception as e:
-            return {"risk_score": 0, "alerts": [], "error": str(e)}
+            error_msg = str(e)
+            # Sanitize potential API key leakage (HIGH-2)
+            for key_name in ["api_key", "token", "authorization"]:
+                for provider_config in self.providers.values():
+                    if isinstance(provider_config, dict):
+                        api_key = provider_config.get(key_name, "")
+                        if api_key and api_key in error_msg:
+                            error_msg = error_msg.replace(api_key, "[REDACTED]")
+            return {"risk_score": 0, "alerts": [], "error": error_msg}
 
     async def _check_chainalysis(
         self,
@@ -302,7 +308,8 @@ class ComplianceEngine:
         config: Dict[str, str]
     ) -> Dict[str, Any]:
         """Check address via Chainalysis KYT."""
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             headers = {
                 "Token": config["api_key"],
                 "Content-Type": "application/json"
@@ -338,11 +345,11 @@ class ComplianceEngine:
                         risk_score = max(risk_score, 0.5)
                         alerts.append(f"Medium-risk exposure: {exp['category']}")
 
-                return {
-                    "risk_score": risk_score,
-                    "alerts": alerts,
-                    "raw_response": data
-                }
+                # Only include raw response in debug mode (HIGH-3)
+                result = {"risk_score": risk_score, "alerts": alerts}
+                if os.getenv("DEBUG_COMPLIANCE"):
+                    result["raw_response"] = data
+                return result
 
     async def _check_elliptic(
         self,
@@ -350,7 +357,8 @@ class ComplianceEngine:
         config: Dict[str, str]
     ) -> Dict[str, Any]:
         """Check address via Elliptic."""
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             headers = {
                 "x-api-key": config["api_key"],
                 "Content-Type": "application/json"
@@ -381,11 +389,11 @@ class ComplianceEngine:
                     if cluster.get("is_high_risk")
                 ]
 
-                return {
-                    "risk_score": risk_score,
-                    "alerts": alerts,
-                    "raw_response": data
-                }
+                # Only include raw response in debug mode (HIGH-3)
+                result = {"risk_score": risk_score, "alerts": alerts}
+                if os.getenv("DEBUG_COMPLIANCE"):
+                    result["raw_response"] = data
+                return result
 
     async def _check_trm(
         self,
@@ -393,7 +401,8 @@ class ComplianceEngine:
         config: Dict[str, str]
     ) -> Dict[str, Any]:
         """Check address via TRM Labs."""
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             headers = {
                 "Authorization": f"Basic {config['api_key']}",
                 "Content-Type": "application/json"
@@ -413,11 +422,11 @@ class ComplianceEngine:
                 data = await resp.json()
 
                 if data and len(data) > 0:
-                    result = data[0]
+                    entry = data[0]
                     risk_score = 0
                     alerts = []
 
-                    for indicator in result.get("riskIndicators", []):
+                    for indicator in entry.get("riskIndicators", []):
                         if indicator.get("category") == "sanctions":
                             risk_score = max(risk_score, 1.0)
                             alerts.append(f"Sanctions: {indicator.get('description')}")
@@ -425,11 +434,11 @@ class ComplianceEngine:
                             risk_score = max(risk_score, 0.9)
                             alerts.append(f"Severe: {indicator.get('description')}")
 
-                    return {
-                        "risk_score": risk_score,
-                        "alerts": alerts,
-                        "raw_response": result
-                    }
+                    # Only include raw response in debug mode (HIGH-3)
+                    result = {"risk_score": risk_score, "alerts": alerts}
+                    if os.getenv("DEBUG_COMPLIANCE"):
+                        result["raw_response"] = entry
+                    return result
 
                 return {"risk_score": 0, "alerts": []}
 
@@ -473,7 +482,7 @@ class ComplianceEngine:
         return {
             "report_type": "compliance_screening",
             "jurisdiction": self.jurisdiction,
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "summary": results["summary"],
             "by_risk_level": by_risk,
             "recommendations": self._generate_recommendations(results),

@@ -16,7 +16,7 @@ import sys
 import os
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 try:
     from web3 import Web3
@@ -207,7 +207,7 @@ class InvariantChecker:
                 severity="warning"
             )
 
-    def run_all_checks(self) -> list[InvariantResult]:
+    def run_all_checks(self) -> List[InvariantResult]:
         """Run all invariant checks."""
         return [
             self.check_inv_sm_1(),

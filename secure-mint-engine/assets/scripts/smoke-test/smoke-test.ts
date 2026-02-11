@@ -4,7 +4,7 @@
  * Validates deployment with essential tests
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -60,6 +60,20 @@ function loadConfig(): TestConfig {
     testRecipient: process.env.TEST_RECIPIENT || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
   };
 
+  // Validate URLs before use
+  try {
+    new URL(config.rpcUrl);
+  } catch {
+    throw new Error(`Invalid RPC URL: ${config.rpcUrl}`);
+  }
+  if (config.apiUrl) {
+    try {
+      new URL(config.apiUrl);
+    } catch {
+      throw new Error(`Invalid API URL: ${config.apiUrl}`);
+    }
+  }
+
   // Load from deployment file if exists
   const deploymentPaths = [
     'deployments/localhost/deployment.json',
@@ -86,14 +100,13 @@ function loadConfig(): TestConfig {
   return config;
 }
 
-function execCommand(command: string, timeout = 30000): { success: boolean; output: string; duration: number } {
+function execCommand(command: string, args?: string[], timeout = 30000): { success: boolean; output: string; duration: number } {
   const start = Date.now();
   try {
-    const output = execSync(command, {
-      encoding: 'utf-8',
-      timeout,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    // Always prefer execFileSync with argument arrays to prevent command injection
+    const output = args
+      ? execFileSync(command, args, { encoding: 'utf-8', timeout, stdio: ['pipe', 'pipe', 'pipe'] })
+      : execFileSync(command, [], { encoding: 'utf-8', timeout, stdio: ['pipe', 'pipe', 'pipe'] });
     return { success: true, output: output.trim(), duration: Date.now() - start };
   } catch (error: any) {
     return {
@@ -106,10 +119,20 @@ function execCommand(command: string, timeout = 30000): { success: boolean; outp
 
 function ethCall(config: TestConfig, to: string, data: string): { success: boolean; result: string; duration: number } {
   const start = Date.now();
-  const curlCmd = `curl -s -X POST ${config.rpcUrl} -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"${to}","data":"${data}"},"latest"],"id":1}' --max-time 10`;
+  const payload = JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'eth_call',
+    params: [{ to, data }, 'latest'],
+    id: 1,
+  });
 
   try {
-    const output = execSync(curlCmd, { encoding: 'utf-8', timeout: 15000 });
+    const output = execFileSync('curl', [
+      '-s', '-X', 'POST', config.rpcUrl,
+      '-H', 'Content-Type: application/json',
+      '-d', payload,
+      '--max-time', '10',
+    ], { encoding: 'utf-8', timeout: 15000 });
     const parsed = JSON.parse(output);
     if (parsed.result && !parsed.error) {
       return { success: true, result: parsed.result, duration: Date.now() - start };
@@ -126,8 +149,10 @@ function ethCall(config: TestConfig, to: string, data: string): { success: boole
 
 async function testRpcConnectivity(config: TestConfig): Promise<TestResult> {
   const start = Date.now();
-  const curlCmd = `curl -s -X POST ${config.rpcUrl} -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' --max-time 5`;
-  const { success, output } = execCommand(curlCmd);
+  const payload = JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 });
+  const { success, output } = execCommand(
+    'curl', ['-s', '-X', 'POST', config.rpcUrl, '-H', 'Content-Type: application/json', '-d', payload, '--max-time', '5']
+  );
 
   if (success && output.includes('"result"')) {
     const blockHex = JSON.parse(output).result;
@@ -163,8 +188,10 @@ async function testTokenDeployment(config: TestConfig): Promise<TestResult> {
 
   // Check code exists at address
   const start = Date.now();
-  const curlCmd = `curl -s -X POST ${config.rpcUrl} -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["${config.tokenAddress}","latest"],"id":1}' --max-time 5`;
-  const { success, output } = execCommand(curlCmd);
+  const payload = JSON.stringify({ jsonrpc: '2.0', method: 'eth_getCode', params: [config.tokenAddress, 'latest'], id: 1 });
+  const { success, output } = execCommand(
+    'curl', ['-s', '-X', 'POST', config.rpcUrl, '-H', 'Content-Type: application/json', '-d', payload, '--max-time', '5']
+  );
 
   if (success && output.includes('"result"')) {
     const code = JSON.parse(output).result;
@@ -200,8 +227,10 @@ async function testPolicyDeployment(config: TestConfig): Promise<TestResult> {
   }
 
   const start = Date.now();
-  const curlCmd = `curl -s -X POST ${config.rpcUrl} -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["${config.policyAddress}","latest"],"id":1}' --max-time 5`;
-  const { success, output } = execCommand(curlCmd);
+  const payload = JSON.stringify({ jsonrpc: '2.0', method: 'eth_getCode', params: [config.policyAddress, 'latest'], id: 1 });
+  const { success, output } = execCommand(
+    'curl', ['-s', '-X', 'POST', config.rpcUrl, '-H', 'Content-Type: application/json', '-d', payload, '--max-time', '5']
+  );
 
   if (success && output.includes('"result"')) {
     const code = JSON.parse(output).result;
@@ -402,7 +431,7 @@ async function testPauseLevel(config: TestConfig): Promise<TestResult> {
 
 async function testApiHealth(config: TestConfig): Promise<TestResult> {
   const start = Date.now();
-  const { success, output } = execCommand(`curl -s ${config.apiUrl}/health --max-time 5`);
+  const { success, output } = execCommand('curl', ['-s', `${config.apiUrl}/health`, '--max-time', '5']);
 
   if (success) {
     try {
@@ -443,7 +472,7 @@ async function testGraphQLEndpoint(config: TestConfig): Promise<TestResult> {
   const start = Date.now();
   const query = '{"query":"{ __typename }"}';
   const { success, output } = execCommand(
-    `curl -s -X POST ${config.apiUrl}/graphql -H "Content-Type: application/json" -d '${query}' --max-time 5`
+    'curl', ['-s', '-X', 'POST', `${config.apiUrl}/graphql`, '-H', 'Content-Type: application/json', '-d', query, '--max-time', '5']
   );
 
   if (success) {

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 /**
  * @title GuardianMultisig
  * @notice Lightweight multisig for emergency operations
  * @dev Designed for guardian-level actions (emergency pause, oracle failover).
  *      Uses a simple threshold-of-N scheme without complex proposal lifecycles.
  */
-contract GuardianMultisig {
+contract GuardianMultisig is ReentrancyGuard {
     // ═══════════════════════════════════════════════════════════════════════
     // STATE
     // ═══════════════════════════════════════════════════════════════════════
@@ -30,11 +32,15 @@ contract GuardianMultisig {
         bytes data;
         uint256 confirmations;
         bool executed;
+        uint256 proposedAt;
         mapping(address => bool) confirmed;
     }
 
     /// @notice Pending transactions
     mapping(uint256 => Transaction) public transactions;
+
+    /// @notice Transaction expiry duration
+    uint256 public constant TX_EXPIRY = 7 days;
 
     /// @notice Next transaction ID
     uint256 public transactionCount;
@@ -105,6 +111,8 @@ contract GuardianMultisig {
         uint256 _value,
         bytes calldata _data
     ) external onlyGuardian returns (uint256 txId) {
+        require(_target != address(0), "Zero address target");
+
         txId = transactionCount++;
 
         Transaction storage t = transactions[txId];
@@ -112,6 +120,7 @@ contract GuardianMultisig {
         t.value = _value;
         t.data = _data;
         t.confirmations = 1;
+        t.proposedAt = block.timestamp;
         t.confirmed[msg.sender] = true;
 
         emit TransactionProposed(txId, msg.sender, _target, _data);
@@ -126,11 +135,13 @@ contract GuardianMultisig {
     /// @notice Confirm a pending transaction
     function confirm(uint256 txId)
         external
+        nonReentrant
         onlyGuardian
         txExists(txId)
         txNotExecuted(txId)
     {
         Transaction storage t = transactions[txId];
+        require(block.timestamp <= t.proposedAt + TX_EXPIRY, "TX expired");
         require(!t.confirmed[msg.sender], "Already confirmed");
 
         t.confirmed[msg.sender] = true;

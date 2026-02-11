@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   FOUNDRY_PROFILE: ci
 
@@ -18,17 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
         with:
           submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # pin to SHA before production
         with:
           node-version: "20"
           cache: "npm"
@@ -53,14 +57,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
         with:
           submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge tests
         run: |
@@ -81,10 +85,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # pin to SHA before production
         with:
           node-version: "20"
           cache: "npm"
@@ -103,7 +107,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v3 # pin to SHA before production
         with:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
@@ -116,14 +120,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
         with:
           submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Run invariant tests
         run: |
@@ -139,10 +143,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5 # pin to SHA before production
         with:
           python-version: "3.11"
 
@@ -159,7 +163,7 @@ jobs:
           CI_REPORT_PATH: outputs/MonetaryRoutingCIReport.md
 
       - name: Upload CI Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # pin to SHA before production
         with:
           name: monetary-routing-report
           path: outputs/MonetaryRoutingCIReport.md
@@ -173,10 +177,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5 # pin to SHA before production
         with:
           python-version: "3.11"
 
@@ -184,7 +188,7 @@ jobs:
         run: pip install slither-analyzer
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # pin to SHA before production
         with:
           node-version: "20"
           cache: "npm"
@@ -194,10 +198,9 @@ jobs:
 
       - name: Run Slither
         run: slither . --config-file slither.config.json
-        continue-on-error: true
 
       - name: Upload Slither report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # pin to SHA before production
         with:
           name: slither-report
           path: slither-report.json
@@ -211,14 +214,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
         with:
           submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Run gas snapshot
         run: forge snapshot
@@ -228,7 +231,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload gas report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # pin to SHA before production
         with:
           name: gas-snapshot
           path: .gas-snapshot
@@ -239,7 +242,7 @@ jobs:
   all-checks:
     name: All Checks Pass
     runs-on: ubuntu-latest
-    needs: [lint, foundry-tests, hardhat-tests, invariant-tests, monetary-routing]
+    needs: [lint, foundry-tests, hardhat-tests, invariant-tests, monetary-routing, slither]
     steps:
       - name: All checks passed
         run: echo "All CI checks passed successfully!"

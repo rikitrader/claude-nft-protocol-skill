@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   FOUNDRY_PROFILE: ci
 
@@ -18,17 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
         with:
           submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Cache Foundry build
-        uses: actions/cache@v4
+        uses: actions/cache@v4 # pin to SHA before production
         with:
           path: |
             cache_forge
@@ -59,7 +63,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload gas snapshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # pin to SHA before production
         with:
           name: gas-snapshot
           path: .gas-snapshot
@@ -76,10 +80,10 @@ jobs:
         working-directory: python-engine
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # pin to SHA before production
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5 # pin to SHA before production
         with:
           python-version: "3.11"
           cache: pip
@@ -98,7 +102,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # pin to SHA before production
         with:
           name: python-coverage
           path: python-engine/coverage.xml

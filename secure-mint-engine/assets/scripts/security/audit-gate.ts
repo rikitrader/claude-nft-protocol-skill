@@ -440,7 +440,7 @@ class SecurityAuditGate {
     options.forEach((opt, i) => console.log(`  ${i + 1}. ${opt}`));
     const answer = await this.question('Select (number): ');
     const index = safeParseInt(answer, 1) - 1;
-    return options[index] || options[0];
+    return (index >= 0 && index < options.length) ? options[index] : options[0];
   }
 
   private async selectMultiple(prompt: string, options: string[]): Promise<string[]> {
@@ -918,7 +918,9 @@ Based on your requirements, here are the recommended audit firms:
 |------|------|------|----------|----------|----------|-------|
 ${estimates.slice(0, 5).map((e, i) => {
   const inBudget = e.maxCost <= this.config.budget ? '✅' : e.minCost <= this.config.budget ? '⚠️' : '❌';
-  return `| ${i + 1} | ${e.firm} | ${AUDIT_FIRMS[Object.keys(AUDIT_FIRMS).find(k => AUDIT_FIRMS[k].name === e.firm) || '']?.tier || 'N/A'} | $${e.minCost.toLocaleString()} | $${e.maxCost.toLocaleString()} | ${e.duration} | ${e.score} ${inBudget} |`;
+  const firmKey = Object.keys(AUDIT_FIRMS).find(k => AUDIT_FIRMS[k].name === e.firm);
+  const tier = firmKey ? AUDIT_FIRMS[firmKey]?.tier ?? 'N/A' : 'N/A';
+  return `| ${i + 1} | ${e.firm} | ${tier} | $${e.minCost.toLocaleString()} | $${e.maxCost.toLocaleString()} | ${e.duration} | ${e.score} ${inBudget} |`;
 }).join('\n')}
 
 ### Budget Analysis

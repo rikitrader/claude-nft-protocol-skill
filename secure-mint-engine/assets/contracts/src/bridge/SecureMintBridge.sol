@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "../../IBackedToken.sol";
 
 /**
  * @title SecureMintBridge
@@ -235,9 +236,9 @@ contract SecureMintBridge is AccessControl, ReentrancyGuard, Pausable {
             token.safeTransferFrom(msg.sender, address(this), amount);
         } else {
             // Burn tokens on L2
-            // Assumes token has burn function accessible to bridge
             token.safeTransferFrom(msg.sender, address(this), amount);
-            // ISecureMintToken(address(token)).burn(address(this), amount);
+            // Burn the tokens - call burn on the backed token
+            IBackedToken(address(token)).burn(amount);
         }
 
         // Transfer fee
@@ -248,7 +249,7 @@ contract SecureMintBridge is AccessControl, ReentrancyGuard, Pausable {
         // Generate transfer ID
         uint256 nonce = ++outboundNonce;
         transferId = keccak256(
-            abi.encodePacked(
+            abi.encode(
                 msg.sender,
                 recipient,
                 netAmount,
@@ -289,10 +290,10 @@ contract SecureMintBridge is AccessControl, ReentrancyGuard, Pausable {
         bytes32 transferId,
         TransferMessage calldata message,
         bytes calldata signature
-    ) external onlyRole(VALIDATOR_ROLE) whenNotPaused {
+    ) external nonReentrant onlyRole(VALIDATOR_ROLE) whenNotPaused {
         // Verify transfer ID matches message
         bytes32 computedId = keccak256(
-            abi.encodePacked(
+            abi.encode(
                 message.sender,
                 message.recipient,
                 message.amount,
@@ -337,11 +338,11 @@ contract SecureMintBridge is AccessControl, ReentrancyGuard, Pausable {
         }
 
         // Check validator hasn't already validated
-        if (pt.hasValidated[msg.sender]) revert AlreadyValidated();
-        pt.hasValidated[msg.sender] = true;
+        if (pt.hasValidated[signer]) revert AlreadyValidated();
+        pt.hasValidated[signer] = true;
         pt.signatureCount++;
 
-        emit TransferValidated(transferId, msg.sender, pt.signatureCount);
+        emit TransferValidated(transferId, signer, pt.signatureCount);
 
         // Execute if threshold reached
         if (pt.signatureCount >= validatorThreshold && !pt.executed) {
@@ -393,6 +394,7 @@ contract SecureMintBridge is AccessControl, ReentrancyGuard, Pausable {
     }
 
     function setSupportedChain(uint256 _chainId, bool supported) external onlyRole(OPERATOR_ROLE) {
+        require(!supported || dailyLimits[_chainId] > 0, "Must set daily limit before enabling chain");
         supportedChains[_chainId] = supported;
         emit ChainSupported(_chainId, supported);
     }
@@ -464,8 +466,7 @@ contract SecureMintBridge is AccessControl, ReentrancyGuard, Pausable {
             token.safeTransfer(pt.recipient, pt.amount);
         } else {
             // Mint tokens on L2
-            // ISecureMintToken(address(token)).mint(pt.recipient, pt.amount);
-            token.safeTransfer(pt.recipient, pt.amount);
+            IBackedToken(address(token)).mint(pt.recipient, pt.amount);
         }
 
         emit TransferExecuted(transferId, pt.recipient, pt.amount);

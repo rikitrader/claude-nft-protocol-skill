@@ -186,7 +186,7 @@ export const SecureMintAttributes = {
 
   // User context
   USER_ADDRESS: 'securemint.user.address',
-  USER_API_KEY: 'securemint.user.api_key',
+  USER_API_KEY_HASH: 'securemint.user.api_key_hash',
 
   // Transaction
   TX_HASH: 'securemint.tx.hash',

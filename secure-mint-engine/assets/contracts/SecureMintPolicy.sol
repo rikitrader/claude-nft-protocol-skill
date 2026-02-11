@@ -55,6 +55,11 @@ contract SecureMintPolicy is Pausable, ReentrancyGuard, AccessControl {
     /// @notice Timelock duration for parameter changes
     uint256 public constant TIMELOCK_DURATION = 48 hours;
 
+    /// @notice Parameter bounds
+    uint256 public constant MAX_EPOCH_CAP = 10_000_000e18;
+    uint256 public constant MIN_ORACLE_AGE = 60;
+    uint256 public constant MAX_ORACLE_AGE = 86400; // 24 hours
+
     /// @notice Current epoch minted amount
     uint256 public currentEpochMinted;
 
@@ -97,6 +102,7 @@ contract SecureMintPolicy is Pausable, ReentrancyGuard, AccessControl {
     event ChangeProposed(bytes32 indexed changeType, uint256 newValue, uint256 executeAfter);
     event ChangeExecuted(bytes32 indexed changeType, uint256 newValue);
     event ChangeCancelled(bytes32 indexed changeType);
+    event EpochReset(uint256 newEpochStart, uint256 mintedReset);
 
     // ═══════════════════════════════════════════════════════════════════════
     // ERRORS
@@ -243,8 +249,11 @@ contract SecureMintPolicy is Pausable, ReentrancyGuard, AccessControl {
 
     function _checkAndUpdateEpoch() internal {
         if (block.timestamp >= epochStartTime + EPOCH_DURATION) {
-            epochStartTime = block.timestamp;
+            uint256 elapsed = block.timestamp - epochStartTime;
+            uint256 epochsPassed = elapsed / EPOCH_DURATION;
+            epochStartTime += epochsPassed * EPOCH_DURATION;
             currentEpochMinted = 0;
+            emit EpochReset(epochStartTime, currentEpochMinted);
         }
     }
 
@@ -295,6 +304,7 @@ contract SecureMintPolicy is Pausable, ReentrancyGuard, AccessControl {
      * @notice Propose a change to epoch mint cap
      */
     function proposeEpochCapChange(uint256 newCap) external onlyRole(GOVERNOR_ROLE) {
+        require(newCap > 0 && newCap <= MAX_EPOCH_CAP, "Invalid epoch cap");
         _proposeChange(CHANGE_EPOCH_CAP, newCap);
     }
 
@@ -310,6 +320,7 @@ contract SecureMintPolicy is Pausable, ReentrancyGuard, AccessControl {
      * @notice Propose a change to max oracle age
      */
     function proposeMaxOracleAgeChange(uint256 newAge) external onlyRole(GOVERNOR_ROLE) {
+        require(newAge >= MIN_ORACLE_AGE && newAge <= MAX_ORACLE_AGE, "Invalid oracle age");
         _proposeChange(CHANGE_MAX_ORACLE_AGE, newAge);
     }
 
