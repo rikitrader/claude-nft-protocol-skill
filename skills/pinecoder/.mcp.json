@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pinecoder": {
+      "command": "python3",
+      "args": ["-m", "engine", "serve"],
+      "cwd": "/Users/ricardoprieto/.claude/skills/pinecoder"
+    }
+  }
+}
