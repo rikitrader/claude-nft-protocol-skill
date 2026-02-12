@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "candlestick-engine": {
+      "command": "python3",
+      "args": ["-m", "engine", "serve"],
+      "cwd": "SKILL_DIR",
+      "env": {}
+    }
+  }
+}
