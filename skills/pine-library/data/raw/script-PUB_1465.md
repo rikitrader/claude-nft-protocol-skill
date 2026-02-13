@@ -1,0 +1,43 @@
+---
+id: PUB;1465
+title: DecisionPoint Breadth Swenlin Trading Oscillator [LazyBear]
+author: LazyBear
+type: indicator
+tags: []
+boosts: 2872
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_1465
+---
+
+# Description
+DecisionPoint Breadth Swenlin Trading Oscillator [LazyBear]
+
+# Source Code
+```pine
+//
+// @author LazyBear 
+// 
+// List of my public indicators: http://bit.ly/1LQaPK8 
+// List of my app-store indicators: http://blog.tradingview.com/?p=970 
+//
+study("DecisionPoint Breadth Swenlin Trading Oscillator [LazyBear]", shorttitle="DBSTO_LB", overlay=false, precision=5)
+mkt = input (defval=1, minval=0, maxval=4, title="Market (0=>AMEX/NASD/NYSE Combined, 1=NYSE, 2=NASDAQ, 3=AMEX, 4=CUSTOM)")
+aic=input(defval="INDEX:ADVS", title="CUSTOM: Advancing Stocks Symbol", type=symbol)
+dic=input(defval="INDEX:DECS", title="CUSTOM: Declining Stocks Symbol", type=symbol)
+res = isintraday?"D":period // dont go below "D"
+advn="INDEX:ADVN", decn="INDEX:DECN" // NYSE
+advnq="INDEX:ADVQ", decnq="INDEX:DECQ" // NASDAQ
+advna="INDEX:ADVA", decna="INDEX:DECA" // AMEX
+advc="(INDEX:ADVN+INDEX:ADVQ+INDEX:ADVA)/3.0", decc="(INDEX:DECN+INDEX:DECQ+INDEX:DECA)/3.0"
+adv= security(mkt==0? advc:mkt == 1? advn:mkt == 2? advnq:mkt == 3? advna:aic, res, close)
+dec= security(mkt==0? decc:mkt == 1? decn:mkt == 2? decnq:mkt == 3? decna:dic, res, close)
+i=(adv-dec)/(adv+dec)
+sto=sma(ema(i * 1000, 4), 5)
+sh=input(true, title="Show Histo")
+plot(0, color=gray, title="MidLine")
+plot(sh?sto:na, style=histogram, color=sto>0?sto>sto[1]?green:orange:sto<sto[1]?red:orange, title="Histo")
+plot(sto, linewidth=2, color=black, title="DSTO")
+
+```

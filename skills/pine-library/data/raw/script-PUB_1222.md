@@ -1,0 +1,37 @@
+---
+id: PUB;1222
+title: Volume Accumulation Percentage Indicator [LazyBear]
+author: LazyBear
+type: indicator
+tags: []
+boosts: 10000
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_1222
+---
+
+# Description
+Volume Accumulation Percentage Indicator [LazyBear]
+
+# Source Code
+```pine
+//
+// @author LazyBear 
+// List of my public indicators: http://bit.ly/1LQaPK8
+// List of my app-store indicators: http://blog.tradingview.com/?p=970 
+//
+study("Volume Accumulation Percentage Indicator [LazyBear]", shorttitle="VAPI_LB", overlay=false)
+length=input(10, title="Time Periods")
+x=(2*close-high-low)/(high-low)
+tva=sum(volume*x,length)
+tv=sum(volume,length)
+va=100*tva/tv
+zl=plot(0, color=gray, title="ZeroLine")
+vac=gray
+val=plot(va, color=vac, style=histogram, title="VAPI Histogram")
+us=va<0?0:(va==0?va[1]  :va), ls=va>0?0:(va==0?va[1]:va)
+ux=plot(us, color=gray, style=circles, title="DummyU"), lx=plot(ls, color=gray, style=circles, title="DummyL")
+fill(ux,val,color=red, transp=50, title="NegativeFill"), fill(lx,val,color=lime, transp=50, title="PositiveFill")
+plot(va, color=gray, linewidth=2, title="VAPI Osc")
+```

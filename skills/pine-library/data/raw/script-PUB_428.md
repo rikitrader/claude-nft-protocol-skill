@@ -1,0 +1,48 @@
+---
+id: PUB;428
+title: Indicators: Volume-Weighted MACD Histogram & Sentiment Zone Osc
+author: LazyBear
+type: indicator
+tags: []
+boosts: 7709
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_428
+---
+
+# Description
+Indicators: Volume-Weighted MACD Histogram & Sentiment Zone Osc
+
+# Source Code
+```pine
+//
+// @author LazyBear
+//
+// If you use this code in its original/modified form, do drop me a note. 
+//
+study("Volume Weighted MACD [LazyBear]", shorttitle="VWMACD_LB")
+slow = input(12, "Short period")
+fast = input(26, "Long period")
+signal = input(9, "Smoothing period")
+
+
+maFast = ema( volume * close, fast ) / ema( volume, fast ) 
+maSlow = ema( volume * close, slow ) / ema( volume, slow ) 
+d = maSlow - maFast 
+maSignal = ema( d, signal ) 
+dm=d-maSignal
+
+h_color=dm>=0? (dm>dm[1]?green:orange) : (dm<dm[1]?red:orange)
+plot( dm, style=histogram, color=h_color, linewidth=3)
+
+
+//
+// Easter Egg! Have fun :)
+//
+// d_color=d>=0? (d>d[1]?green:orange) : (d<d[1]?red:orange)
+// zl=plot(0, color=gray)
+// dl=plot(d, style=line, color=d_color, linewidth=4)
+// fill(zl, dl, silver)
+
+```

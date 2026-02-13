@@ -1,0 +1,36 @@
+---
+id: PUB;385
+title: CM_RSI Plus EMA
+author: ChrisMoody
+type: indicator
+tags: []
+boosts: 15553
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_385
+---
+
+# Description
+CM_RSI Plus EMA
+
+# Source Code
+```pine
+//Created by Chris Moody on 8/8/2014 by Request for motcha1
+//RSI Indicator with EMA of RSI for Signal
+//Great Confirrming Signal for CM_Williams_Vix_Fix https://www.tradingview.com/v/og7JPrRA/
+study(title="CM_RSI_EMA", shorttitle="CM_RSI_EMA_", overlay=false)
+src = close, 
+len = input(20, minval=1, title="RSI Length")
+len2 = input(10, minval=1, title="EMA of RSI Length")
+up = rma(max(change(src), 0), len)
+down = rma(-min(change(src), 0), len)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+emaRSI = ema(rsi,len2)
+
+plot(rsi, title="RSI", style=line, linewidth=3, color=silver)
+plot(emaRSI, title="EMA of RSI", style=circles, linewidth=2, color=red)
+band1 = hline(80, title="Upper Line", linestyle=dashed, linewidth=3, color=red)
+band0 = hline(20, title="Lower Line", linestyle=dashed, linewidth=3, color=lime)
+fill(band1, band0, color=purple, transp=90)
+```

@@ -1,0 +1,43 @@
+---
+id: PUB;1268
+title: Range Identifier [LazyBear]
+author: LazyBear
+type: indicator
+tags: []
+boosts: 4619
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_1268
+---
+
+# Description
+Range Identifier [LazyBear]
+
+# Source Code
+```pine
+//
+// @author LazyBear 
+// 
+// List of my public indicators: http://bit.ly/1LQaPK8 
+// List of my app-store indicators: http://blog.tradingview.com/?p=970 
+//
+//
+study("Range Identifier [LazyBear]", shorttitle="RID_LB", overlay=true)
+connectRanges=input(false, title="Connect Ranges")
+showMidLine=input(false, title="Show MidLine")
+lengthEMA=input(34, title="EMA Length")
+showEMA=input(true, title="Show EMA")
+hc=input(true, title="Highlight Consolidation")
+e=ema(close,lengthEMA)
+up = close<nz(up[1]) and close>down[1] ? nz(up[1]) : high
+down = close<nz(up[1]) and close>down[1] ? nz(down[1]) : low
+mid = avg(up,down)
+ul=plot(connectRanges?up:up==nz(up[1])?up:na, color=gray, linewidth=2, style=linebr, title="Up")
+ll=plot(connectRanges?down:down==nz(down[1])?down:na, color=gray, linewidth=2, style=linebr, title="Down")
+dummy=plot(hc?close>e?down:up:na, color=gray, style=circles, linewidth=0, title="Dummy")
+fill(ul,dummy, color=lime)
+fill(dummy,ll, color=red)
+plot(showMidLine?mid:na, color=gray, linewidth=1, title="Mid")
+plot(showEMA?e:na, title="EMA", color=black, linewidth=2)
+```

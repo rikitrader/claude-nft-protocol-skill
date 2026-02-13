@@ -1,0 +1,39 @@
+---
+id: PUB;192
+title: DEnvelope [Better Bollinger Bands]
+author: LazyBear
+type: indicator
+tags: []
+boosts: 1648
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_192
+---
+
+# Description
+DEnvelope [Better Bollinger Bands]
+
+# Source Code
+```pine
+//
+// @author LazyBear 
+// List of all my indicators: https://www.tradingview.com/v/4IneGo8h/
+//
+study("DEnvelope [LazyBear]", shorttitle="DENV_LB", overlay=true)
+lb=input(20, title="DEnvelope lookback length")
+de=input(2, title="DEnvelope band deviation")
+alp=2/(lb+1)
+src=hlc3
+mt=alp*src+(1-alp)*nz(mt[1])
+ut=alp*mt+(1-alp)*nz(ut[1])
+dt=((2-alp)*mt-ut)/(1-alp)
+mt2=alp*abs(src-dt)+(1-alp)*nz(mt2[1])
+ut2=alp*mt2+(1-alp)*nz(ut2[1])
+dt2=((2-alp)*mt2-ut2)/(1-alp)
+but=dt+de*dt2
+blt=dt-de*dt2
+plot(but, color=red, linewidth=2)
+plot(dt, color=gray)
+plot(blt, color=green, linewidth=2)
+```

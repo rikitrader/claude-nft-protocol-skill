@@ -1,0 +1,52 @@
+---
+id: PUB;1584
+title: ATR Pips [LazyBear] [Elixium Mod: FEAR GAUGE]
+author: Elixium
+type: indicator
+tags: []
+boosts: 484
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_1584
+---
+
+# Description
+ATR Pips [LazyBear] [Elixium Mod: FEAR GAUGE]
+
+# Source Code
+```pine
+//
+// @author LazyBear 
+// 
+// List of my public indicators: http://bit.ly/1LQaPK8 
+// List of my app-store indicators: http://blog.tradingview.com/?p=970 
+//
+study("ATR Pips [LazyBear] FEAR GAUGE", shorttitle="FEAR GAUGE", overlay=false, precision=0)
+length=input(5, title="ATR Length")
+mult=input(0.33, title="Percentage Multiplier (for ex., 0.7 = 70%)", step=0.1, minval=0.1, maxval=1.0)
+sb=input(false, title="Show Enclosing BB")
+l = input(34, minval=1, title="Enclosing BB Length")
+m = input(2.0, minval=1, maxval=50, title="Enclosing BB Multiplier")
+oa=input(false, title="Show actual ATR")
+p=mult*100
+ii=syminfo.pointvalue==0
+s=ii?na:oa?atr(length):floor(syminfo.pointvalue * mult * atr(length))
+x=ii?(nz(x[1])+0.7)%3.0:na
+plotshape(ii?x:na, style=shape.cross, color=red, text="Invalid", location=location.absolute, title="ErrorText")
+basis = sb?sma(s, l):na
+dev = sb?m * stdev(s, l):na
+upper = sb ? (basis + dev) : na
+lower = sb ? (basis - dev) : na
+plot(upper, color=gray, linewidth=2, title="Upper")
+plot(lower, color=gray, linewidth=2, title="Lower")
+plot(basis, color=orange, linewidth=2, title="Middle")
+plot(ii?na:s, color=red, linewidth=2, title="ATR")
+
+ul=hline(120, color=gray)
+ll=hline(60, color=gray)
+hline(80, color=gray)
+hline(100, color=gray)
+
+fill(ul,ll, color=blue)
+```

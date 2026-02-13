@@ -1,0 +1,46 @@
+---
+id: PUB;416
+title: Indicators: MMA and 3 oscillators
+author: LazyBear
+type: indicator
+tags: []
+boosts: 1502
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_416
+---
+
+# Description
+Indicators: MMA and 3 oscillators
+
+# Source Code
+```pine
+//
+// @author LazyBear
+//
+// If you use this code in its original/modified form, do drop me a note. 
+//
+study("Guppy MMA [LazyBear]", shorttitle="GMMA_LB", overlay=true)
+
+src=close
+
+// shortterm 
+stsl=plot(ema(src, 3), color=#000066, linewidth=1)
+plot(ema(src, 5), color=#000099)
+plot(ema(src, 8), color=#0000cc)
+plot(ema(src, 10), color=#0000ff)
+plot(ema(src, 12), color=#0033cc)
+stll=plot(ema(src, 15), color=#0033ff)
+
+// longterm
+ltsl=plot(ema(src, 30), color=#990000, linewidth=1)
+plot(ema(src, 35), color=#990033)
+plot(ema(src, 40), color=#cc0000)
+plot(ema(src, 45), color=#cc0033)
+plot(ema(src, 50), color=#ff0000)
+ltll=plot(ema(src, 60), color=#ff0033)
+
+fill(stsl, stll, blue)
+fill(ltsl, ltll, red)
+```

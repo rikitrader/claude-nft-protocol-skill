@@ -1,0 +1,34 @@
+---
+id: PUB;792
+title: Linear Regression Slope
+author: emiliolb
+type: indicator
+tags: []
+boosts: 1780
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_792
+---
+
+# Description
+Linear Regression Slope
+
+# Source Code
+```pine
+// Created by emiliolb -- Version 1.0
+// Contact emiliolb@outlook.com 
+study(title="Linear Regression Slope", shorttitle="LRS", overlay=true)
+
+src = close[0]
+len = input(defval=150, minval=1, title="Linear Regression Length")
+lrc = linreg(src, len, 0)
+plot(lrc, color = red, title = "Linear Regression Curve", style = line, linewidth = 2)
+
+lrprev = linreg(close[1], len, 0)
+slope = ((lrc - lrprev) / interval)
+
+//Please if somebody have suggestions how show this better, let me know
+codiff = slope
+plotarrow(codiff, colorup=teal, colordown=orange, transp=40)
+```

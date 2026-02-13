@@ -1,0 +1,42 @@
+---
+id: PUB;1358
+title: Ehlers  Simple Cycle Indicator [LazyBear]
+author: LazyBear
+type: indicator
+tags: []
+boosts: 1826
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_1358
+---
+
+# Description
+Ehlers  Simple Cycle Indicator [LazyBear]
+
+# Source Code
+```pine
+//
+// @author LazyBear 
+// 
+// List of my public indicators: http://bit.ly/1LQaPK8 
+// List of my app-store indicators: http://blog.tradingview.com/?p=970 
+//
+study("Ehlers  Simple Cycle Indicator [LazyBear]", shorttitle="ESCI_LB")
+src=input(hl2, title="Source") 
+alpha=input(.07, title="Alpha")
+Smooth = (src + 2*src[1] + 2*src[2] + src[3])/6.0
+cycle_ = (1 - .5*alpha)*(1 - .5*alpha)*(Smooth - 2*Smooth[1] + Smooth[2])+ 2*(1 - alpha)*cycle[1] - (1 - alpha)*(1 - alpha)*cycle[2]
+cycle = iff(n<7, (src - 2*src[1] + src[2]) / 4.0, cycle_)
+t=cycle[1]
+plot(0, title="ZeroLine", color=gray) 
+fr=input(true, title="Fill Osc/Trigger region")
+duml=plot(fr?(cycle>t?cycle:t):na, style=circles, linewidth=0, color=gray, title="Dummy")
+cmil=plot(cycle, title="SimpleCycleIndicator",color=blue)
+tl=plot(t, title="Trigger",color=green)
+fill(cmil, duml, color=red, transp=50, title="NegativeFill")
+fill(tl, duml, color=lime, transp=50, title="PositiveFill")
+ebc=input(false, title="Color bars?")
+bc=ebc?(cycle>0? (cycle>t?lime:(cycle==t?gray:green)): (cycle<t?red:orange)):na
+barcolor(bc)
+```

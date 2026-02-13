@@ -1,0 +1,35 @@
+---
+id: PUB;12
+title: Indicator: OBV Oscillator
+author: LazyBear
+type: indicator
+tags: []
+boosts: 14515
+views: 0
+has_source: true
+scraped_at: 2026-02-13
+slug: script-PUB_12
+---
+
+# Description
+Indicator: OBV Oscillator
+
+# Source Code
+```pine
+//
+// @author LazyBear
+// 
+// Appreciate a note if you use this code anywhere. 
+// 
+study(title="On Balance Volume Oscillator [LazyBear]", shorttitle="OBVOSC_LB")
+src = close
+length=input(20)
+obv(src) => cum(change(src) > 0 ? volume : change(src) < 0 ? -volume : 0*volume)
+os=obv(src)
+obv_osc = (os - ema(os,length))
+obc_color=obv_osc > 0 ? green : red
+plot(obv_osc, color=obc_color, style=line,title="OBV-Points", linewidth=2)
+plot(obv_osc, color=silver, transp=70, title="OBV", style=area)
+hline(0)
+
+```
